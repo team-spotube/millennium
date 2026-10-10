@@ -41,7 +41,6 @@ import com.composeunstyled.RadioButton
 import com.composeunstyled.SelectedIndicator
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledRadioGroup
-import org.spotube.millennium.theme.MillenniumColors
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
@@ -52,22 +51,21 @@ import org.spotube.millennium.theme.millenniumSurface
 
 @Immutable
 data class MillenniumRadioGroupThemeProperties(
-    val colors: MillenniumColors,
-    val indicatorBackground: Brush,
-    val selectedIndicatorBackground: Brush,
+    val indicatorBackground: Brush? = null,
+    val selectedIndicatorBackground: Brush? = null,
     val indicatorShape: Shape,
     val indicatorSize: DpSize,
     val dotSize: Dp,
-    val dotColor: Color,
-    val indicatorBorderColor: Color,
+    val dotColor: Color? = null,
+    val indicatorBorderColor: Color? = null,
     val indicatorBorderWidth: Dp,
     val minimumTouchHeight: Dp,
     val optionPadding: PaddingValues,
     val optionSpacing: Dp,
     val groupSpacing: Dp,
     val labelStyle: TextStyle,
-    val labelColor: Color,
-    val selectedLabelColor: Color,
+    val labelColor: Color? = null,
+    val selectedLabelColor: Color? = null,
     val stateAnimationMillis: Int,
     val alpha: Float = 1f,
 )
@@ -77,35 +75,28 @@ data class MillenniumRadioGroupTheme(
     val states: MillenniumControlStateProperty<MillenniumRadioGroupThemeProperties>,
 )
 
-fun defaultMillenniumRadioGroupTheme(colors: MillenniumColors): MillenniumRadioGroupTheme {
+fun defaultMillenniumRadioGroupTheme(): MillenniumRadioGroupTheme {
     val base = MillenniumRadioGroupThemeProperties(
-        colors = colors,
-        indicatorBackground = millenniumBevelBrush(colors, sunken = true),
-        selectedIndicatorBackground = gelBrush(colors.accentTop, colors.accentBottom),
         indicatorShape = RoundedCornerShape(50),
         indicatorSize = DpSize(22.dp, 22.dp),
         dotSize = 8.dp,
-        dotColor = colors.onAccent,
-        indicatorBorderColor = colors.border,
         indicatorBorderWidth = 1.dp,
         minimumTouchHeight = 44.dp,
         optionPadding = PaddingValues(0.dp),
         optionSpacing = 12.dp,
         groupSpacing = 4.dp,
         labelStyle = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Normal),
-        labelColor = colors.text,
-        selectedLabelColor = colors.text,
         stateAnimationMillis = 120,
     )
     return MillenniumRadioGroupTheme(
         states = MillenniumControlStateProperty(
             default = base,
-            hovered = base.copy(indicatorBorderColor = colors.accent, alpha = 0.96f),
-            focused = base.copy(indicatorBorderColor = colors.accent, indicatorBorderWidth = 2.dp),
+            hovered = base.copy(alpha = 0.96f),
+            focused = base.copy(indicatorBorderWidth = 2.dp),
             pressed = base.copy(alpha = 0.90f),
-            disabled = base.copy(alpha = 0.45f, labelColor = colors.muted),
-            selected = base.copy(indicatorBorderColor = colors.accent),
-            error = base.copy(indicatorBorderColor = colors.danger, indicatorBorderWidth = 2.dp),
+            disabled = base.copy(alpha = 0.45f),
+            selected = base,
+            error = base.copy(indicatorBorderWidth = 2.dp),
         ),
     )
 }
@@ -119,6 +110,7 @@ fun <T> MillenniumRadioGroup(
     modifier: Modifier = Modifier,
     optionLabel: (T) -> String = { it.toString() },
 ) {
+    val colors = MillenniumTheme.colors
     val properties = MillenniumTheme.radioGroupTheme.states.default
     UnstyledRadioGroup(value, onValueChange, modifier, accessibilityLabel = label) {
         Column(verticalArrangement = Arrangement.spacedBy(properties.groupSpacing)) {
@@ -140,6 +132,14 @@ fun <T> MillenniumRadioGroup(
                     targetValue = itemProperties.alpha,
                     animationSpec = tween(itemProperties.stateAnimationMillis),
                 ).value
+                val indicatorBorderColor = itemProperties.indicatorBorderColor ?: when (state) {
+                    MillenniumControlState.Focused, MillenniumControlState.Hovered, MillenniumControlState.Selected -> colors.accent
+                    MillenniumControlState.Error -> colors.danger
+                    else -> colors.border
+                }
+                val labelColor = itemProperties.labelColor
+                    ?: if (state == MillenniumControlState.Disabled) colors.muted else colors.text
+                val selectedLabelColor = itemProperties.selectedLabelColor ?: colors.text
                 RadioButton(
                     value = option,
                     modifier = Modifier.heightIn(min = itemProperties.minimumTouchHeight)
@@ -154,20 +154,22 @@ fun <T> MillenniumRadioGroup(
                     ) {
                         Box(
                             Modifier.size(itemProperties.indicatorSize).millenniumSurface(
-                                background = if (selected) itemProperties.selectedIndicatorBackground else itemProperties.indicatorBackground,
+                                background = if (selected) itemProperties.selectedIndicatorBackground
+                                    ?: gelBrush(colors.accentTop, colors.accentBottom)
+                                else itemProperties.indicatorBackground ?: millenniumBevelBrush(colors, sunken = true),
                                 shape = itemProperties.indicatorShape,
-                                borderColor = itemProperties.indicatorBorderColor,
+                                borderColor = indicatorBorderColor,
                                 borderWidth = itemProperties.indicatorBorderWidth,
                             ),
                             contentAlignment = Alignment.Center,
                         ) {
                             SelectedIndicator {
-                                Box(Modifier.size(itemProperties.dotSize).background(itemProperties.dotColor, CircleShape))
+                                Box(Modifier.size(itemProperties.dotSize).background(itemProperties.dotColor ?: colors.onAccent, CircleShape))
                             }
                         }
                         CompositionLocalProvider(
                             LocalTextStyle provides LocalTextStyle.current.merge(itemProperties.labelStyle)
-                                .copy(color = if (selected) itemProperties.selectedLabelColor else itemProperties.labelColor),
+                                .copy(color = if (selected) selectedLabelColor else labelColor),
                         ) { Text(optionLabel(option)) }
                     }
                 }

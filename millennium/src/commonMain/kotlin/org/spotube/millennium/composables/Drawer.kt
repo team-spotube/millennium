@@ -33,7 +33,6 @@ import com.composeunstyled.Panel
 import com.composeunstyled.UnstyledDrawer
 import com.composeunstyled.UnstyledDrawerState
 import com.composeunstyled.Viewport
-import org.spotube.millennium.theme.MillenniumColors
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
@@ -44,18 +43,17 @@ import org.spotube.millennium.theme.millenniumSurface
 
 @Immutable
 data class MillenniumDrawerThemeProperties(
-    val colors: MillenniumColors,
-    val background: Brush,
-    val foreground: Color,
+    val background: Brush? = null,
+    val foreground: Color? = null,
     val shape: Shape,
     val maximumWidth: Dp,
     val contentPadding: PaddingValues,
     val contentSpacing: Dp,
-    val borderColor: Color,
+    val borderColor: Color? = null,
     val borderWidth: Dp,
     val shadowElevation: Dp,
-    val innerGlowColor: Color,
-    val scrimColor: Color,
+    val innerGlowColor: Color? = null,
+    val scrimColor: Color? = null,
     val alpha: Float,
 )
 
@@ -64,31 +62,25 @@ data class MillenniumDrawerTheme(
     val states: MillenniumControlStateProperty<MillenniumDrawerThemeProperties>,
 )
 
-fun defaultMillenniumDrawerTheme(colors: MillenniumColors): MillenniumDrawerTheme {
+fun defaultMillenniumDrawerTheme(): MillenniumDrawerTheme {
     val base = MillenniumDrawerThemeProperties(
-        colors = colors,
-        background = millenniumBevelBrush(colors),
-        foreground = colors.text,
         shape = RoundedCornerShape(topEnd = 18.dp, bottomEnd = 18.dp),
         maximumWidth = 320.dp,
         contentPadding = PaddingValues(24.dp),
         contentSpacing = 20.dp,
-        borderColor = colors.border,
         borderWidth = 1.dp,
         shadowElevation = 12.dp,
-        innerGlowColor = colors.highlight.copy(alpha = 0.55f),
-        scrimColor = colors.scrim,
         alpha = 1f,
     )
     return MillenniumDrawerTheme(
         states = MillenniumControlStateProperty(
             default = base,
-            hovered = base.copy(borderColor = colors.accent),
-            focused = base.copy(borderColor = colors.accent, borderWidth = 2.dp),
+            hovered = base,
+            focused = base.copy(borderWidth = 2.dp),
             pressed = base.copy(shadowElevation = 8.dp),
             disabled = base.copy(alpha = 0.55f),
-            selected = base.copy(borderColor = colors.accent),
-            error = base.copy(borderColor = colors.danger, borderWidth = 2.dp),
+            selected = base,
+            error = base.copy(borderWidth = 2.dp),
         ),
     )
 }
@@ -111,30 +103,36 @@ fun MillenniumDrawer(
     state: UnstyledDrawerState<MillenniumDrawerValue>,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val colors = MillenniumTheme.colors
     val properties = MillenniumTheme.drawerTheme.states.resolve(MillenniumControlState.Default)
+    val background = properties.background ?: millenniumBevelBrush(colors)
+    val foreground = properties.foreground ?: colors.text
+    val borderColor = properties.borderColor ?: colors.border
+    val glowColor = properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f)
+    val scrimColor = properties.scrimColor ?: colors.scrim
     UnstyledDrawer(
         state = state,
         placement = DrawerPlacement.Start,
         presentation = com.composeunstyled.DrawerPresentation.Modal,
-        overlay = { Overlay { androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(properties.scrimColor)) } },
+        overlay = { Overlay { androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(scrimColor)) } },
     ) {
         Viewport(Modifier.fillMaxSize()) {
             Panel(
                 Modifier.widthIn(max = properties.maximumWidth).fillMaxWidth().fillMaxHeight()
                     .millenniumSurface(
-                        background = properties.background,
+                        background = background,
                         shape = properties.shape,
-                        borderColor = properties.borderColor,
+                        borderColor = borderColor,
                         borderWidth = properties.borderWidth,
                         shadowElevation = properties.shadowElevation,
-                        innerGlowColor = properties.innerGlowColor,
+                        innerGlowColor = glowColor,
                     ).alpha(properties.alpha),
             ) {
                 Column(
                     Modifier.padding(properties.contentPadding).systemBarsPadding(),
                     verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(properties.contentSpacing),
                 ) {
-                    MillenniumStyledContent(TextStyle(color = properties.foreground), properties.foreground) {
+                    MillenniumStyledContent(TextStyle(color = foreground), foreground) {
                         content()
                     }
                 }
@@ -150,6 +148,6 @@ private fun MillenniumDrawerPreview() = MillenniumPreview {
     LaunchedEffect(state) { state.targetValue = MillenniumDrawerValue.Open }
     MillenniumDrawer(state) {
         MillenniumText("A little more space", weight = FontWeight.SemiBold)
-        MillenniumText("A softly raised edge drawer.", color = MillenniumTheme.drawerTheme.states.default.colors.muted)
+        MillenniumText("A softly raised edge drawer.", color = MillenniumTheme.colors.muted)
     }
 }

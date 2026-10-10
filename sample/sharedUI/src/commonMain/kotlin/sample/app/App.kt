@@ -100,7 +100,7 @@ fun App() {
                                             size = 13.sp
                                         )
                                     }
-                                    if (!compact) Badge("20 COMPONENTS", c.muted)
+                                    if (!compact) Badge("21 COMPONENTS", c.muted)
                                 }
                                 Gallery(
                                     category,
@@ -252,70 +252,67 @@ private fun Header(dark: Boolean, onDarkChange: (Boolean) -> Unit, wide: Boolean
 @Composable
 private fun Sidebar(category: String, onSelect: (String) -> Unit) {
     val c = MillenniumTheme.colors
-    Column(
-        Modifier.width(212.dp).fillMaxHeight().background(c.surface.copy(alpha = 0.7f))
-            .verticalScroll(rememberScrollState()).padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        MillenniumText(
-            "EXPLORER",
-            size = 10.sp,
-            weight = FontWeight.Bold,
-            color = c.muted,
-            modifier = Modifier.padding(vertical = 16.dp)
-        )
-        categories.forEachIndexed { index, item ->
-            MillenniumButton(
-                { onSelect(item) },
-                modifier = Modifier.fillMaxWidth(),
-                style = if (category == item) MillenniumButtonStyle.Primary else MillenniumButtonStyle.Quiet
+    var explorerExpanded by rememberSaveable { mutableStateOf(true) }
+    var designExpanded by rememberSaveable { mutableStateOf(true) }
+    MillenniumSidebar(modifier = Modifier.fillMaxHeight()) {
+        MillenniumSidebarHeader { Brand() }
+        MillenniumSidebarContent {
+            MillenniumSidebarGroup(
+                expanded = explorerExpanded,
+                collapsible = true,
+                onExpandedChange = { explorerExpanded = it }
             ) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(item, fontSize = 13.sp)
-                    Text(
-                        if (index == 0) "20" else listOf("", "2", "6", "2", "6", "4")[index],
-                        fontSize = 11.sp
-                    )
+                MillenniumSidebarGroupLabel("EXPLORER")
+                MillenniumSidebarGroupContent {
+                    MillenniumSidebarMenu {
+                        categories.forEachIndexed { index, item ->
+                            MillenniumSidebarItem(
+                                label = item,
+                                onClick = { onSelect(item) },
+                                selected = category == item,
+                                badge = if (index == 0) "21" else listOf("", "2", "6", "2", "6", "4")[index]
+                            )
+                        }
+                    }
                 }
             }
+            MillenniumSidebarSeparator()
+            MillenniumSidebarGroup(
+                expanded = designExpanded,
+                collapsible = true,
+                onExpandedChange = { designExpanded = it }
+            ) {
+                MillenniumSidebarGroupLabel("THE DESIGN LANGUAGE")
+                MillenniumSidebarGroupContent {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        listOf(
+                            "01   Light you can feel",
+                            "02   Depth with purpose",
+                            "03   Familiar, not dated"
+                        ).forEach {
+                            MillenniumText(
+                                it,
+                                color = c.muted,
+                                size = 12.sp,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                            )
+                        }
+                    }
+                }
+            }
+            MillenniumCard(contentPadding = PaddingValues(14.dp)) {
+                MillenniumIcon(MillenniumIcons.Sparkle, tint = c.accent)
+                MillenniumText("2007 soul.\n2026 standards.", weight = FontWeight.SemiBold)
+                MillenniumText(
+                    "Accessible primitives.\nMultiplatform by nature.",
+                    color = c.muted,
+                    size = 11.sp
+                )
+            }
         }
-        Spacer(Modifier.height(24.dp))
-        MillenniumSeparator()
-        MillenniumText(
-            "THE DESIGN LANGUAGE",
-            size = 10.sp,
-            weight = FontWeight.Bold,
-            color = c.muted,
-            modifier = Modifier.padding(top = 16.dp)
-        )
-        listOf(
-            "01   Light you can feel",
-            "02   Depth with purpose",
-            "03   Familiar, not dated"
-        ).forEach {
-            MillenniumText(
-                it,
-                color = c.muted,
-                size = 12.sp,
-                modifier = Modifier.padding(vertical = 6.dp)
-            )
+        MillenniumSidebarFooter {
+            MillenniumText("EDITION 001 / 2026", color = c.muted, size = 10.sp)
         }
-        Spacer(Modifier.height(24.dp))
-        MillenniumCard(contentPadding = PaddingValues(14.dp)) {
-            MillenniumIcon(MillenniumIcons.Sparkle, tint = c.accent)
-            MillenniumText("2007 soul.\n2026 standards.", weight = FontWeight.SemiBold)
-            MillenniumText(
-                "Accessible primitives.\nMultiplatform by nature.",
-                color = c.muted,
-                size = 11.sp
-            )
-        }
-        MillenniumText(
-            "EDITION 001 / 2026",
-            color = c.muted,
-            size = 10.sp,
-            modifier = Modifier.padding(top = 20.dp)
-        )
     }
 }
 
@@ -471,6 +468,12 @@ private fun Gallery(
                 "Find exactly the right setting."
             ) { RangeDemo() }
             Card("Navigation", "08", "Tab group", "One place. A few perspectives.") { TabsDemo() }
+            Card(
+                "Navigation",
+                "21",
+                "Sidebar",
+                "A fixed header, a scrolling middle, a fixed footer."
+            ) { SidebarDemo() }
             Card(
                 "Feedback",
                 "09–10",
@@ -646,6 +649,119 @@ private fun TabsDemo() {
                     size = 12.sp,
                     color = MillenniumTheme.colors.muted
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SidebarDemo() {
+    var collapsed by rememberSaveable { mutableStateOf(false) }
+    var libraryExpanded by rememberSaveable { mutableStateOf(true) }
+    var workspaceExpanded by rememberSaveable { mutableStateOf(true) }
+    var selected by rememberSaveable { mutableStateOf("Discover") }
+    Row(
+        Modifier.fillMaxWidth().height(360.dp).clip(RoundedCornerShape(12.dp))
+            .background(MillenniumTheme.colors.inset)
+    ) {
+        MillenniumSidebar(
+            modifier = Modifier.fillMaxHeight(),
+            collapsed = collapsed,
+            onCollapsedChange = { collapsed = it }
+        ) {
+            MillenniumSidebarHeader {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (collapsed) {
+                        MillenniumIcon(MillenniumIcons.Sparkle, tint = MillenniumTheme.colors.accent)
+                    } else {
+                        MillenniumText("Millennium", weight = FontWeight.Bold)
+                    }
+                    MillenniumSidebarTrigger()
+                }
+            }
+            MillenniumSidebarContent {
+                MillenniumSidebarGroup(
+                    expanded = libraryExpanded,
+                    collapsible = true,
+                    onExpandedChange = { libraryExpanded = it }
+                ) {
+                    MillenniumSidebarGroupLabel("LIBRARY")
+                    MillenniumSidebarGroupContent {
+                        MillenniumSidebarMenu {
+                            MillenniumSidebarItem(
+                                label = "Discover",
+                                onClick = { selected = "Discover" },
+                                selected = selected == "Discover",
+                                icon = MillenniumIcons.Sparkle,
+                                badge = "20"
+                            )
+                            MillenniumSidebarItem(
+                                label = "Saved",
+                                onClick = { selected = "Saved" },
+                                selected = selected == "Saved",
+                                icon = MillenniumIcons.Music,
+                                badge = "8"
+                            )
+                            MillenniumSidebarItem(
+                                label = "History",
+                                onClick = { selected = "History" },
+                                selected = selected == "History",
+                                icon = MillenniumIcons.Check
+                            )
+                        }
+                    }
+                }
+                MillenniumSidebarSeparator()
+                MillenniumSidebarGroup(
+                    expanded = workspaceExpanded,
+                    collapsible = true,
+                    onExpandedChange = { workspaceExpanded = it }
+                ) {
+                    MillenniumSidebarGroupLabel("WORKSPACE")
+                    MillenniumSidebarGroupContent {
+                        MillenniumSidebarMenu {
+                            MillenniumSidebarItem(
+                                label = "Playlists",
+                                onClick = { selected = "Playlists" },
+                                selected = selected == "Playlists",
+                                icon = MillenniumIcons.Music
+                            )
+                            MillenniumSidebarItem(
+                                label = "Shared",
+                                onClick = { selected = "Shared" },
+                                selected = selected == "Shared",
+                                icon = MillenniumIcons.Sparkle
+                            )
+                        }
+                    }
+                }
+            }
+            MillenniumSidebarFooter {
+                MillenniumText(
+                    if (collapsed) "v1" else "Edition 001 / 2026",
+                    color = MillenniumTheme.colors.muted,
+                    size = 10.sp
+                )
+            }
+        }
+        Box(Modifier.weight(1f).fillMaxHeight().padding(20.dp), contentAlignment = Alignment.Center) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                MillenniumText("Selected view", size = 11.sp, color = MillenniumTheme.colors.muted)
+                MillenniumText(selected, size = 22.sp, weight = FontWeight.SemiBold)
+                if (!collapsed) {
+                    MillenniumText(
+                        "Fold groups, collapse the rail, or pick a new view.",
+                        size = 11.sp,
+                        color = MillenniumTheme.colors.muted
+                    )
+                }
             }
         }
     }

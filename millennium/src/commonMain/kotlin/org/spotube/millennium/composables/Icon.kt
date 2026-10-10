@@ -18,7 +18,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.UnstyledIcon
-import org.spotube.millennium.theme.MillenniumColors
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
@@ -26,8 +25,7 @@ import org.spotube.millennium.theme.MillenniumPreview
 
 @Immutable
 data class MillenniumIconThemeProperties(
-    val colors: MillenniumColors,
-    val tint: Color,
+    val tint: Color? = null,
     val size: Dp,
     val alpha: Float,
     val tintAnimationMillis: Int,
@@ -38,10 +36,8 @@ data class MillenniumIconTheme(
     val states: MillenniumControlStateProperty<MillenniumIconThemeProperties>,
 )
 
-fun defaultMillenniumIconTheme(colors: MillenniumColors): MillenniumIconTheme {
+fun defaultMillenniumIconTheme(): MillenniumIconTheme {
     val base = MillenniumIconThemeProperties(
-        colors = colors,
-        tint = colors.text,
         size = 20.dp,
         alpha = 1f,
         tintAnimationMillis = 120,
@@ -49,12 +45,12 @@ fun defaultMillenniumIconTheme(colors: MillenniumColors): MillenniumIconTheme {
     return MillenniumIconTheme(
         states = MillenniumControlStateProperty(
             default = base,
-            hovered = base.copy(tint = colors.accent),
-            focused = base.copy(tint = colors.accent),
-            pressed = base.copy(tint = colors.accentBottom),
-            disabled = base.copy(tint = colors.muted, alpha = 0.45f),
-            selected = base.copy(tint = colors.accent),
-            error = base.copy(tint = colors.danger),
+            hovered = base,
+            focused = base,
+            pressed = base,
+            disabled = base.copy(alpha = 0.45f),
+            selected = base,
+            error = base,
         ),
     )
 }
@@ -68,7 +64,14 @@ fun MillenniumIcon(
     state: MillenniumControlState = MillenniumControlState.Default,
 ) {
     val properties = MillenniumTheme.iconTheme.states.resolve(state)
-    val targetTint = tint ?: properties.tint
+    val colors = MillenniumTheme.colors
+    val targetTint = tint ?: properties.tint ?: when (state) {
+        MillenniumControlState.Hovered, MillenniumControlState.Focused, MillenniumControlState.Selected -> colors.accent
+        MillenniumControlState.Pressed -> colors.accentBottom
+        MillenniumControlState.Disabled -> colors.muted
+        MillenniumControlState.Error -> colors.danger
+        MillenniumControlState.Default -> colors.text
+    }
     val animatedTint = animateColorAsState(targetTint, tween(properties.tintAnimationMillis)).value
     UnstyledIcon(
         imageVector,
@@ -110,8 +113,8 @@ private fun MillenniumIconPreview() = MillenniumPreview {
     androidx.compose.foundation.layout.Row(
         horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(20.dp),
     ) {
-        MillenniumIcon(MillenniumIcons.Sparkle, contentDescription = "Sparkle", tint = MillenniumTheme.iconTheme.states.default.colors.accent)
+        MillenniumIcon(MillenniumIcons.Sparkle, contentDescription = "Sparkle", tint = MillenniumTheme.colors.accent)
         MillenniumIcon(MillenniumIcons.Music, contentDescription = "Music")
-        MillenniumIcon(MillenniumIcons.Check, contentDescription = "Check", tint = MillenniumTheme.iconTheme.states.default.colors.success)
+        MillenniumIcon(MillenniumIcons.Check, contentDescription = "Check", tint = MillenniumTheme.colors.success)
     }
 }

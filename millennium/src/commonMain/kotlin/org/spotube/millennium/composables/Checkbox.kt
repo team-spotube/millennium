@@ -38,7 +38,6 @@ import androidx.compose.ui.unit.dp
 import com.composeunstyled.LocalTextStyle
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledCheckbox
-import org.spotube.millennium.theme.MillenniumColors
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
@@ -49,21 +48,20 @@ import org.spotube.millennium.theme.millenniumSurface
 
 /** Shared face anatomy for the binary and tri-state checkbox controls. */
 interface MillenniumCheckFaceStyle {
-    val colors: MillenniumColors
-    val faceBackground: Brush
-    val selectedFaceBackground: Brush
-    val selectedFaceForeground: Color
+    val faceBackground: Brush?
+    val selectedFaceBackground: Brush?
+    val selectedFaceForeground: Color?
     val faceShape: Shape
     val faceSize: DpSize
     val markSize: Dp
     val dashSize: DpSize
-    val faceBorderColor: Color
+    val faceBorderColor: Color?
     val faceBorderWidth: Dp
-    val faceGlowColor: Color
+    val faceGlowColor: Color?
     val faceElevation: Dp
     val faceAlpha: Float
     val stateChangeMillis: Int
-    val labelForeground: Color
+    val labelForeground: Color?
     val labelStyle: TextStyle
     val minimumTouchHeight: Dp
     val contentPadding: PaddingValues
@@ -72,21 +70,20 @@ interface MillenniumCheckFaceStyle {
 
 @Immutable
 data class MillenniumCheckboxThemeProperties(
-    override val colors: MillenniumColors,
-    override val faceBackground: Brush,
-    override val selectedFaceBackground: Brush,
-    override val selectedFaceForeground: Color,
+    override val faceBackground: Brush? = null,
+    override val selectedFaceBackground: Brush? = null,
+    override val selectedFaceForeground: Color? = null,
     override val faceShape: Shape,
     override val faceSize: DpSize,
     override val markSize: Dp,
     override val dashSize: DpSize,
-    override val faceBorderColor: Color,
+    override val faceBorderColor: Color? = null,
     override val faceBorderWidth: Dp,
-    override val faceGlowColor: Color,
+    override val faceGlowColor: Color? = null,
     override val faceElevation: Dp,
     override val faceAlpha: Float,
     override val stateChangeMillis: Int,
-    override val labelForeground: Color,
+    override val labelForeground: Color? = null,
     override val labelStyle: TextStyle,
     override val minimumTouchHeight: Dp,
     override val contentPadding: PaddingValues,
@@ -98,23 +95,16 @@ data class MillenniumCheckboxTheme(
     val states: MillenniumControlStateProperty<MillenniumCheckboxThemeProperties>,
 )
 
-fun defaultMillenniumCheckboxTheme(colors: MillenniumColors): MillenniumCheckboxTheme {
+fun defaultMillenniumCheckboxTheme(): MillenniumCheckboxTheme {
     val base = MillenniumCheckboxThemeProperties(
-        colors = colors,
-        faceBackground = millenniumBevelBrush(colors, sunken = true),
-        selectedFaceBackground = gelBrush(colors.accentTop, colors.accentBottom),
-        selectedFaceForeground = colors.onAccent,
         faceShape = androidx.compose.foundation.shape.RoundedCornerShape(5.dp),
         faceSize = DpSize(22.dp, 22.dp),
         markSize = 16.dp,
         dashSize = DpSize(11.dp, 2.dp),
-        faceBorderColor = colors.border,
         faceBorderWidth = 1.dp,
-        faceGlowColor = colors.highlight.copy(alpha = 0.55f),
         faceElevation = 0.dp,
         faceAlpha = 1f,
         stateChangeMillis = 120,
-        labelForeground = colors.text,
         labelStyle = TextStyle(fontWeight = FontWeight.Normal),
         minimumTouchHeight = 44.dp,
         contentPadding = PaddingValues(0.dp),
@@ -123,14 +113,12 @@ fun defaultMillenniumCheckboxTheme(colors: MillenniumColors): MillenniumCheckbox
     return MillenniumCheckboxTheme(
         states = MillenniumControlStateProperty(
             default = base,
-            hovered = base.copy(faceBorderColor = colors.accent, faceGlowColor = colors.highlight),
-            focused = base.copy(faceBorderColor = colors.accent, faceBorderWidth = 2.dp),
+            hovered = base,
+            focused = base.copy(faceBorderWidth = 2.dp),
             pressed = base.copy(faceElevation = 0.dp),
-            disabled = base.copy(faceAlpha = 0.45f, labelForeground = colors.muted),
-            selected = base.copy(
-                faceBorderColor = colors.accentBottom,
-            ),
-            error = base.copy(faceBorderColor = colors.danger, faceBorderWidth = 2.dp),
+            disabled = base.copy(faceAlpha = 0.45f),
+            selected = base,
+            error = base.copy(faceBorderWidth = 2.dp),
         ),
     )
 }
@@ -141,6 +129,14 @@ internal fun MillenniumCheckFace(
     properties: MillenniumCheckFaceStyle,
     state: MillenniumControlState,
 ) {
+    val colors = MillenniumTheme.colors
+    val faceBackground = properties.faceBackground
+        ?: if (value == ToggleableState.Off) millenniumBevelBrush(colors, sunken = true)
+        else gelBrush(colors.accentTop, colors.accentBottom)
+    val borderColor = properties.faceBorderColor
+        ?: if (value == ToggleableState.Off) colors.border else colors.accentBottom
+    val glowColor = properties.faceGlowColor ?: colors.highlight.copy(alpha = 0.55f)
+    val selectedForeground = properties.selectedFaceForeground ?: colors.onAccent
     val selected = value != ToggleableState.Off
     val scale by animateFloatAsState(
         targetValue = if (state == MillenniumControlState.Pressed) 0.94f else 1f,
@@ -151,12 +147,12 @@ internal fun MillenniumCheckFace(
             .size(properties.faceSize)
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .millenniumSurface(
-                background = if (selected) properties.selectedFaceBackground else properties.faceBackground,
+                background = if (selected) properties.selectedFaceBackground ?: gelBrush(colors.accentTop, colors.accentBottom) else faceBackground,
                 shape = properties.faceShape,
-                borderColor = properties.faceBorderColor,
+                borderColor = borderColor,
                 borderWidth = properties.faceBorderWidth,
                 shadowElevation = properties.faceElevation,
-                innerGlowColor = properties.faceGlowColor,
+                innerGlowColor = glowColor,
             )
             .alpha(properties.faceAlpha),
         contentAlignment = Alignment.Center,
@@ -165,12 +161,12 @@ internal fun MillenniumCheckFace(
             ToggleableState.On -> MillenniumIcon(
                 MillenniumIcons.Check,
                 modifier = Modifier.size(properties.markSize),
-                tint = properties.selectedFaceForeground,
+                tint = selectedForeground,
             )
             ToggleableState.Indeterminate -> Box(
                 Modifier
                     .size(properties.dashSize)
-                    .background(properties.selectedFaceForeground, CircleShape),
+                    .background(selectedForeground, CircleShape),
             )
             ToggleableState.Off -> Unit
         }
@@ -198,6 +194,10 @@ fun MillenniumCheckbox(
         else -> MillenniumControlState.Default
     }
     val properties = MillenniumTheme.checkboxTheme.states.resolve(state)
+    val labelColor = properties.labelForeground ?: when (state) {
+        MillenniumControlState.Disabled -> MillenniumTheme.colors.muted
+        else -> MillenniumTheme.colors.text
+    }
     UnstyledCheckbox(
         checked = checked,
         onCheckedChange = onCheckedChange,
@@ -219,7 +219,7 @@ fun MillenniumCheckbox(
             )
             CompositionLocalProvider(
                 LocalTextStyle provides LocalTextStyle.current.merge(properties.labelStyle)
-                    .copy(color = properties.labelForeground),
+                    .copy(color = labelColor),
             ) { Text(label) }
         }
     }

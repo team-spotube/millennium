@@ -66,64 +66,6 @@ data class MillenniumControlStateProperty<T>(
     }
 }
 
-/** Shared semantic color roles. Component themes store their own palette value. */
-@Immutable
-data class MillenniumColors(
-    val background: Color,
-    val surface: Color,
-    val raised: Color,
-    val inset: Color,
-    val text: Color,
-    val muted: Color,
-    val border: Color,
-    val highlight: Color,
-    val accent: Color,
-    val accentTop: Color,
-    val accentBottom: Color,
-    val onAccent: Color,
-    val success: Color,
-    val danger: Color,
-    val scrim: Color,
-)
-
-/** Pearl surfaces and clear navy text for light appearances. */
-val MillenniumLightColors = MillenniumColors(
-    background = Color(0xFFE9EFF5),
-    surface = Color(0xFFF8FAFD),
-    raised = Color.White,
-    inset = Color(0xFFE1E8F0),
-    text = Color(0xFF182C43),
-    muted = Color(0xFF52667C),
-    border = Color(0xFFB3C3D4),
-    highlight = Color.White,
-    accent = Color(0xFF0064C8),
-    accentTop = Color(0xFF3375B5),
-    accentBottom = Color(0xFF0051AF),
-    onAccent = Color.White,
-    success = Color(0xFF257B51),
-    danger = Color(0xFFBC334A),
-    scrim = Color(0x99101E30),
-)
-
-/** Smoked navy surfaces and bright accessible foregrounds for dark appearances. */
-val MillenniumDarkColors = MillenniumColors(
-    background = Color(0xFF0D1522),
-    surface = Color(0xFF182536),
-    raised = Color(0xFF26374B),
-    inset = Color(0xFF101C2A),
-    text = Color(0xFFEAF2FC),
-    muted = Color(0xFFA5B7CC),
-    border = Color(0xFF43566F),
-    highlight = Color(0xFF63768C),
-    accent = Color(0xFF79C4FF),
-    accentTop = Color(0xFF2F75B9),
-    accentBottom = Color(0xFF003E83),
-    onAccent = Color.White,
-    success = Color(0xFF7AE2AE),
-    danger = Color(0xFFFF98A9),
-    scrim = Color(0xBB030912),
-)
-
 /** Four-stop gel highlight: the hard midpoint is a deliberate 2007 reference. */
 fun gelBrush(top: Color, bottom: Color): Brush = Brush.verticalGradient(
     0f to top,

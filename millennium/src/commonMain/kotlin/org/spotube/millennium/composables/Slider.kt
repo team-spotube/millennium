@@ -30,7 +30,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.UnstyledSlider
-import org.spotube.millennium.theme.MillenniumColors
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
@@ -41,22 +40,21 @@ import org.spotube.millennium.theme.millenniumSurface
 
 @Immutable
 data class MillenniumSliderThemeProperties(
-    val colors: MillenniumColors,
-    val trackBackground: Brush,
-    val activeTrackBackground: Brush,
-    val thumbBackground: Brush,
+    val trackBackground: Brush? = null,
+    val activeTrackBackground: Brush? = null,
+    val thumbBackground: Brush? = null,
     val trackShape: Shape,
     val thumbShape: Shape,
     val trackHeight: Dp,
     val thumbSize: Dp,
     val activeThumbSize: Dp,
     val touchTargetHeight: Dp,
-    val trackBorderColor: Color,
+    val trackBorderColor: Color? = null,
     val trackBorderWidth: Dp,
-    val thumbBorderColor: Color,
+    val thumbBorderColor: Color? = null,
     val thumbBorderWidth: Dp,
     val thumbElevation: Dp,
-    val thumbGlowColor: Color,
+    val thumbGlowColor: Color? = null,
     val stateAnimationMillis: Int,
     val alpha: Float = 1f,
 )
@@ -66,35 +64,28 @@ data class MillenniumSliderTheme(
     val states: MillenniumControlStateProperty<MillenniumSliderThemeProperties>,
 )
 
-fun defaultMillenniumSliderTheme(colors: MillenniumColors): MillenniumSliderTheme {
+fun defaultMillenniumSliderTheme(): MillenniumSliderTheme {
     val base = MillenniumSliderThemeProperties(
-        colors = colors,
-        trackBackground = millenniumBevelBrush(colors, sunken = true),
-        activeTrackBackground = gelBrush(colors.accentTop, colors.accentBottom),
-        thumbBackground = Brush.verticalGradient(listOf(colors.raised, colors.surface)),
         trackShape = RoundedCornerShape(50),
         thumbShape = RoundedCornerShape(50),
         trackHeight = 8.dp,
         thumbSize = 22.dp,
         activeThumbSize = 26.dp,
         touchTargetHeight = 44.dp,
-        trackBorderColor = colors.border,
         trackBorderWidth = 1.dp,
-        thumbBorderColor = colors.border,
         thumbBorderWidth = 1.dp,
         thumbElevation = 4.dp,
-        thumbGlowColor = colors.highlight.copy(alpha = 0.55f),
         stateAnimationMillis = 120,
     )
     return MillenniumSliderTheme(
         states = MillenniumControlStateProperty(
             default = base,
-            hovered = base.copy(thumbBorderColor = colors.accent, thumbGlowColor = colors.highlight),
-            focused = base.copy(thumbBorderColor = colors.accent, thumbBorderWidth = 2.dp),
+            hovered = base,
+            focused = base.copy(thumbBorderWidth = 2.dp),
             pressed = base.copy(thumbElevation = 2.dp),
             disabled = base.copy(alpha = 0.45f),
-            selected = base.copy(thumbBorderColor = colors.accent),
-            error = base.copy(trackBorderColor = colors.danger, thumbBorderColor = colors.danger),
+            selected = base,
+            error = base.copy(trackBorderWidth = 2.dp, thumbBorderWidth = 2.dp),
         ),
     )
 }
@@ -121,6 +112,11 @@ fun MillenniumSlider(
         else -> MillenniumControlState.Default
     }
     val properties = MillenniumTheme.sliderTheme.states.resolve(controlState)
+    val colors = MillenniumTheme.colors
+    val trackBackground = properties.trackBackground ?: millenniumBevelBrush(colors, sunken = true)
+    val activeTrackBackground = properties.activeTrackBackground ?: gelBrush(colors.accentTop, colors.accentBottom)
+    val trackBorderColor = properties.trackBorderColor
+        ?: if (controlState == MillenniumControlState.Error) colors.danger else colors.border
     UnstyledSlider(
         value = value,
         onValueChange = onValueChange,
@@ -134,15 +130,15 @@ fun MillenniumSlider(
         track = { state ->
             Box(
                 Modifier.fillMaxWidth().height(properties.trackHeight).millenniumSurface(
-                    background = properties.trackBackground,
+                    background = trackBackground,
                     shape = properties.trackShape,
-                    borderColor = properties.trackBorderColor,
+                    borderColor = trackBorderColor,
                     borderWidth = properties.trackBorderWidth,
                 ),
             ) {
                 Box(
                     Modifier.fillMaxHeight().fillMaxWidth(state.fraction)
-                        .background(properties.activeTrackBackground, properties.trackShape),
+                        .background(activeTrackBackground, properties.trackShape),
                 )
             }
         },
@@ -154,17 +150,25 @@ fun MillenniumSlider(
                 else -> MillenniumControlState.Default
             }
             val thumbProperties = MillenniumTheme.sliderTheme.states.resolve(thumbState)
+            val thumbBackground = thumbProperties.thumbBackground
+                ?: Brush.verticalGradient(listOf(colors.raised, colors.surface))
+            val thumbBorderColor = thumbProperties.thumbBorderColor ?: when (thumbState) {
+                MillenniumControlState.Focused, MillenniumControlState.Selected -> colors.accent
+                MillenniumControlState.Error -> colors.danger
+                else -> colors.border
+            }
+            val thumbGlowColor = thumbProperties.thumbGlowColor ?: colors.highlight.copy(alpha = 0.55f)
             val targetSize = if (state.isPressed || state.isDragging) thumbProperties.activeThumbSize else thumbProperties.thumbSize
             val animatedSize by animateDpAsState(targetSize, tween(thumbProperties.stateAnimationMillis))
             Box(Modifier.size(thumbProperties.touchTargetHeight), contentAlignment = Alignment.Center) {
                 Box(
                     Modifier.size(animatedSize).millenniumSurface(
-                        background = thumbProperties.thumbBackground,
+                        background = thumbBackground,
                         shape = thumbProperties.thumbShape,
-                        borderColor = thumbProperties.thumbBorderColor,
+                        borderColor = thumbBorderColor,
                         borderWidth = thumbProperties.thumbBorderWidth,
                         shadowElevation = thumbProperties.thumbElevation,
-                        innerGlowColor = thumbProperties.thumbGlowColor,
+                        innerGlowColor = thumbGlowColor,
                     ),
                 )
             }

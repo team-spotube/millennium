@@ -18,7 +18,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
-import org.spotube.millennium.theme.MillenniumColors
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
@@ -29,19 +28,18 @@ import org.spotube.millennium.theme.millenniumSurface
 
 @Immutable
 data class MillenniumCardThemeProperties(
-    val colors: MillenniumColors,
-    val background: Brush,
-    val foreground: Color,
+    val background: Brush? = null,
+    val foreground: Color? = null,
     val shape: Shape,
     val maxWidth: Dp,
     val contentPadding: PaddingValues,
     val contentSpacing: Dp,
     val contentTextStyle: TextStyle,
     val shadowElevation: Dp,
-    val shadowColor: Color,
-    val borderColor: Color,
+    val shadowColor: Color? = null,
+    val borderColor: Color? = null,
     val borderWidth: Dp,
-    val innerGlowColor: Color,
+    val innerGlowColor: Color? = null,
     val alpha: Float = 1f,
 )
 
@@ -50,31 +48,25 @@ data class MillenniumCardTheme(
     val states: MillenniumControlStateProperty<MillenniumCardThemeProperties>,
 )
 
-fun defaultMillenniumCardTheme(colors: MillenniumColors): MillenniumCardTheme {
+fun defaultMillenniumCardTheme(): MillenniumCardTheme {
     val base = MillenniumCardThemeProperties(
-        colors = colors,
-        background = millenniumBevelBrush(colors),
-        foreground = colors.text,
         shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
         maxWidth = 640.dp,
         contentPadding = PaddingValues(20.dp),
         contentSpacing = 16.dp,
         contentTextStyle = TextStyle(fontWeight = FontWeight.Normal),
         shadowElevation = 8.dp,
-        shadowColor = Color.Black.copy(alpha = 0.14f),
-        borderColor = colors.border,
         borderWidth = 1.dp,
-        innerGlowColor = colors.highlight.copy(alpha = 0.55f),
     )
     return MillenniumCardTheme(
         states = MillenniumControlStateProperty(
             default = base,
-            hovered = base.copy(shadowElevation = 10.dp, borderColor = colors.accent),
-            focused = base.copy(borderWidth = 2.dp, borderColor = colors.accent),
+            hovered = base.copy(shadowElevation = 10.dp),
+            focused = base.copy(borderWidth = 2.dp),
             pressed = base.copy(shadowElevation = 4.dp),
             disabled = base.copy(alpha = 0.55f),
-            selected = base.copy(borderColor = colors.accent),
-            error = base.copy(borderColor = colors.danger, borderWidth = 2.dp),
+            selected = base.copy(borderWidth = 2.dp),
+            error = base.copy(borderWidth = 2.dp),
         ),
     )
 }
@@ -86,24 +78,25 @@ fun MillenniumCard(
     contentPadding: PaddingValues? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val colors = MillenniumTheme.colors
     val properties = MillenniumTheme.cardTheme.states.resolve(MillenniumControlState.Default)
     Column(
         modifier = modifier
             .widthIn(max = properties.maxWidth)
             .millenniumSurface(
-                background = properties.background,
+                background = properties.background ?: millenniumBevelBrush(colors),
                 shape = properties.shape,
-                borderColor = properties.borderColor,
+                borderColor = properties.borderColor ?: colors.border,
                 borderWidth = properties.borderWidth,
                 shadowElevation = properties.shadowElevation,
-                shadowColor = properties.shadowColor,
-                innerGlowColor = properties.innerGlowColor,
+                shadowColor = properties.shadowColor ?: Color.Black.copy(alpha = 0.14f),
+                innerGlowColor = properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f),
             )
             .padding(contentPadding ?: properties.contentPadding)
             .alpha(properties.alpha),
         verticalArrangement = Arrangement.spacedBy(properties.contentSpacing),
         content = {
-            MillenniumStyledContent(properties.contentTextStyle, properties.foreground) { content() }
+            MillenniumStyledContent(properties.contentTextStyle, properties.foreground ?: colors.text) { content() }
         },
     )
 }
@@ -113,6 +106,6 @@ fun MillenniumCard(
 private fun MillenniumCardPreview() = MillenniumPreview {
     MillenniumCard {
         MillenniumText("A little nostalgia", weight = FontWeight.SemiBold)
-        MillenniumText("Pearl surfaces, a fine bevel, and a soft lift.", color = MillenniumTheme.cardTheme.states.default.colors.muted)
+        MillenniumText("Pearl surfaces, a fine bevel, and a soft lift.", color = MillenniumTheme.colors.muted)
     }
 }

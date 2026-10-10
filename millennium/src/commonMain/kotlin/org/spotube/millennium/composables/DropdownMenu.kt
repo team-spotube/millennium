@@ -34,7 +34,6 @@ import com.composeunstyled.DropdownMenuPanel
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledDropdownMenu
 import com.composeunstyled.UnstyledDropdownMenuItem
-import org.spotube.millennium.theme.MillenniumColors
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
@@ -44,19 +43,18 @@ import org.spotube.millennium.theme.millenniumSurface
 
 @Immutable
 data class MillenniumDropdownMenuThemeProperties(
-    val colors: MillenniumColors,
-    val panelBackground: Brush,
+    val panelBackground: Brush? = null,
     val panelShape: Shape,
-    val panelBorderColor: Color,
+    val panelBorderColor: Color? = null,
     val panelBorderWidth: Dp,
     val panelShadowElevation: Dp,
-    val panelGlowColor: Color,
+    val panelGlowColor: Color? = null,
     val minimumWidth: Dp,
     val sideOffset: Dp,
     val panelPadding: PaddingValues,
-    val itemBackground: Brush,
+    val itemBackground: Brush? = null,
     val itemShape: Shape,
-    val itemForeground: Color,
+    val itemForeground: Color? = null,
     val itemTextStyle: TextStyle,
     val itemMinimumHeight: Dp,
     val itemPadding: PaddingValues,
@@ -70,21 +68,15 @@ data class MillenniumDropdownMenuTheme(
     val states: MillenniumControlStateProperty<MillenniumDropdownMenuThemeProperties>,
 )
 
-fun defaultMillenniumDropdownMenuTheme(colors: MillenniumColors): MillenniumDropdownMenuTheme {
+fun defaultMillenniumDropdownMenuTheme(): MillenniumDropdownMenuTheme {
     val base = MillenniumDropdownMenuThemeProperties(
-        colors = colors,
-        panelBackground = millenniumBevelBrush(colors),
         panelShape = RoundedCornerShape(12.dp),
-        panelBorderColor = colors.border,
         panelBorderWidth = 1.dp,
         panelShadowElevation = 8.dp,
-        panelGlowColor = colors.highlight.copy(alpha = 0.5f),
         minimumWidth = 200.dp,
         sideOffset = 8.dp,
         panelPadding = PaddingValues(4.dp),
-        itemBackground = Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent)),
         itemShape = RoundedCornerShape(8.dp),
-        itemForeground = colors.text,
         itemTextStyle = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium),
         itemMinimumHeight = 44.dp,
         itemPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
@@ -94,12 +86,12 @@ fun defaultMillenniumDropdownMenuTheme(colors: MillenniumColors): MillenniumDrop
     return MillenniumDropdownMenuTheme(
         states = MillenniumControlStateProperty(
             default = base,
-            hovered = base.copy(itemBackground = millenniumBevelBrush(colors), itemForeground = colors.text, alpha = 0.97f),
-            focused = base.copy(itemBackground = millenniumBevelBrush(colors), itemForeground = colors.text),
-            pressed = base.copy(itemBackground = millenniumBevelBrush(colors, sunken = true), alpha = 0.90f),
-            disabled = base.copy(alpha = 0.45f, itemForeground = colors.muted),
-            selected = base.copy(itemBackground = millenniumBevelBrush(colors, accent = true), itemForeground = colors.onAccent),
-            error = base.copy(panelBorderColor = colors.danger, panelBorderWidth = 2.dp),
+            hovered = base.copy(alpha = 0.97f),
+            focused = base,
+            pressed = base.copy(alpha = 0.90f),
+            disabled = base.copy(alpha = 0.45f),
+            selected = base,
+            error = base.copy(panelBorderWidth = 2.dp),
         ),
     )
 }
@@ -113,7 +105,11 @@ fun MillenniumDropdownMenu(
     modifier: Modifier = Modifier,
     anchor: @Composable () -> Unit,
 ) {
+    val colors = MillenniumTheme.colors
     val panelProperties = MillenniumTheme.dropdownMenuTheme.states.default
+    val panelBackground = panelProperties.panelBackground ?: millenniumBevelBrush(colors)
+    val panelBorderColor = panelProperties.panelBorderColor ?: colors.border
+    val panelGlowColor = panelProperties.panelGlowColor ?: colors.highlight.copy(alpha = 0.5f)
     UnstyledDropdownMenu(
         expanded = expanded,
         onExpandedChange = onExpandedChange,
@@ -123,12 +119,12 @@ fun MillenniumDropdownMenu(
         panel = {
             DropdownMenuPanel(
                 Modifier.widthIn(min = panelProperties.minimumWidth).millenniumSurface(
-                    background = panelProperties.panelBackground,
+                    background = panelBackground,
                     shape = panelProperties.panelShape,
-                    borderColor = panelProperties.panelBorderColor,
+                    borderColor = panelBorderColor,
                     borderWidth = panelProperties.panelBorderWidth,
                     shadowElevation = panelProperties.panelShadowElevation,
-                    innerGlowColor = panelProperties.panelGlowColor,
+                    innerGlowColor = panelGlowColor,
                 ).padding(panelProperties.panelPadding).alpha(panelProperties.alpha),
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(panelProperties.itemSpacing)) {
@@ -144,6 +140,17 @@ fun MillenniumDropdownMenu(
                             else -> MillenniumControlState.Default
                         }
                         val properties = MillenniumTheme.dropdownMenuTheme.states.resolve(state)
+                        val itemBackground = properties.itemBackground ?: when (state) {
+                            MillenniumControlState.Hovered, MillenniumControlState.Focused -> millenniumBevelBrush(colors)
+                            MillenniumControlState.Pressed -> millenniumBevelBrush(colors, sunken = true)
+                            MillenniumControlState.Selected -> millenniumBevelBrush(colors, accent = true)
+                            else -> Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
+                        }
+                        val itemForeground = properties.itemForeground ?: when (state) {
+                            MillenniumControlState.Disabled -> colors.muted
+                            MillenniumControlState.Selected -> colors.onAccent
+                            else -> colors.text
+                        }
                         val animatedAlpha = animateFloatAsState(
                             targetValue = properties.alpha,
                             animationSpec = tween(properties.stateAnimationMillis),
@@ -154,10 +161,10 @@ fun MillenniumDropdownMenu(
                             interactionSource = interaction,
                             modifier = Modifier.fillMaxWidth().heightIn(min = properties.itemMinimumHeight)
                                 .alpha(animatedAlpha)
-                                .millenniumSurface(properties.itemBackground, properties.itemShape)
+                                .millenniumSurface(itemBackground, properties.itemShape)
                                 .padding(properties.itemPadding),
                         ) {
-                            Text(item, style = properties.itemTextStyle, color = properties.itemForeground)
+                            Text(item, style = properties.itemTextStyle, color = itemForeground)
                         }
                     }
                 }

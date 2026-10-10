@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledButton
-import org.spotube.millennium.theme.MillenniumColors
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
@@ -55,18 +54,17 @@ data class MillenniumButtonMotion(
 /** Complete, state-specific button appearance and layout configuration. */
 @Immutable
 data class MillenniumButtonThemeProperties(
-    val colors: MillenniumColors,
-    val background: Brush,
-    val foreground: Color,
+    val background: Brush? = null,
+    val foreground: Color? = null,
     val textStyle: TextStyle,
     val shape: Shape,
     val padding: PaddingValues,
     val minSize: DpSize,
     val borderWidth: Dp,
-    val borderColor: Color,
-    val shadows: List<Color>,
+    val borderColor: Color? = null,
+    val shadows: List<Color>? = null,
     val shadowElevation: Dp,
-    val innerGlowColor: Color,
+    val innerGlowColor: Color? = null,
     val innerGlowWidth: Dp = 1.dp,
     val innerGlowInset: Dp = 8.dp,
     val innerGlowTop: Dp = 1.dp,
@@ -83,28 +81,11 @@ data class MillenniumButtonTheme(
     val danger: MillenniumControlStateProperty<MillenniumButtonThemeProperties>,
 )
 
-fun defaultMillenniumButtonTheme(colors: MillenniumColors): MillenniumButtonTheme {
+fun defaultMillenniumButtonTheme(): MillenniumButtonTheme {
     fun variant(style: MillenniumButtonStyle): MillenniumControlStateProperty<MillenniumButtonThemeProperties> {
-        val isPrimary = style == MillenniumButtonStyle.Primary
         val isQuiet = style == MillenniumButtonStyle.Quiet
-        val isDanger = style == MillenniumButtonStyle.Danger
-        val defaultBackground = when {
-            isPrimary -> gelBrush(colors.accentTop, colors.accentBottom)
-            isDanger -> Brush.verticalGradient(listOf(colors.danger, colors.danger))
-            isQuiet -> Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
-            else -> millenniumBevelBrush(colors)
-        }
-        val foreground = when {
-            isPrimary -> colors.onAccent
-            isDanger -> colors.surface
-            else -> colors.text
-        }
         val base = MillenniumButtonThemeProperties(
-            colors = colors,
-            background = defaultBackground,
-            foreground = foreground,
             textStyle = TextStyle(
-                color = foreground,
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -113,33 +94,16 @@ fun defaultMillenniumButtonTheme(colors: MillenniumColors): MillenniumButtonThem
             padding = PaddingValues(horizontal = 18.dp, vertical = 10.dp),
             minSize = DpSize(48.dp, 44.dp),
             borderWidth = if (isQuiet) 0.dp else 1.dp,
-            borderColor = when {
-                isDanger -> colors.danger
-                isPrimary -> colors.accentBottom
-                else -> colors.border
-            },
-            shadows = listOf(Color.Black.copy(alpha = 0.16f)),
             shadowElevation = if (isQuiet) 0.dp else 3.dp,
-            innerGlowColor = colors.highlight.copy(alpha = 0.35f),
         )
         return MillenniumControlStateProperty(
             default = base,
-            hovered = base.copy(
-                borderColor = if (isQuiet) colors.accent else base.borderColor,
-                innerGlowColor = colors.highlight.copy(alpha = 0.60f),
-            ),
-            focused = base.copy(
-                borderWidth = 2.dp,
-                borderColor = colors.accent,
-                innerGlowColor = colors.highlight.copy(alpha = 0.60f),
-            ),
-            pressed = base.copy(
-                shadowElevation = 0.dp,
-                innerGlowColor = colors.inset.copy(alpha = 0.32f),
-            ),
+            hovered = base.copy(borderWidth = if (isQuiet) 1.dp else base.borderWidth),
+            focused = base.copy(borderWidth = 2.dp),
+            pressed = base.copy(shadowElevation = 0.dp),
             disabled = base.copy(alpha = 0.45f, shadowElevation = 0.dp),
-            selected = base.copy(borderColor = colors.accent),
-            error = base.copy(borderWidth = 2.dp, borderColor = colors.danger),
+            selected = base.copy(borderWidth = 2.dp),
+            error = base.copy(borderWidth = 2.dp),
         )
     }
 
@@ -178,6 +142,36 @@ fun MillenniumButton(
         else -> MillenniumControlState.Default
     }
     val properties = MillenniumTheme.buttonTheme.forStyle(style).resolve(state)
+    val colors = MillenniumTheme.colors
+    val foreground = properties.foreground
+        ?: properties.textStyle.color.takeUnless { it == Color.Unspecified }
+        ?: when (style) {
+            MillenniumButtonStyle.Primary -> colors.onAccent
+            MillenniumButtonStyle.Danger -> colors.surface
+            else -> colors.text
+        }
+    val background = properties.background ?: when (style) {
+        MillenniumButtonStyle.Primary -> gelBrush(colors.accentTop, colors.accentBottom)
+        MillenniumButtonStyle.Secondary -> millenniumBevelBrush(colors)
+        MillenniumButtonStyle.Quiet -> Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
+        MillenniumButtonStyle.Danger -> Brush.verticalGradient(listOf(colors.danger, colors.danger))
+    }
+    val borderColor = properties.borderColor ?: when (state) {
+        MillenniumControlState.Focused, MillenniumControlState.Selected -> colors.accent
+        MillenniumControlState.Error -> colors.danger
+        else -> when (style) {
+            MillenniumButtonStyle.Primary -> colors.accentBottom
+            MillenniumButtonStyle.Secondary -> colors.border
+            MillenniumButtonStyle.Quiet -> Color.Transparent
+            MillenniumButtonStyle.Danger -> colors.danger
+        }
+    }
+    val innerGlowColor = properties.innerGlowColor ?: when (state) {
+        MillenniumControlState.Hovered, MillenniumControlState.Focused -> colors.highlight.copy(alpha = 0.60f)
+        MillenniumControlState.Pressed -> colors.inset.copy(alpha = 0.32f)
+        else -> colors.highlight.copy(alpha = 0.35f)
+    }
+    val shadowColors = properties.shadows ?: listOf(Color.Black.copy(alpha = 0.16f))
     val targetScale = when {
         !enabled -> 1f
         pressed -> properties.motion.pressedScale
@@ -202,20 +196,20 @@ fun MillenniumButton(
             .defaultMinSize(minWidth = properties.minSize.width, minHeight = properties.minSize.height)
             .alpha(properties.alpha)
             .millenniumSurface(
-                background = properties.background,
+                background = background,
                 shape = properties.shape,
-                borderColor = properties.borderColor,
+                borderColor = borderColor,
                 borderWidth = properties.borderWidth,
                 shadowElevation = elevation,
-                shadowColors = properties.shadows,
-                innerGlowColor = properties.innerGlowColor,
+                shadowColors = shadowColors,
+                innerGlowColor = innerGlowColor,
                 innerGlowWidth = properties.innerGlowWidth,
                 innerGlowInset = properties.innerGlowInset,
                 innerGlowTop = properties.innerGlowTop,
             ),
         contentPadding = properties.padding,
     ) {
-        MillenniumStyledContent(properties.textStyle, properties.foreground, content)
+        MillenniumStyledContent(properties.textStyle, foreground, content)
     }
 }
 

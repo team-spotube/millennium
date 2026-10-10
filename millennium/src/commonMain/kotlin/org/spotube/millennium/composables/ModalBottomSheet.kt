@@ -35,7 +35,6 @@ import com.composeunstyled.Sheet
 import com.composeunstyled.SheetDetent
 import com.composeunstyled.UnstyledModalBottomSheet
 import com.composeunstyled.rememberModalBottomSheetState
-import org.spotube.millennium.theme.MillenniumColors
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
@@ -46,20 +45,19 @@ import org.spotube.millennium.theme.millenniumSurface
 
 @Immutable
 data class MillenniumModalBottomSheetThemeProperties(
-    val colors: MillenniumColors,
-    val background: Brush,
-    val foreground: Color,
+    val background: Brush? = null,
+    val foreground: Color? = null,
     val shape: Shape,
     val maximumWidth: Dp,
     val contentPadding: PaddingValues,
     val contentSpacing: Dp,
     val handleSize: DpSize,
-    val handleColor: Color,
-    val borderColor: Color,
+    val handleColor: Color? = null,
+    val borderColor: Color? = null,
     val borderWidth: Dp,
     val shadowElevation: Dp,
-    val innerGlowColor: Color,
-    val scrimColor: Color,
+    val innerGlowColor: Color? = null,
+    val scrimColor: Color? = null,
     val animationMillis: Int,
     val alpha: Float,
 )
@@ -69,34 +67,27 @@ data class MillenniumModalBottomSheetTheme(
     val states: MillenniumControlStateProperty<MillenniumModalBottomSheetThemeProperties>,
 )
 
-fun defaultMillenniumModalBottomSheetTheme(colors: MillenniumColors): MillenniumModalBottomSheetTheme {
+fun defaultMillenniumModalBottomSheetTheme(): MillenniumModalBottomSheetTheme {
     val base = MillenniumModalBottomSheetThemeProperties(
-        colors = colors,
-        background = millenniumBevelBrush(colors),
-        foreground = colors.text,
         shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
         maximumWidth = 640.dp,
         contentPadding = PaddingValues(24.dp),
         contentSpacing = 16.dp,
         handleSize = DpSize(40.dp, 5.dp),
-        handleColor = colors.muted,
-        borderColor = colors.border,
         borderWidth = 1.dp,
         shadowElevation = 12.dp,
-        innerGlowColor = colors.highlight.copy(alpha = 0.55f),
-        scrimColor = colors.scrim,
         animationMillis = 220,
         alpha = 1f,
     )
     return MillenniumModalBottomSheetTheme(
         states = MillenniumControlStateProperty(
             default = base,
-            hovered = base.copy(borderColor = colors.accent),
-            focused = base.copy(borderColor = colors.accent, borderWidth = 2.dp),
+            hovered = base,
+            focused = base.copy(borderWidth = 2.dp),
             pressed = base.copy(shadowElevation = 8.dp),
             disabled = base.copy(alpha = 0.55f),
-            selected = base.copy(borderColor = colors.accent),
-            error = base.copy(borderColor = colors.danger, borderWidth = 2.dp),
+            selected = base,
+            error = base.copy(borderWidth = 2.dp),
         ),
     )
 }
@@ -106,12 +97,19 @@ fun MillenniumModalBottomSheet(
     state: ModalBottomSheetState,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val colors = MillenniumTheme.colors
     val properties = MillenniumTheme.modalBottomSheetTheme.states.resolve(MillenniumControlState.Default)
+    val background = properties.background ?: millenniumBevelBrush(colors)
+    val foreground = properties.foreground ?: colors.text
+    val handleColor = properties.handleColor ?: colors.muted
+    val borderColor = properties.borderColor ?: colors.border
+    val glowColor = properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f)
+    val scrimColor = properties.scrimColor ?: colors.scrim
     UnstyledModalBottomSheet(
         state = state,
         overlay = {
             Scrim(
-                scrimColor = properties.scrimColor,
+                scrimColor = scrimColor,
                 enter = fadeIn(animationSpec = tween(properties.animationMillis)),
                 exit = fadeOut(animationSpec = tween(properties.animationMillis)),
             )
@@ -120,12 +118,12 @@ fun MillenniumModalBottomSheet(
         Box(Modifier.fillMaxWidth(), contentAlignment = androidx.compose.ui.Alignment.TopCenter) {
             Sheet(
                 Modifier.widthIn(max = properties.maximumWidth).fillMaxWidth().millenniumSurface(
-                    background = properties.background,
+                    background = background,
                     shape = properties.shape,
-                    borderColor = properties.borderColor,
+                    borderColor = borderColor,
                     borderWidth = properties.borderWidth,
                     shadowElevation = properties.shadowElevation,
-                    innerGlowColor = properties.innerGlowColor,
+                    innerGlowColor = glowColor,
                 ).alpha(properties.alpha),
             ) {
                 Column(
@@ -134,9 +132,9 @@ fun MillenniumModalBottomSheet(
                     horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
                 ) {
                     DragIndication(
-                        Modifier.size(properties.handleSize).background(properties.handleColor, CircleShape),
+                        Modifier.size(properties.handleSize).background(handleColor, CircleShape),
                     )
-                    MillenniumStyledContent(TextStyle(color = properties.foreground), properties.foreground) {
+                    MillenniumStyledContent(TextStyle(color = foreground), foreground) {
                         content()
                     }
                 }
@@ -151,6 +149,6 @@ private fun MillenniumModalBottomSheetPreview() = MillenniumPreview {
     val state = rememberModalBottomSheetState(initialDetent = SheetDetent.FullyExpanded)
     MillenniumModalBottomSheet(state) {
         MillenniumText("Your next favorite track", weight = FontWeight.SemiBold)
-        MillenniumText("A modal sheet with a soft glass finish.", color = MillenniumTheme.modalBottomSheetTheme.states.default.colors.muted)
+        MillenniumText("A modal sheet with a soft glass finish.", color = MillenniumTheme.colors.muted)
     }
 }

@@ -39,7 +39,6 @@ import com.composeunstyled.DisclosedContent
 import com.composeunstyled.DisclosureButton
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledDisclosure
-import org.spotube.millennium.theme.MillenniumColors
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
@@ -50,14 +49,13 @@ import org.spotube.millennium.theme.millenniumSurface
 
 @Immutable
 data class MillenniumDisclosureThemeProperties(
-    val colors: MillenniumColors,
-    val background: Brush,
-    val foreground: Color,
+    val background: Brush? = null,
+    val foreground: Color? = null,
     val shape: Shape,
-    val borderColor: Color,
+    val borderColor: Color? = null,
     val borderWidth: Dp,
     val shadowElevation: Dp,
-    val innerGlowColor: Color,
+    val innerGlowColor: Color? = null,
     val titleStyle: TextStyle,
     val contentStyle: TextStyle,
     val minimumHeaderHeight: Dp,
@@ -74,16 +72,11 @@ data class MillenniumDisclosureTheme(
     val states: MillenniumControlStateProperty<MillenniumDisclosureThemeProperties>,
 )
 
-fun defaultMillenniumDisclosureTheme(colors: MillenniumColors): MillenniumDisclosureTheme {
+fun defaultMillenniumDisclosureTheme(): MillenniumDisclosureTheme {
     val base = MillenniumDisclosureThemeProperties(
-        colors = colors,
-        background = millenniumBevelBrush(colors),
-        foreground = colors.text,
         shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-        borderColor = colors.border,
         borderWidth = 1.dp,
         shadowElevation = 0.dp,
-        innerGlowColor = colors.highlight.copy(alpha = 0.5f),
         titleStyle = TextStyle(fontSize = 15.sp, lineHeight = 21.sp, fontWeight = FontWeight.SemiBold),
         contentStyle = TextStyle(fontSize = 14.sp, lineHeight = 21.sp),
         minimumHeaderHeight = 48.dp,
@@ -96,12 +89,12 @@ fun defaultMillenniumDisclosureTheme(colors: MillenniumColors): MillenniumDisclo
     return MillenniumDisclosureTheme(
         states = MillenniumControlStateProperty(
             default = base,
-            hovered = base.copy(borderColor = colors.accent),
-            focused = base.copy(borderColor = colors.accent, borderWidth = 2.dp),
+            hovered = base,
+            focused = base.copy(borderWidth = 2.dp),
             pressed = base.copy(shadowElevation = 2.dp),
-            disabled = base.copy(alpha = 0.45f, foreground = colors.muted),
-            selected = base.copy(borderColor = colors.accent),
-            error = base.copy(borderColor = colors.danger, borderWidth = 2.dp),
+            disabled = base.copy(alpha = 0.45f),
+            selected = base,
+            error = base.copy(borderWidth = 2.dp),
         ),
     )
 }
@@ -126,6 +119,13 @@ fun MillenniumDisclosure(
         else -> MillenniumControlState.Default
     }
     val properties = MillenniumTheme.disclosureTheme.states.resolve(state)
+    val colors = MillenniumTheme.colors
+    val foreground = properties.foreground ?: colors.text
+    val borderColor = properties.borderColor ?: when (state) {
+        MillenniumControlState.Hovered, MillenniumControlState.Focused, MillenniumControlState.Selected -> colors.accent
+        MillenniumControlState.Error -> colors.danger
+        else -> colors.border
+    }
     val arrowRotation by animateFloatAsState(
         targetValue = if (expanded) 180f else 0f,
         animationSpec = tween(properties.animationMillis),
@@ -134,12 +134,12 @@ fun MillenniumDisclosure(
         expanded = expanded,
         onExpandedChange = onExpandedChange,
         modifier = modifier.millenniumSurface(
-            background = properties.background,
+            background = properties.background ?: millenniumBevelBrush(colors),
             shape = properties.shape,
-            borderColor = properties.borderColor,
+            borderColor = borderColor,
             borderWidth = properties.borderWidth,
             shadowElevation = properties.shadowElevation,
-            innerGlowColor = properties.innerGlowColor,
+            innerGlowColor = properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.5f),
         ).alpha(properties.alpha),
     ) {
         Column {
@@ -151,11 +151,11 @@ fun MillenniumDisclosure(
                 interactionSource = interaction,
             ) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(title, modifier = Modifier.weight(1f), style = properties.titleStyle, color = properties.foreground)
+                    Text(title, modifier = Modifier.weight(1f), style = properties.titleStyle, color = foreground)
                     MillenniumIcon(
                         MillenniumIcons.Chevron,
                         modifier = Modifier.rotate(arrowRotation),
-                        tint = properties.foreground,
+                        tint = foreground,
                     )
                 }
             }
@@ -169,7 +169,7 @@ fun MillenniumDisclosure(
                     Modifier.padding(properties.contentPadding),
                     verticalArrangement = Arrangement.spacedBy(properties.contentSpacing),
                 ) {
-                    MillenniumStyledContent(properties.contentStyle, properties.foreground, content)
+                    MillenniumStyledContent(properties.contentStyle, foreground, content)
                 }
             }
         }

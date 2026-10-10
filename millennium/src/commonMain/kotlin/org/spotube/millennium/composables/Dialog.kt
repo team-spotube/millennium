@@ -30,7 +30,6 @@ import com.composeunstyled.DialogPanel
 import com.composeunstyled.Scrim
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledDialog
-import org.spotube.millennium.theme.MillenniumColors
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
@@ -41,20 +40,19 @@ import org.spotube.millennium.theme.millenniumSurface
 
 @Immutable
 data class MillenniumDialogThemeProperties(
-    val colors: MillenniumColors,
-    val panelBackground: Brush,
+    val panelBackground: Brush? = null,
     val shape: Shape,
-    val foreground: Color,
+    val foreground: Color? = null,
     val titleStyle: TextStyle,
-    val panelBorderColor: Color,
+    val panelBorderColor: Color? = null,
     val panelBorderWidth: Dp,
     val panelShadowElevation: Dp,
-    val panelGlowColor: Color,
+    val panelGlowColor: Color? = null,
     val panelMaxWidth: Dp,
     val overlayPadding: Dp,
     val contentPadding: Dp,
     val contentSpacing: Dp,
-    val scrimColor: Color,
+    val scrimColor: Color? = null,
     val enterScale: Float,
     val animationMillis: Int,
     val alpha: Float = 1f,
@@ -65,34 +63,28 @@ data class MillenniumDialogTheme(
     val states: MillenniumControlStateProperty<MillenniumDialogThemeProperties>,
 )
 
-fun defaultMillenniumDialogTheme(colors: MillenniumColors): MillenniumDialogTheme {
+fun defaultMillenniumDialogTheme(): MillenniumDialogTheme {
     val base = MillenniumDialogThemeProperties(
-        colors = colors,
-        panelBackground = millenniumBevelBrush(colors),
         shape = RoundedCornerShape(18.dp),
-        foreground = colors.text,
         titleStyle = TextStyle(fontSize = 22.sp, lineHeight = 29.sp, fontWeight = FontWeight.SemiBold),
-        panelBorderColor = colors.border,
         panelBorderWidth = 1.dp,
         panelShadowElevation = 12.dp,
-        panelGlowColor = colors.highlight.copy(alpha = 0.6f),
         panelMaxWidth = 480.dp,
         overlayPadding = 24.dp,
         contentPadding = 24.dp,
         contentSpacing = 16.dp,
-        scrimColor = colors.scrim,
         enterScale = 0.96f,
         animationMillis = 180,
     )
     return MillenniumDialogTheme(
         states = MillenniumControlStateProperty(
             default = base,
-            hovered = base.copy(panelBorderColor = colors.accent),
-            focused = base.copy(panelBorderColor = colors.accent, panelBorderWidth = 2.dp),
+            hovered = base,
+            focused = base.copy(panelBorderWidth = 2.dp),
             pressed = base.copy(panelShadowElevation = 8.dp),
             disabled = base.copy(alpha = 0.65f),
-            selected = base.copy(panelBorderColor = colors.accent),
-            error = base.copy(panelBorderColor = colors.danger, panelBorderWidth = 2.dp),
+            selected = base,
+            error = base.copy(panelBorderWidth = 2.dp),
         ),
     )
 }
@@ -105,13 +97,19 @@ fun MillenniumDialog(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val colors = MillenniumTheme.colors
     val properties = MillenniumTheme.dialogTheme.states.resolve(MillenniumControlState.Default)
+    val foreground = properties.foreground ?: colors.text
+    val panelBorderColor = properties.panelBorderColor ?: colors.border
+    val panelBackground = properties.panelBackground ?: millenniumBevelBrush(colors)
+    val panelGlowColor = properties.panelGlowColor ?: colors.highlight.copy(alpha = 0.6f)
+    val scrimColor = properties.scrimColor ?: colors.scrim
     UnstyledDialog(
         visible = visible,
         onDismissRequest = onDismissRequest,
         overlay = {
             Scrim(
-                scrimColor = properties.scrimColor,
+                scrimColor = scrimColor,
                 enter = fadeIn(animationSpec = tween(properties.animationMillis)),
                 exit = fadeOut(animationSpec = tween(properties.animationMillis)),
             )
@@ -124,12 +122,12 @@ fun MillenniumDialog(
             DialogPanel(
                 modifier.widthIn(max = properties.panelMaxWidth).fillMaxWidth().alpha(properties.alpha)
                     .millenniumSurface(
-                        background = properties.panelBackground,
+                        background = panelBackground,
                         shape = properties.shape,
-                        borderColor = properties.panelBorderColor,
+                        borderColor = panelBorderColor,
                         borderWidth = properties.panelBorderWidth,
                         shadowElevation = properties.panelShadowElevation,
-                        innerGlowColor = properties.panelGlowColor,
+                        innerGlowColor = panelGlowColor,
                     ),
                 paneTitle = title,
                 enter = fadeIn(animationSpec = tween(properties.animationMillis)) +
@@ -137,14 +135,14 @@ fun MillenniumDialog(
                 exit = fadeOut(animationSpec = tween(properties.animationMillis)),
             ) {
                 MillenniumStyledContent(
-                    TextStyle(color = properties.foreground),
-                    properties.foreground,
+                    TextStyle(color = foreground),
+                    foreground,
                 ) {
                     Column(
                         Modifier.padding(properties.contentPadding),
                         verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(properties.contentSpacing),
                     ) {
-                        Text(title, style = properties.titleStyle, color = properties.foreground)
+                        Text(title, style = properties.titleStyle, color = foreground)
                         content()
                     }
                 }

@@ -20,7 +20,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledAvatar
-import org.spotube.millennium.theme.MillenniumColors
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
@@ -30,17 +29,16 @@ import org.spotube.millennium.theme.millenniumSurface
 
 @Immutable
 data class MillenniumAvatarThemeProperties(
-    val colors: MillenniumColors,
-    val background: Brush,
-    val foreground: Color,
+    val background: Brush? = null,
+    val foreground: Color? = null,
     val shape: Shape,
     val size: Dp,
     val textStyle: TextStyle,
-    val borderColor: Color,
+    val borderColor: Color? = null,
     val borderWidth: Dp,
     val shadowElevation: Dp,
-    val shadowColor: Color,
-    val innerGlowColor: Color,
+    val shadowColor: Color? = null,
+    val innerGlowColor: Color? = null,
     val sizeAnimationMillis: Int,
     val alpha: Float = 1f,
 )
@@ -50,30 +48,24 @@ data class MillenniumAvatarTheme(
     val states: MillenniumControlStateProperty<MillenniumAvatarThemeProperties>,
 )
 
-fun defaultMillenniumAvatarTheme(colors: MillenniumColors): MillenniumAvatarTheme {
+fun defaultMillenniumAvatarTheme(): MillenniumAvatarTheme {
     val base = MillenniumAvatarThemeProperties(
-        colors = colors,
-        background = gelBrush(colors.accentTop, colors.accentBottom),
-        foreground = colors.onAccent,
         shape = RoundedCornerShape(50),
         size = 48.dp,
         textStyle = TextStyle(fontWeight = FontWeight.Bold),
-        borderColor = colors.accentBottom,
         borderWidth = 1.dp,
         shadowElevation = 3.dp,
-        shadowColor = Color.Black.copy(alpha = 0.16f),
-        innerGlowColor = colors.highlight.copy(alpha = 0.55f),
         sizeAnimationMillis = 140,
     )
     return MillenniumAvatarTheme(
         states = MillenniumControlStateProperty(
             default = base,
-            hovered = base.copy(innerGlowColor = colors.highlight),
-            focused = base.copy(borderColor = colors.accent, borderWidth = 2.dp),
+            hovered = base,
+            focused = base.copy(borderWidth = 2.dp),
             pressed = base.copy(shadowElevation = 1.dp),
             disabled = base.copy(alpha = 0.45f),
-            selected = base.copy(borderColor = colors.accent),
-            error = base.copy(borderColor = colors.danger, borderWidth = 2.dp),
+            selected = base,
+            error = base.copy(borderWidth = 2.dp),
         ),
     )
 }
@@ -86,6 +78,7 @@ fun MillenniumAvatar(
     painter: Painter? = null,
     size: Dp? = null,
 ) {
+    val colors = MillenniumTheme.colors
     val properties = MillenniumTheme.avatarTheme.states.resolve(MillenniumControlState.Default)
     val targetSize = size ?: properties.size
     val animatedSize = animateDpAsState(targetSize, tween(properties.sizeAnimationMillis)).value
@@ -93,13 +86,13 @@ fun MillenniumAvatar(
         painter = painter,
         contentDescription = contentDescription,
         modifier = modifier.size(animatedSize).millenniumSurface(
-            background = properties.background,
+            background = properties.background ?: gelBrush(colors.accentTop, colors.accentBottom),
             shape = properties.shape,
-            borderColor = properties.borderColor,
+            borderColor = properties.borderColor ?: colors.accentBottom,
             borderWidth = properties.borderWidth,
             shadowElevation = properties.shadowElevation,
-            shadowColor = properties.shadowColor,
-            innerGlowColor = properties.innerGlowColor,
+            shadowColor = properties.shadowColor ?: Color.Black.copy(alpha = 0.16f),
+            innerGlowColor = properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f),
         ).alpha(properties.alpha),
         underlay = {
             val fontSize = properties.textStyle.fontSize.takeUnless { it == androidx.compose.ui.unit.TextUnit.Unspecified }
@@ -107,7 +100,7 @@ fun MillenniumAvatar(
             Text(
                 initials,
                 style = properties.textStyle,
-                color = properties.foreground,
+                color = properties.foreground ?: colors.onAccent,
                 fontSize = fontSize,
             )
         },

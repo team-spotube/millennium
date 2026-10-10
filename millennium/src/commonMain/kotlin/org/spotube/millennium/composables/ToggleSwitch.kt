@@ -35,7 +35,6 @@ import com.composeunstyled.Text
 import com.composeunstyled.Track
 import com.composeunstyled.Thumb
 import com.composeunstyled.UnstyledSwitch
-import org.spotube.millennium.theme.MillenniumColors
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
@@ -46,21 +45,20 @@ import org.spotube.millennium.theme.millenniumSurface
 
 @Immutable
 data class MillenniumToggleSwitchThemeProperties(
-    val colors: MillenniumColors,
-    val trackBackground: Brush,
-    val selectedTrackBackground: Brush,
+    val trackBackground: Brush? = null,
+    val selectedTrackBackground: Brush? = null,
     val trackShape: Shape,
     val trackSize: DpSize,
-    val trackBorderColor: Color,
+    val trackBorderColor: Color? = null,
     val trackBorderWidth: Dp,
-    val trackGlowColor: Color,
-    val thumbBackground: Brush,
+    val trackGlowColor: Color? = null,
+    val thumbBackground: Brush? = null,
     val thumbShape: Shape,
     val thumbSize: Dp,
     val thumbInset: Dp,
     val thumbElevation: Dp,
     val minimumTouchHeight: Dp,
-    val labelForeground: Color,
+    val labelForeground: Color? = null,
     val labelStyle: TextStyle,
     val contentPadding: PaddingValues,
     val contentSpacing: Dp,
@@ -73,23 +71,16 @@ data class MillenniumToggleSwitchTheme(
     val states: MillenniumControlStateProperty<MillenniumToggleSwitchThemeProperties>,
 )
 
-fun defaultMillenniumToggleSwitchTheme(colors: MillenniumColors): MillenniumToggleSwitchTheme {
+fun defaultMillenniumToggleSwitchTheme(): MillenniumToggleSwitchTheme {
     val base = MillenniumToggleSwitchThemeProperties(
-        colors = colors,
-        trackBackground = millenniumBevelBrush(colors, sunken = true),
-        selectedTrackBackground = gelBrush(colors.accentTop, colors.accentBottom),
         trackShape = RoundedCornerShape(50),
         trackSize = DpSize(52.dp, 30.dp),
-        trackBorderColor = colors.border,
         trackBorderWidth = 1.dp,
-        trackGlowColor = colors.highlight.copy(alpha = 0.45f),
-        thumbBackground = Brush.verticalGradient(listOf(colors.raised, colors.surface)),
         thumbShape = RoundedCornerShape(50),
         thumbSize = 24.dp,
         thumbInset = 3.dp,
         thumbElevation = 3.dp,
         minimumTouchHeight = 44.dp,
-        labelForeground = colors.text,
         labelStyle = TextStyle(fontWeight = FontWeight.Normal),
         contentPadding = PaddingValues(0.dp),
         contentSpacing = 12.dp,
@@ -98,12 +89,12 @@ fun defaultMillenniumToggleSwitchTheme(colors: MillenniumColors): MillenniumTogg
     return MillenniumToggleSwitchTheme(
         states = MillenniumControlStateProperty(
             default = base,
-            hovered = base.copy(trackBorderColor = colors.accent, trackGlowColor = colors.highlight),
-            focused = base.copy(trackBorderColor = colors.accent, trackBorderWidth = 2.dp),
+            hovered = base,
+            focused = base.copy(trackBorderWidth = 2.dp),
             pressed = base.copy(thumbElevation = 1.dp),
-            disabled = base.copy(alpha = 0.45f, labelForeground = colors.muted),
-            selected = base.copy(trackBorderColor = colors.accentBottom),
-            error = base.copy(trackBorderColor = colors.danger, trackBorderWidth = 2.dp),
+            disabled = base.copy(alpha = 0.45f),
+            selected = base,
+            error = base.copy(trackBorderWidth = 2.dp),
         ),
     )
 }
@@ -129,6 +120,17 @@ fun MillenniumSwitch(
         else -> MillenniumControlState.Default
     }
     val properties = MillenniumTheme.toggleSwitchTheme.states.resolve(state)
+    val colors = MillenniumTheme.colors
+    val trackBackground = properties.trackBackground ?: millenniumBevelBrush(colors, sunken = true)
+    val selectedTrackBackground = properties.selectedTrackBackground ?: gelBrush(colors.accentTop, colors.accentBottom)
+    val trackBorderColor = properties.trackBorderColor ?: when (state) {
+        MillenniumControlState.Focused, MillenniumControlState.Hovered, MillenniumControlState.Selected -> colors.accent
+        MillenniumControlState.Error -> colors.danger
+        else -> colors.border
+    }
+    val trackGlowColor = properties.trackGlowColor ?: colors.highlight.copy(alpha = 0.45f)
+    val thumbBackground = properties.thumbBackground ?: Brush.verticalGradient(listOf(colors.raised, colors.surface))
+    val labelForeground = properties.labelForeground ?: if (state == MillenniumControlState.Disabled) colors.muted else colors.text
     UnstyledSwitch(
         checked = checked,
         onCheckedChange = onCheckedChange,
@@ -147,11 +149,11 @@ fun MillenniumSwitch(
                 Modifier
                     .size(properties.trackSize)
                     .millenniumSurface(
-                        background = if (checked) properties.selectedTrackBackground else properties.trackBackground,
+                        background = if (checked) selectedTrackBackground else trackBackground,
                         shape = properties.trackShape,
-                        borderColor = properties.trackBorderColor,
+                        borderColor = trackBorderColor,
                         borderWidth = properties.trackBorderWidth,
-                        innerGlowColor = properties.trackGlowColor,
+                        innerGlowColor = trackGlowColor,
                     ),
             ) {
                 Thumb(
@@ -160,7 +162,7 @@ fun MillenniumSwitch(
                         .padding(properties.thumbInset)
                         .size(properties.thumbSize)
                         .millenniumSurface(
-                            background = properties.thumbBackground,
+                            background = thumbBackground,
                             shape = properties.thumbShape,
                             shadowElevation = properties.thumbElevation,
                         ),
@@ -168,7 +170,7 @@ fun MillenniumSwitch(
             }
             CompositionLocalProvider(
                 LocalTextStyle provides LocalTextStyle.current.merge(properties.labelStyle)
-                    .copy(color = properties.labelForeground),
+                    .copy(color = labelForeground),
             ) { Text(label) }
         }
     }

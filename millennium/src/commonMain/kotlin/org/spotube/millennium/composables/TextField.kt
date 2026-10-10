@@ -35,7 +35,6 @@ import androidx.compose.foundation.text.selection.TextSelectionColors
 import com.composeunstyled.Text
 import com.composeunstyled.TextInput
 import com.composeunstyled.UnstyledTextField
-import org.spotube.millennium.theme.MillenniumColors
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
@@ -45,19 +44,18 @@ import org.spotube.millennium.theme.millenniumSurface
 
 @Immutable
 data class MillenniumTextFieldThemeProperties(
-    val colors: MillenniumColors,
-    val background: Brush,
+    val background: Brush? = null,
     val shape: Shape,
     val textStyle: TextStyle,
     val labelStyle: TextStyle,
     val placeholderStyle: TextStyle,
     val errorStyle: TextStyle,
-    val foreground: Color,
-    val placeholderColor: Color,
-    val cursorColor: Color,
-    val selectionColor: Color,
-    val errorColor: Color,
-    val borderColor: Color,
+    val foreground: Color? = null,
+    val placeholderColor: Color? = null,
+    val cursorColor: Color? = null,
+    val selectionColor: Color? = null,
+    val errorColor: Color? = null,
+    val borderColor: Color? = null,
     val borderWidth: Dp,
     val minimumHeight: Dp,
     val contentPadding: PaddingValues,
@@ -71,21 +69,13 @@ data class MillenniumTextFieldTheme(
     val states: MillenniumControlStateProperty<MillenniumTextFieldThemeProperties>,
 )
 
-fun defaultMillenniumTextFieldTheme(colors: MillenniumColors): MillenniumTextFieldTheme {
+fun defaultMillenniumTextFieldTheme(): MillenniumTextFieldTheme {
     val base = MillenniumTextFieldThemeProperties(
-        colors = colors,
-        background = millenniumBevelBrush(colors, sunken = true),
         shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
-        textStyle = TextStyle(fontSize = 14.sp, lineHeight = 21.sp, color = colors.text),
-        labelStyle = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium, color = colors.text),
-        placeholderStyle = TextStyle(fontSize = 14.sp, lineHeight = 21.sp, color = colors.muted),
-        errorStyle = TextStyle(fontSize = 12.sp, lineHeight = 17.sp, color = colors.danger),
-        foreground = colors.text,
-        placeholderColor = colors.muted,
-        cursorColor = colors.accent,
-        selectionColor = colors.accent.copy(alpha = 0.25f),
-        errorColor = colors.danger,
-        borderColor = colors.border,
+        textStyle = TextStyle(fontSize = 14.sp, lineHeight = 21.sp),
+        labelStyle = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium),
+        placeholderStyle = TextStyle(fontSize = 14.sp, lineHeight = 21.sp),
+        errorStyle = TextStyle(fontSize = 12.sp, lineHeight = 17.sp),
         borderWidth = 1.dp,
         minimumHeight = 46.dp,
         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
@@ -95,12 +85,12 @@ fun defaultMillenniumTextFieldTheme(colors: MillenniumColors): MillenniumTextFie
     return MillenniumTextFieldTheme(
         states = MillenniumControlStateProperty(
             default = base,
-            hovered = base.copy(borderColor = colors.accent),
-            focused = base.copy(borderColor = colors.accent, borderWidth = 2.dp),
-            pressed = base.copy(borderColor = colors.accent),
-            disabled = base.copy(alpha = 0.45f, foreground = colors.muted),
-            selected = base.copy(borderColor = colors.accent),
-            error = base.copy(borderColor = colors.danger, borderWidth = 2.dp),
+            hovered = base,
+            focused = base.copy(borderWidth = 2.dp),
+            pressed = base,
+            disabled = base.copy(alpha = 0.45f),
+            selected = base,
+            error = base.copy(borderWidth = 2.dp),
         ),
     )
 }
@@ -127,8 +117,23 @@ fun MillenniumTextField(
         else -> MillenniumControlState.Default
     }
     val properties = MillenniumTheme.textFieldTheme.states.resolve(controlState)
+    val colors = MillenniumTheme.colors
+    val foreground = properties.foreground
+        ?: properties.textStyle.color.takeUnless { it == Color.Unspecified }
+        ?: if (controlState == MillenniumControlState.Disabled) colors.muted else colors.text
+    val placeholderColor = properties.placeholderColor
+        ?: properties.placeholderStyle.color.takeUnless { it == Color.Unspecified }
+        ?: colors.muted
+    val cursorColor = properties.cursorColor ?: colors.accent
+    val selectionColor = properties.selectionColor ?: colors.accent.copy(alpha = 0.25f)
+    val errorColor = properties.errorColor ?: colors.danger
+    val borderColor = properties.borderColor ?: when (controlState) {
+        MillenniumControlState.Focused, MillenniumControlState.Hovered, MillenniumControlState.Pressed -> colors.accent
+        MillenniumControlState.Error -> colors.danger
+        else -> colors.border
+    }
     val animatedBorder by animateColorAsState(
-        targetValue = properties.borderColor,
+        targetValue = borderColor,
         animationSpec = tween(properties.stateAnimationMillis),
     )
     UnstyledTextField(
@@ -138,29 +143,29 @@ fun MillenniumTextField(
         accessibilityLabel = label,
         interactionSource = interaction,
         lineLimits = TextFieldLineLimits.SingleLine,
-        textStyle = properties.textStyle.copy(color = properties.foreground),
-        cursorBrush = SolidColor(properties.cursorColor),
-        selectionColors = TextSelectionColors(properties.cursorColor, properties.selectionColor),
+        textStyle = properties.textStyle.copy(color = foreground),
+        cursorBrush = SolidColor(cursorColor),
+        selectionColors = TextSelectionColors(cursorColor, selectionColor),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(properties.contentSpacing)) {
-            Text(label, style = properties.labelStyle.copy(color = properties.foreground))
+            Text(label, style = properties.labelStyle.copy(color = foreground))
             TextInput(
                 Modifier
                     .fillMaxWidth()
                     .heightIn(min = properties.minimumHeight)
                     .millenniumSurface(
-                        background = properties.background,
+                        background = properties.background ?: millenniumBevelBrush(colors, sunken = true),
                         shape = properties.shape,
                         borderColor = animatedBorder,
                         borderWidth = properties.borderWidth,
                     )
                     .padding(properties.contentPadding),
                 placeholder = {
-                    Text(placeholder, style = properties.placeholderStyle, color = properties.placeholderColor)
+                    Text(placeholder, style = properties.placeholderStyle.copy(color = placeholderColor), color = placeholderColor)
                 },
             )
             if (error != null) {
-                Text(error, style = properties.errorStyle, color = properties.errorColor)
+                Text(error, style = properties.errorStyle.copy(color = errorColor), color = errorColor)
             }
         }
     }

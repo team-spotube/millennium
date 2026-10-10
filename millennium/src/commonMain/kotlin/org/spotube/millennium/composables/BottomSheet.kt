@@ -33,7 +33,6 @@ import com.composeunstyled.Sheet
 import com.composeunstyled.SheetDetent
 import com.composeunstyled.UnstyledBottomSheet
 import com.composeunstyled.rememberBottomSheetState
-import org.spotube.millennium.theme.MillenniumColors
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
@@ -44,19 +43,18 @@ import org.spotube.millennium.theme.millenniumSurface
 
 @Immutable
 data class MillenniumBottomSheetThemeProperties(
-    val colors: MillenniumColors,
-    val background: Brush,
-    val foreground: Color,
+    val background: Brush? = null,
+    val foreground: Color? = null,
     val shape: Shape,
     val maximumWidth: Dp,
     val contentPadding: PaddingValues,
     val contentSpacing: Dp,
     val handleSize: DpSize,
-    val handleColor: Color,
-    val borderColor: Color,
+    val handleColor: Color? = null,
+    val borderColor: Color? = null,
     val borderWidth: Dp,
     val shadowElevation: Dp,
-    val innerGlowColor: Color,
+    val innerGlowColor: Color? = null,
     val alpha: Float,
 )
 
@@ -65,32 +63,26 @@ data class MillenniumBottomSheetTheme(
     val states: MillenniumControlStateProperty<MillenniumBottomSheetThemeProperties>,
 )
 
-fun defaultMillenniumBottomSheetTheme(colors: MillenniumColors): MillenniumBottomSheetTheme {
+fun defaultMillenniumBottomSheetTheme(): MillenniumBottomSheetTheme {
     val base = MillenniumBottomSheetThemeProperties(
-        colors = colors,
-        background = millenniumBevelBrush(colors),
-        foreground = colors.text,
         shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
         maximumWidth = 640.dp,
         contentPadding = PaddingValues(24.dp),
         contentSpacing = 16.dp,
         handleSize = DpSize(40.dp, 5.dp),
-        handleColor = colors.muted,
-        borderColor = colors.border,
         borderWidth = 1.dp,
         shadowElevation = 10.dp,
-        innerGlowColor = colors.highlight.copy(alpha = 0.55f),
         alpha = 1f,
     )
     return MillenniumBottomSheetTheme(
         states = MillenniumControlStateProperty(
             default = base,
-            hovered = base.copy(borderColor = colors.accent),
-            focused = base.copy(borderColor = colors.accent, borderWidth = 2.dp),
+            hovered = base,
+            focused = base.copy(borderWidth = 2.dp),
             pressed = base.copy(shadowElevation = 6.dp),
             disabled = base.copy(alpha = 0.55f),
-            selected = base.copy(borderColor = colors.accent),
-            error = base.copy(borderColor = colors.danger, borderWidth = 2.dp),
+            selected = base,
+            error = base.copy(borderWidth = 2.dp),
         ),
     )
 }
@@ -101,17 +93,23 @@ fun MillenniumBottomSheet(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val colors = MillenniumTheme.colors
     val properties = MillenniumTheme.bottomSheetTheme.states.resolve(MillenniumControlState.Default)
+    val background = properties.background ?: millenniumBevelBrush(colors)
+    val foreground = properties.foreground ?: colors.text
+    val handleColor = properties.handleColor ?: colors.muted
+    val borderColor = properties.borderColor ?: colors.border
+    val glowColor = properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f)
     UnstyledBottomSheet(state, modifier) {
         Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.TopCenter) {
             Sheet(
                 Modifier.widthIn(max = properties.maximumWidth).fillMaxWidth().millenniumSurface(
-                    background = properties.background,
+                    background = background,
                     shape = properties.shape,
-                    borderColor = properties.borderColor,
+                    borderColor = borderColor,
                     borderWidth = properties.borderWidth,
                     shadowElevation = properties.shadowElevation,
-                    innerGlowColor = properties.innerGlowColor,
+                    innerGlowColor = glowColor,
                 ).alpha(properties.alpha),
             ) {
                 Column(
@@ -120,9 +118,9 @@ fun MillenniumBottomSheet(
                     horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
                 ) {
                     DragIndication(
-                        Modifier.size(properties.handleSize).background(properties.handleColor, CircleShape),
+                        Modifier.size(properties.handleSize).background(handleColor, CircleShape),
                     )
-                    MillenniumStyledContent(TextStyle(color = properties.foreground), properties.foreground) {
+                    MillenniumStyledContent(TextStyle(color = foreground), foreground) {
                         content()
                     }
                 }
@@ -137,6 +135,6 @@ private fun MillenniumBottomSheetPreview() = MillenniumPreview {
     val state = rememberBottomSheetState(initialDetent = SheetDetent.FullyExpanded)
     MillenniumBottomSheet(state) {
         MillenniumText("Hello from down here.", weight = FontWeight.SemiBold)
-        MillenniumText("A softly raised sheet with a tactile handle.", color = MillenniumTheme.bottomSheetTheme.states.default.colors.muted)
+        MillenniumText("A softly raised sheet with a tactile handle.", color = MillenniumTheme.colors.muted)
     }
 }

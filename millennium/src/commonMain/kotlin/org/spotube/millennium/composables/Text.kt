@@ -9,14 +9,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 import com.composeunstyled.Text
-import org.spotube.millennium.theme.MillenniumColors
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
 
 @Immutable
 data class MillenniumTextThemeProperties(
-    val colors: MillenniumColors,
     val body: TextStyle,
     val label: TextStyle,
     val button: TextStyle,
@@ -31,10 +29,9 @@ data class MillenniumTextTheme(
     val states: MillenniumControlStateProperty<MillenniumTextThemeProperties>,
 )
 
-fun defaultMillenniumTextTheme(colors: MillenniumColors) = MillenniumTextTheme(
+fun defaultMillenniumTextTheme() = MillenniumTextTheme(
     states = MillenniumControlStateProperty.all(
         MillenniumTextThemeProperties(
-            colors = colors,
             body = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 14.sp, lineHeight = 21.sp),
             label = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium),
             button = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
@@ -50,7 +47,7 @@ fun defaultMillenniumTextTheme(colors: MillenniumColors) = MillenniumTextTheme(
 fun MillenniumText(
     text: String,
     modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier,
-    color: Color = MillenniumTheme.textTheme.states.default.colors.text,
+    color: Color = MillenniumTheme.colors.text,
     size: TextUnit = MillenniumTheme.textTheme.states.default.body.fontSize,
     weight: FontWeight = MillenniumTheme.textTheme.states.default.body.fontWeight ?: FontWeight.Normal,
 ) {

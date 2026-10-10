@@ -40,7 +40,7 @@ state and modifiers; there is no Material dependency.
 | Surfaces | `MillenniumCard` |
 | Actions | `MillenniumButton` (primary, secondary, quiet, danger), `MillenniumDisclosure` |
 | Inputs | `MillenniumCheckbox`, `MillenniumTriStateCheckbox`, `MillenniumSwitch`, `MillenniumTextField`, `MillenniumSlider`, `MillenniumRadioGroup` |
-| Navigation | `MillenniumTabGroup`, `MillenniumDropdownMenu` |
+| Navigation | `MillenniumTabGroup`, `MillenniumDropdownMenu`, `MillenniumSidebar` |
 | Feedback | `MillenniumAvatar`, `MillenniumIcon`, `MillenniumProgress`, `MillenniumIndeterminateProgress`, `MillenniumScrollbar`, `MillenniumSeparator`, `MillenniumTooltip` |
 | Overlays | `MillenniumDialog`, `MillenniumDrawer`, `MillenniumBottomSheet`, `MillenniumModalBottomSheet` |
 
@@ -48,6 +48,42 @@ Read semantic colors with `MillenniumTheme.colors`. Use `MillenniumText` for tex
 outside component content, or Compose Unstyled `Text` inside controls to inherit
 their foreground style. `MillenniumCard` provides a beveled panel. Install
 `MillenniumTooltipHost` once above tooltip-bearing content.
+
+`MillenniumSidebar` is a shadcn-style composition of independent bricks rather than
+one monolithic control. `MillenniumSidebarHeader` and `MillenniumSidebarFooter` stay
+fixed while `MillenniumSidebarContent` scrolls (with a themed scrollbar).
+`MillenniumSidebarGroup` holds a `MillenniumSidebarGroupLabel` and a collapsible
+`MillenniumSidebarGroupContent`; `MillenniumSidebarMenu` stacks `MillenniumSidebarItem`
+rows with optional icons and `MillenniumSidebarBadge` counters.
+`MillenniumSidebarTrigger` folds the rail to icon width, driven by
+`rememberMillenniumSidebarState` (or plain hoisted `Boolean` state).
+
+```kotlin
+val sidebar = rememberMillenniumSidebarState()
+Row(Modifier.fillMaxSize()) {
+    MillenniumSidebar(sidebar) {
+        MillenniumSidebarHeader { MillenniumSidebarTrigger() }
+        MillenniumSidebarContent {
+            MillenniumSidebarGroup(id = "library", state = sidebar) {
+                MillenniumSidebarGroupLabel("Library")
+                MillenniumSidebarGroupContent {
+                    MillenniumSidebarMenu {
+                        MillenniumSidebarItem(
+                            label = "Discover",
+                            icon = MillenniumIcons.Sparkle,
+                            selected = true,
+                            badge = "20",
+                            onClick = {},
+                        )
+                    }
+                }
+            }
+        }
+        MillenniumSidebarFooter { MillenniumText("v1.0") }
+    }
+    // Main content
+}
+```
 
 ### Hackable theme configuration
 
@@ -57,9 +93,12 @@ owns button typography, colors, dimensions, shape, padding, bevel, shadow, hover
 press feedback, and transition behavior. Every state variation is represented by
 `MillenniumControlStateProperty` (`Default`, `Hovered`, `Focused`, `Pressed`,
 `Disabled`, `Selected`, and `Error`); dimensions, spacing, typography, motion, and
-other component-specific tokens are not collected into global style buckets. The
-shared light/dark palettes are starting points; component theme properties own the
-actual values used by each control.
+other component-specific tokens are not collected into global style buckets.
+`MillenniumThemeConfig.colorSchemes` is the single global source for light/dark
+palette roles. Component themes do not copy or own that palette: they resolve their
+defaults from `MillenniumTheme.colors` at composition time. A component theme can
+still set a local override, such as a custom button gradient, without changing the
+global palette or neighboring components.
 
 ```kotlin
 import androidx.compose.ui.graphics.Color
@@ -72,11 +111,10 @@ val customLightColors = MillenniumLightColors.copy(
     accentTop = Color(0xFFE570A0),
     accentBottom = Color(0xFFCC2255),
 )
-val defaults = MillenniumThemeConfig(
-    light = defaultMillenniumThemeComponents(customLightColors),
-)
+val defaults = MillenniumThemeConfig()
 val light = defaults.light
 val appTheme = defaults.copy(
+    colorSchemes = defaults.colorSchemes.copy(light = customLightColors),
     light = light.copy(
         buttonTheme = light.buttonTheme.copy(
             primary = light.buttonTheme.primary.copy(

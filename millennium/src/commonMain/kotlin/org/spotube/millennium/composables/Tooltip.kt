@@ -20,7 +20,6 @@ import com.composeunstyled.Text
 import com.composeunstyled.TooltipHost
 import com.composeunstyled.TooltipPanel
 import com.composeunstyled.UnstyledTooltip
-import org.spotube.millennium.theme.MillenniumColors
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
@@ -30,17 +29,16 @@ import org.spotube.millennium.theme.millenniumSurface
 
 @Immutable
 data class MillenniumTooltipThemeProperties(
-    val colors: MillenniumColors,
-    val background: Brush,
+    val background: Brush? = null,
     val shape: Shape,
-    val foreground: Color,
+    val foreground: Color? = null,
     val textStyle: TextStyle,
     val maxWidth: Dp,
     val padding: PaddingValues,
-    val borderColor: Color,
+    val borderColor: Color? = null,
     val borderWidth: Dp,
     val shadowElevation: Dp,
-    val innerGlowColor: Color,
+    val innerGlowColor: Color? = null,
     val hoverDelayMillis: Long,
     val sideOffset: Dp,
     val alpha: Float,
@@ -51,19 +49,14 @@ data class MillenniumTooltipTheme(
     val states: MillenniumControlStateProperty<MillenniumTooltipThemeProperties>,
 )
 
-fun defaultMillenniumTooltipTheme(colors: MillenniumColors): MillenniumTooltipTheme {
+fun defaultMillenniumTooltipTheme(): MillenniumTooltipTheme {
     val base = MillenniumTooltipThemeProperties(
-        colors = colors,
-        background = millenniumBevelBrush(colors),
         shape = RoundedCornerShape(10.dp),
-        foreground = colors.text,
         textStyle = TextStyle(fontSize = 12.sp, lineHeight = 17.sp),
         maxWidth = 280.dp,
         padding = PaddingValues(12.dp),
-        borderColor = colors.border,
         borderWidth = 1.dp,
         shadowElevation = 6.dp,
-        innerGlowColor = colors.highlight.copy(alpha = 0.5f),
         hoverDelayMillis = 350,
         sideOffset = 8.dp,
         alpha = 1f,
@@ -71,12 +64,12 @@ fun defaultMillenniumTooltipTheme(colors: MillenniumColors): MillenniumTooltipTh
     return MillenniumTooltipTheme(
         states = MillenniumControlStateProperty(
             default = base,
-            hovered = base.copy(borderColor = colors.accent),
-            focused = base.copy(borderColor = colors.accent),
+            hovered = base,
+            focused = base,
             pressed = base.copy(shadowElevation = 3.dp),
             disabled = base.copy(alpha = 0.55f),
-            selected = base.copy(borderColor = colors.accent),
-            error = base.copy(borderColor = colors.danger, borderWidth = 2.dp),
+            selected = base,
+            error = base.copy(borderWidth = 2.dp),
         ),
     )
 }
@@ -89,21 +82,26 @@ fun MillenniumTooltipHost(modifier: Modifier = Modifier, content: @Composable ()
 @Composable
 fun MillenniumTooltip(text: String, anchor: @Composable () -> Unit) {
     val properties = MillenniumTheme.tooltipTheme.states.default
+    val colors = MillenniumTheme.colors
+    val background = properties.background ?: millenniumBevelBrush(colors)
+    val borderColor = properties.borderColor ?: colors.border
+    val glowColor = properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.5f)
+    val foreground = properties.foreground ?: colors.text
     UnstyledTooltip(
         hoverDelayMillis = properties.hoverDelayMillis,
         sideOffset = properties.sideOffset,
         panel = {
             TooltipPanel(
                 Modifier.widthIn(max = properties.maxWidth).millenniumSurface(
-                    background = properties.background,
+                    background = background,
                     shape = properties.shape,
-                    borderColor = properties.borderColor,
+                    borderColor = borderColor,
                     borderWidth = properties.borderWidth,
                     shadowElevation = properties.shadowElevation,
-                    innerGlowColor = properties.innerGlowColor,
+                    innerGlowColor = glowColor,
                 ).padding(properties.padding).alpha(properties.alpha),
             ) {
-                Text(text, style = properties.textStyle, color = properties.foreground)
+                Text(text, style = properties.textStyle, color = foreground)
             }
         },
         anchor = anchor,

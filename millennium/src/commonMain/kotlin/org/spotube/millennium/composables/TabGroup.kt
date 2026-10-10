@@ -37,7 +37,6 @@ import com.composeunstyled.TabList
 import com.composeunstyled.TabPanel
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledTabGroup
-import org.spotube.millennium.theme.MillenniumColors
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
@@ -48,19 +47,18 @@ import org.spotube.millennium.theme.millenniumSurface
 
 @Immutable
 data class MillenniumTabGroupThemeProperties(
-    val colors: MillenniumColors,
-    val listBackground: Brush,
+    val listBackground: Brush? = null,
     val listShape: Shape,
-    val listBorderColor: Color,
+    val listBorderColor: Color? = null,
     val listBorderWidth: Dp,
     val listPadding: Dp,
     val listInnerSpacing: Dp,
     val groupContentSpacing: Dp,
     val tabShape: Shape,
-    val selectedTabBackground: Brush,
-    val unselectedTabBackground: Brush,
-    val selectedTabForeground: Color,
-    val unselectedTabForeground: Color,
+    val selectedTabBackground: Brush? = null,
+    val unselectedTabBackground: Brush? = null,
+    val selectedTabForeground: Color? = null,
+    val unselectedTabForeground: Color? = null,
     val tabTextStyle: TextStyle,
     val minimumTabHeight: Dp,
     val tabPadding: PaddingValues,
@@ -73,21 +71,14 @@ data class MillenniumTabGroupTheme(
     val states: MillenniumControlStateProperty<MillenniumTabGroupThemeProperties>,
 )
 
-fun defaultMillenniumTabGroupTheme(colors: MillenniumColors): MillenniumTabGroupTheme {
+fun defaultMillenniumTabGroupTheme(): MillenniumTabGroupTheme {
     val base = MillenniumTabGroupThemeProperties(
-        colors = colors,
-        listBackground = millenniumBevelBrush(colors, sunken = true),
         listShape = RoundedCornerShape(10.dp),
-        listBorderColor = colors.border,
         listBorderWidth = 1.dp,
         listPadding = 4.dp,
         listInnerSpacing = 4.dp,
         groupContentSpacing = 16.dp,
         tabShape = RoundedCornerShape(8.dp),
-        selectedTabBackground = gelBrush(colors.accentTop, colors.accentBottom),
-        unselectedTabBackground = Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent)),
-        selectedTabForeground = colors.onAccent,
-        unselectedTabForeground = colors.muted,
         tabTextStyle = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
         minimumTabHeight = 44.dp,
         tabPadding = PaddingValues(vertical = 8.dp, horizontal = 12.dp),
@@ -96,12 +87,12 @@ fun defaultMillenniumTabGroupTheme(colors: MillenniumColors): MillenniumTabGroup
     return MillenniumTabGroupTheme(
         states = MillenniumControlStateProperty(
             default = base,
-            hovered = base.copy(unselectedTabForeground = colors.text, alpha = 0.97f),
-            focused = base.copy(listBorderColor = colors.accent, listBorderWidth = 2.dp),
+            hovered = base.copy(alpha = 0.97f),
+            focused = base.copy(listBorderWidth = 2.dp),
             pressed = base.copy(alpha = 0.90f),
             disabled = base.copy(alpha = 0.45f),
-            selected = base.copy(listBorderColor = colors.accent),
-            error = base.copy(listBorderColor = colors.danger, listBorderWidth = 2.dp),
+            selected = base,
+            error = base.copy(listBorderWidth = 2.dp),
         ),
     )
 }
@@ -115,14 +106,17 @@ fun <T> MillenniumTabGroup(
     tabLabel: (T) -> String = { it.toString() },
     panel: @Composable (T) -> Unit,
 ) {
+    val colors = MillenniumTheme.colors
     val groupProperties = MillenniumTheme.tabGroupTheme.states.default
+    val listBackground = groupProperties.listBackground ?: millenniumBevelBrush(colors, sunken = true)
+    val listBorderColor = groupProperties.listBorderColor ?: colors.border
     UnstyledTabGroup(selectedTab, onSelectedTabChange, tabs, modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(groupProperties.groupContentSpacing)) {
             TabList(
                 Modifier.fillMaxWidth().millenniumSurface(
-                    background = groupProperties.listBackground,
+                    background = listBackground,
                     shape = groupProperties.listShape,
-                    borderColor = groupProperties.listBorderColor,
+                    borderColor = listBorderColor,
                     borderWidth = groupProperties.listBorderWidth,
                 ).padding(groupProperties.listPadding),
             ) {
@@ -148,8 +142,13 @@ fun <T> MillenniumTabGroup(
                             targetValue = properties.alpha,
                             animationSpec = tween(properties.stateAnimationMillis),
                         ).value
-                        val tabBackground = if (isSelected) properties.selectedTabBackground else properties.unselectedTabBackground
-                        val tabForeground = if (isSelected) properties.selectedTabForeground else properties.unselectedTabForeground
+                        val tabBackground = if (isSelected) properties.selectedTabBackground
+                            ?: gelBrush(colors.accentTop, colors.accentBottom)
+                        else properties.unselectedTabBackground
+                            ?: Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
+                        val tabForeground = if (isSelected) properties.selectedTabForeground ?: colors.onAccent
+                            else properties.unselectedTabForeground ?: colors.muted
+                        val tabBorder = properties.listBorderColor ?: if (isSelected) colors.accentBottom else Color.Transparent
                         Tab(
                             key,
                             modifier = Modifier.weight(1f).heightIn(min = properties.minimumTabHeight)
@@ -157,7 +156,7 @@ fun <T> MillenniumTabGroup(
                                 .millenniumSurface(
                                     background = tabBackground,
                                     shape = properties.tabShape,
-                                    borderColor = if (isSelected) properties.listBorderColor else null,
+                                    borderColor = if (isSelected) tabBorder else null,
                                     borderWidth = if (isSelected) 1.dp else 0.dp,
                                 )
                                 .padding(properties.tabPadding),
