@@ -49,6 +49,21 @@ outside component content, or Compose Unstyled `Text` inside controls to inherit
 their foreground style. `MillenniumCard` provides a beveled panel. Install
 `MillenniumTooltipHost` once above tooltip-bearing content.
 
+Built-in accent families are `MillenniumPalette.Blue` (the default blue/gray),
+`MillenniumPalette.Orange` (bright apricot gel / neutral-white light / zinc night) and
+`MillenniumPalette.Lime` (bright citron gel / neutral-white light / zinc night). The sample's palette menu switches
+among them in both the reference study and component gallery. Choose one in
+`MillenniumThemeConfig.palette`; each family includes light and dark appearances.
+All six appearance palettes are covered by AA contrast tests, including text on
+gel-gradient stops.
+
+```kotlin
+var palette by rememberSaveable { mutableStateOf(MillenniumPalette.Orange) }
+MillenniumTheme(config = MillenniumThemeConfig(palette = palette)) {
+    // Components resolve their active roles from MillenniumTheme.colors.
+}
+```
+
 `MillenniumSidebar` is a shadcn-style composition of independent bricks rather than
 one monolithic control. `MillenniumSidebarHeader` and `MillenniumSidebarFooter` stay
 fixed while `MillenniumSidebarContent` scrolls (with a themed scrollbar).
@@ -240,7 +255,9 @@ tri-state selection, input validation, indeterminate progress, and real overlays
 ### Design & accessibility
 
 The material language combines Aqua gel, pearl enamel and Vista-like smoked
-glass. Primary actions are convex capsules with a sharp reflection break and
+glass. Dark mode uses neutral zinc surfaces with the same restrained blue/cyan
+accents, rather than tinting the entire interface navy. Primary actions are
+rounded rectangles with a sharp reflection break and
 luminous lower lip; secondary controls have an enamel bevel. Panels use a quieter
 glass gradient and tighter framing. Fields and slider tracks have recessed inner
 edges. Gel stops remain within contrast-tested endpoints rather than washing white

@@ -1,6 +1,7 @@
 package org.spotube.millennium
 
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -57,6 +58,8 @@ class VisualRefinementTest {
         assertEquals(RoundedCornerShape(8.dp), theme.buttonTheme.danger.default.shape)
         assertEquals(192.dp, theme.dropdownMenuTheme.states.default.itemWidth)
         assertTrue(theme.dialogTheme.states.default.titleBarHeight >= 44.dp)
+        assertEquals(null, theme.dialogTheme.states.default.titleBarBackground)
+        assertEquals(null, theme.dialogTheme.states.default.titleBarForeground)
         assertEquals(1f, theme.radioGroupTheme.states.hovered.alpha)
         assertEquals(1f, theme.radioGroupTheme.states.pressed.alpha)
     }
@@ -113,5 +116,37 @@ class VisualRefinementTest {
         assertTrue(properties.closeAnimationMillis in 100..properties.openAnimationMillis)
         assertTrue(properties.itemStateAnimationMillis >= 100)
         assertTrue(properties.itemMinimumHeight >= 44.dp)
+    }
+
+    @Test
+    fun builtInPaletteFamiliesMeetContrastAcrossLightDarkAndGelStops() {
+        val schemes = MillenniumThemeConfig().colorSchemes
+        assertEquals(schemes.orangeLight.background, schemes.limeLight.background)
+        assertEquals(Color(0xFFFAFAFA), schemes.orangeLight.background)
+        assertEquals(Color.White, schemes.orangeLight.surface)
+        assertEquals(Color.White, schemes.limeLight.surface)
+        MillenniumPalette.entries.forEach { palette ->
+            listOf(false, true).forEach { dark ->
+                val colors = schemes.resolve(palette, dark)
+                listOf(colors.background, colors.surface, colors.raised, colors.inset).forEach { surface ->
+                    listOf(colors.text, colors.muted).forEach { foreground ->
+                        assertTrue(contrast(foreground, surface) >= 4.5, "$palette text contrast on $surface")
+                    }
+                }
+                listOf(colors.accent, colors.success, colors.danger).forEach { foreground ->
+                    assertTrue(contrast(foreground, colors.surface) >= 4.5, "$palette semantic contrast on surface")
+                }
+                millenniumGelStops(colors.accentTop, colors.accentBottom).forEach { (_, stop) ->
+                    assertTrue(contrast(colors.onAccent, stop) >= 4.5, "$palette gel label contrast at $stop")
+                }
+            }
+        }
+        assertEquals(MillenniumPalette.Blue, MillenniumThemeConfig().palette)
+    }
+
+    private fun contrast(foreground: Color, background: Color): Float {
+        val a = foreground.luminance()
+        val b = background.luminance()
+        return (maxOf(a, b) + 0.05f) / (minOf(a, b) + 0.05f)
     }
 }

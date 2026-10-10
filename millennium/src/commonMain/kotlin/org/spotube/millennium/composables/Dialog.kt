@@ -158,12 +158,14 @@ fun MillenniumDialog(
                 ) {
                     Column {
                         val titleBarBackground = properties.titleBarBackground
-                            ?: org.spotube.millennium.theme.gelBrush(colors.accentTop, colors.accentBottom)
-                        val titleBarForeground = properties.titleBarForeground ?: colors.onAccent
+                        val titleBarForeground = properties.titleBarForeground ?: foreground
                         Row(
                             Modifier.fillMaxWidth()
                                 .heightIn(min = properties.titleBarHeight)
-                                .background(titleBarBackground)
+                                .then(
+                                    if (titleBarBackground != null) Modifier.background(titleBarBackground)
+                                    else Modifier
+                                )
                                 .padding(properties.titleBarPadding),
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             verticalAlignment = Alignment.CenterVertically,
@@ -197,7 +199,7 @@ fun MillenniumDialog(
                             }
                         }
                         Box(Modifier.fillMaxWidth().height(1.dp).background(
-                            properties.titleBarBorderColor ?: colors.accentBottom,
+                            properties.titleBarBorderColor ?: colors.border,
                         ))
                         Column(
                             Modifier.padding(properties.contentPadding),

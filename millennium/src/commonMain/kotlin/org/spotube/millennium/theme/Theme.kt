@@ -47,20 +47,69 @@ val MillenniumLightColors = MillenniumColors(
     success = Color(0xFF257B51), danger = Color(0xFFBC334A), scrim = Color(0x99101E30),
 )
 
-/** Smoked navy surfaces and bright accessible foregrounds for dark appearances. */
+/** Neutral zinc surfaces with bright accessible foregrounds and aqua-blue accents. */
 val MillenniumDarkColors = MillenniumColors(
-    background = Color(0xFF0B1420), surface = Color(0xFF172838), raised = Color(0xFF2B4053),
-    inset = Color(0xFF0D1B28), text = Color(0xFFF0F6FC), muted = Color(0xFFB0C3D3),
-    border = Color(0xFF587187), highlight = Color(0xFF8CAABD), accent = Color(0xFF79CFFF),
+    background = Color(0xFF09090B), surface = Color(0xFF18181B), raised = Color(0xFF27272A),
+    inset = Color(0xFF111113), text = Color(0xFFFAFAFA), muted = Color(0xFFA1A1AA),
+    border = Color(0xFF3F3F46), highlight = Color(0xFF71717A), accent = Color(0xFF79CFFF),
     accentTop = Color(0xFF1976B9), accentBottom = Color(0xFF002D74), onAccent = Color.White,
     success = Color(0xFF7AE2AE), danger = Color(0xFFFF98A9), scrim = Color(0xBB030912),
+)
+
+/** Bright apricot gel over neutral white in light mode and zinc at night. */
+val MillenniumOrangeLightColors = MillenniumColors(
+    background = Color(0xFFFAFAFA), surface = Color.White, raised = Color.White,
+    inset = Color(0xFFF4F4F5), text = Color(0xFF27272A), muted = Color(0xFF52525B),
+    border = Color(0xFFD4D4D8), highlight = Color.White, accent = Color(0xFF9A3412),
+    accentTop = Color(0xFFFDBA74), accentBottom = Color(0xFFD97706), onAccent = Color(0xFF431407),
+    success = Color(0xFF166534), danger = Color(0xFFB42332), scrim = Color(0x990F0906),
+)
+
+/** Zinc night surfaces keep the orange gel vivid without tinting the whole UI. */
+val MillenniumOrangeDarkColors = MillenniumColors(
+    background = Color(0xFF09090B), surface = Color(0xFF18181B), raised = Color(0xFF27272A),
+    inset = Color(0xFF111113), text = Color(0xFFFAFAFA), muted = Color(0xFFA1A1AA),
+    border = Color(0xFF3F3F46), highlight = Color(0xFF71717A), accent = Color(0xFFFB923C),
+    accentTop = Color(0xFFFDBA74), accentBottom = Color(0xFFF97316), onAccent = Color(0xFF431407),
+    success = Color(0xFF86EFAC), danger = Color(0xFFFF8A80), scrim = Color(0xCC050505),
+)
+
+/** Bright citron gel over neutral white in light mode. */
+val MillenniumLimeLightColors = MillenniumColors(
+    background = Color(0xFFFAFAFA), surface = Color.White, raised = Color.White,
+    inset = Color(0xFFF4F4F5), text = Color(0xFF27272A), muted = Color(0xFF52525B),
+    border = Color(0xFFD4D4D8), highlight = Color.White, accent = Color(0xFF3F6212),
+    accentTop = Color(0xFFBEF264), accentBottom = Color(0xFF84CC16), onAccent = Color(0xFF1A2E05),
+    success = Color(0xFF3F6212), danger = Color(0xFFB42332), scrim = Color(0x99080A06),
+)
+
+/** Bright chartreuse-gel highlights on neutral zinc night surfaces. */
+val MillenniumLimeDarkColors = MillenniumColors(
+    background = Color(0xFF09090B), surface = Color(0xFF18181B), raised = Color(0xFF27272A),
+    inset = Color(0xFF111113), text = Color(0xFFFAFAFA), muted = Color(0xFFA1A1AA),
+    border = Color(0xFF3F3F46), highlight = Color(0xFF71717A), accent = Color(0xFFA3E635),
+    accentTop = Color(0xFFBEF264), accentBottom = Color(0xFF84CC16), onAccent = Color(0xFF1A2E05),
+    success = Color(0xFFA3E635), danger = Color(0xFFFF8A80), scrim = Color(0xCC050505),
 )
 
 @Immutable
 data class MillenniumColorSchemes(
     val light: MillenniumColors = MillenniumLightColors,
     val dark: MillenniumColors = MillenniumDarkColors,
+    val orangeLight: MillenniumColors = MillenniumOrangeLightColors,
+    val orangeDark: MillenniumColors = MillenniumOrangeDarkColors,
+    val limeLight: MillenniumColors = MillenniumLimeLightColors,
+    val limeDark: MillenniumColors = MillenniumLimeDarkColors,
 )
+
+/** Accent families that can be swapped without changing component themes. */
+enum class MillenniumPalette { Blue, Orange, Lime }
+
+fun MillenniumColorSchemes.resolve(palette: MillenniumPalette, dark: Boolean): MillenniumColors = when (palette) {
+    MillenniumPalette.Blue -> if (dark) this.dark else light
+    MillenniumPalette.Orange -> if (dark) orangeDark else orangeLight
+    MillenniumPalette.Lime -> if (dark) limeDark else limeLight
+}
 
 /** The complete set of component-owned themes for one appearance. */
 @Immutable
@@ -131,6 +180,7 @@ data class MillenniumThemeConfig(
     val dark: MillenniumThemeComponents = MillenniumDarkThemeComponents,
     val themeTransitionMillis: Int = 180,
     val extensions: Map<String, Any> = emptyMap(),
+    val palette: MillenniumPalette = MillenniumPalette.Blue,
 )
 
 private val paletteProperty = ThemeProperty<MillenniumColors>("millennium.palette")
@@ -185,16 +235,16 @@ fun MillenniumTheme(
     content: @Composable () -> Unit,
 ) {
     val activeComponents = if (dark) config.dark else config.light
-    val activeColors = if (dark) config.colorSchemes.dark else config.colorSchemes.light
+    val activeColors = config.colorSchemes.resolve(config.palette, dark)
     val unstyledTheme = remember(config) {
         buildThemeV2 {
             name = "Millennium / Aero refined"
             colorSchemeTransitionSpec = tween(config.themeTransitionMillis)
             colorScheme(ColorScheme.Light) {
-                properties[paletteProperty] = mapOf(paletteToken to config.colorSchemes.light)
+                properties[paletteProperty] = mapOf(paletteToken to config.colorSchemes.resolve(config.palette, dark = false))
             }
             colorScheme(ColorScheme.Dark) {
-                properties[paletteProperty] = mapOf(paletteToken to config.colorSchemes.dark)
+                properties[paletteProperty] = mapOf(paletteToken to config.colorSchemes.resolve(config.palette, dark = true))
             }
         }
     }

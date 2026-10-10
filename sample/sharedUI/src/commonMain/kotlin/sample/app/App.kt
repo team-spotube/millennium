@@ -35,6 +35,7 @@ import org.spotube.millennium.composables.MillenniumSwitch
 import org.spotube.millennium.composables.MillenniumTriStateCheckbox
 import org.spotube.millennium.composables.MillenniumText
 import org.spotube.millennium.theme.MillenniumTheme
+import org.spotube.millennium.theme.MillenniumPalette
 import org.spotube.millennium.theme.gelBrush
 
 private val categories =
@@ -53,17 +54,18 @@ fun App() {
 @Composable
 private fun GalleryApp(onOpenStudy: () -> Unit) {
     var dark by rememberSaveable { mutableStateOf(false) }
+    var palette by rememberSaveable { mutableStateOf(MillenniumPalette.Blue) }
     var category by rememberSaveable { mutableStateOf("All components") }
     var dialog by rememberSaveable { mutableStateOf(false) }
     val drawer = rememberMillenniumDrawerState()
     val modalSheet = rememberModalBottomSheetState(initialDetent = SheetDetent.Hidden)
-    MillenniumTheme(dark) {
+    MillenniumTheme(dark, config = org.spotube.millennium.theme.MillenniumThemeConfig(palette = palette)) {
         MillenniumTooltipHost {
             val c = MillenniumTheme.colors
             BoxWithConstraints(Modifier.fillMaxSize().background(c.background)) {
                 val wide = maxWidth >= 900.dp
                 Column(Modifier.fillMaxSize()) {
-                    Header(dark, { dark = it }, wide)
+                    Header(dark, { dark = it }, palette, { palette = it }, wide)
                     MillenniumButton(onOpenStudy, style = MillenniumButtonStyle.Quiet) { Text("Back to design study") }
                     MillenniumSeparator()
                     Row(Modifier.weight(1f)) {
@@ -238,8 +240,15 @@ private fun Brand() {
 }
 
 @Composable
-private fun Header(dark: Boolean, onDarkChange: (Boolean) -> Unit, wide: Boolean) {
+private fun Header(
+    dark: Boolean,
+    onDarkChange: (Boolean) -> Unit,
+    palette: MillenniumPalette,
+    onPaletteChange: (MillenniumPalette) -> Unit,
+    wide: Boolean,
+) {
     val c = MillenniumTheme.colors
+    var paletteMenuExpanded by remember { mutableStateOf(false) }
     Row(
         Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(c.raised, c.surface)))
             .padding(horizontal = if (wide) 28.dp else 20.dp, vertical = 14.dp),
@@ -256,6 +265,21 @@ private fun Header(dark: Boolean, onDarkChange: (Boolean) -> Unit, wide: Boolean
             )
         }
         Spacer(Modifier.weight(1f))
+        MillenniumDropdownMenu(
+            expanded = paletteMenuExpanded,
+            onExpandedChange = { paletteMenuExpanded = it },
+            items = MillenniumPalette.entries.map { it.name },
+            onItemClick = { selected ->
+                onPaletteChange(MillenniumPalette.valueOf(selected))
+                paletteMenuExpanded = false
+            },
+            anchor = {
+                MillenniumButton(
+                    onClick = { paletteMenuExpanded = !paletteMenuExpanded },
+                    style = MillenniumButtonStyle.Secondary,
+                ) { Text("${palette.name} palette") }
+            },
+        )
         MillenniumSwitch(dark, onDarkChange, if (dark) "Dark" else "Light")
     }
 }

@@ -26,7 +26,8 @@ import org.spotube.millennium.theme.*
 @Composable
 internal fun AeroDesignStudy(onOpenGallery: () -> Unit) {
     var dark by rememberSaveable { mutableStateOf(false) }
-    val config = remember { studyTheme() }
+    var palette by rememberSaveable { mutableStateOf(MillenniumPalette.Blue) }
+    val config = remember(palette) { studyTheme(palette) }
     MillenniumTheme(dark = dark, config = config) {
         val colors = MillenniumTheme.colors
         BoxWithConstraints(Modifier.fillMaxSize().background(colors.background)) {
@@ -49,6 +50,18 @@ internal fun AeroDesignStudy(onOpenGallery: () -> Unit) {
                         MillenniumText("AERO / DESIGN STUDY 01", size = 10.sp, color = colors.muted)
                     }
                     MillenniumSwitch(dark, { dark = it }, "Dark")
+                    var paletteOpen by remember { mutableStateOf(false) }
+                    MillenniumDropdownMenu(
+                        expanded = paletteOpen,
+                        onExpandedChange = { paletteOpen = it },
+                        items = MillenniumPalette.entries.map { it.name },
+                        onItemClick = { palette = MillenniumPalette.valueOf(it); paletteOpen = false },
+                        anchor = {
+                            MillenniumButton({ paletteOpen = !paletteOpen }, style = MillenniumButtonStyle.Secondary) {
+                                Text(palette.name)
+                            }
+                        },
+                    )
                 }
                 Column(Modifier.widthIn(max = 1120.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     MillenniumText("A brighter kind of interface.", size = if (compact) 28.sp else 36.sp, weight = FontWeight.SemiBold)
@@ -157,7 +170,7 @@ private fun StudyLibrary(modifier: Modifier) {
     }
 }
 
-private fun studyTheme(): MillenniumThemeConfig {
+private fun studyTheme(palette: MillenniumPalette): MillenniumThemeConfig {
     val base = MillenniumThemeConfig()
     fun components(original: MillenniumThemeComponents, colors: MillenniumColors): MillenniumThemeComponents {
         val pearl = Brush.verticalGradient(listOf(colors.raised, colors.surface))
@@ -201,5 +214,9 @@ private fun studyTheme(): MillenniumThemeConfig {
             ),
         )
     }
-    return base.copy(light = components(base.light, base.colorSchemes.light), dark = components(base.dark, base.colorSchemes.dark))
+    return base.copy(
+        palette = palette,
+        light = components(base.light, base.colorSchemes.resolve(palette, dark = false)),
+        dark = components(base.dark, base.colorSchemes.resolve(palette, dark = true)),
+    )
 }
