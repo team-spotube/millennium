@@ -39,7 +39,7 @@ state and modifiers; there is no Material dependency.
 | --- | --- |
 | Surfaces | `MillenniumCard` |
 | Actions | `MillenniumButton` (primary, secondary, quiet, danger), `MillenniumDisclosure` |
-| Inputs | `MillenniumCheckbox`, `MillenniumTriStateCheckbox`, `MillenniumSwitch`, `MillenniumTextField`, `MillenniumSlider`, `MillenniumRadioGroup` |
+| Inputs | `MillenniumCheckbox`, `MillenniumTriStateCheckbox`, `MillenniumSwitch`, `MillenniumTextField`, `MillenniumAutocomplete`, `MillenniumSlider`, `MillenniumRadioGroup` |
 | Navigation | `MillenniumTabGroup`, `MillenniumDropdownMenu`, `MillenniumSidebar`, `MillenniumBottomNavigationBar` |
 | Feedback | `MillenniumAvatar`, `MillenniumIcon`, `MillenniumProgress`, `MillenniumIndeterminateProgress`, `MillenniumScrollbar`, `MillenniumSeparator`, `MillenniumTooltip` |
 | Overlays | `MillenniumDialog`, `MillenniumDrawer`, `MillenniumBottomSheet`, `MillenniumModalBottomSheet` |
@@ -88,6 +88,38 @@ Row(Modifier.fillMaxSize()) {
     }
     // Main content
 }
+```
+
+#### Autocomplete
+
+`MillenniumAutocomplete` accepts caller-filtered suggestions and a
+`TextFieldState`. Focus remains in the editor while a non-focusable popup is open:
+Up/Down changes the highlighted result, Enter commits, Escape closes the menu and
+keeps the query, and clicking outside dismisses it. Pointer selection works without moving focus into the popup. The
+menu has fixed `menuHeader`/`menuFooter` slots, a scrollable suggestions area,
+per-item `leadingContent`/`trailingContent` slots, and an optional fully custom
+`suggestionContent` row. Customize panel and item appearances through
+`MillenniumTheme.autocompleteTheme`.
+Menu entry/exit, row hover, highlight border, elevation, and subtle hover scale
+are animated independently. Configure `openAnimationMillis`,
+`closeAnimationMillis`, and `itemStateAnimationMillis` in the autocomplete theme.
+
+```kotlin
+val query = rememberTextFieldState()
+val names = listOf("A-ha", "Air", "Björk", "Daft Punk")
+val matches = names.filter { it.contains(query.text, ignoreCase = true) }
+MillenniumAutocomplete(
+    state = query,
+    label = "Artist",
+    placeholder = "Search artists",
+    suggestions = matches,
+    suggestionLabel = { it },
+    onSuggestionSelected = { selected -> /* use selected */ },
+    leadingContent = { MillenniumAvatar(it.take(2), it, size = 30.dp) },
+    trailingContent = { item -> /* e.g. a save action */ },
+    menuHeader = { MillenniumText("MATCHES") },
+    menuFooter = { MillenniumText("↑ ↓ move · Enter choose · Esc close") },
+)
 ```
 
 ### Hackable theme configuration

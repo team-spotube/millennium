@@ -111,7 +111,7 @@ private fun GalleryApp(onOpenStudy: () -> Unit) {
                                             size = 13.sp
                                         )
                                     }
-                                    if (!compact) Badge("22 COMPONENTS", c.muted)
+                                    if (!compact) Badge("23 COMPONENTS", c.muted)
                                 }
                                 Gallery(
                                     category,
@@ -281,7 +281,7 @@ private fun Sidebar(category: String, onSelect: (String) -> Unit) {
                                 label = item,
                                 onClick = { onSelect(item) },
                                 selected = category == item,
-                                badge = if (index == 0) "22" else listOf("", "2", "6", "4", "6", "4")[index]
+                                badge = if (index == 0) "23" else listOf("", "2", "6", "4", "6", "4")[index]
                             )
                         }
                     }
@@ -479,6 +479,12 @@ private fun Gallery(
                 "Find exactly the right setting."
             ) { RangeDemo() }
             Card("Navigation", "08", "Tab group", "One place. A few perspectives.") { TabsDemo() }
+            Card(
+                "Inputs",
+                "23",
+                "Autocomplete",
+                "Type, move through results, and keep focus where it belongs."
+            ) { AutocompleteDemo() }
             Card(
                 "Navigation",
                 "21",
@@ -703,6 +709,56 @@ private fun BottomNavigationDemo() {
         "Tab to focus · Enter to select. The bar stays outside the scrolling body.",
         size = 11.sp,
         color = MillenniumTheme.colors.muted
+    )
+}
+
+@Composable
+private fun AutocompleteDemo() {
+    val artists = listOf(
+        "A-ha", "Air", "Al Green", "Amy Winehouse", "Björk", "Daft Punk", "Enya",
+        "Fleetwood Mac", "Massive Attack", "Portishead", "The Cure", "The xx",
+    )
+    val state = rememberTextFieldState()
+    var selectedArtist by rememberSaveable { mutableStateOf("") }
+    var favorites by remember { mutableStateOf(emptySet<String>()) }
+    val query = state.text.toString()
+    val suggestions = if (query.isBlank()) emptyList() else artists
+        .filter { it.contains(query, ignoreCase = true) }
+        .take(6)
+
+    MillenniumAutocomplete(
+        state = state,
+        label = "Find an artist",
+        placeholder = "Try “da”, “the” or “air”",
+        suggestions = suggestions,
+        suggestionLabel = { it },
+        onSuggestionSelected = { selectedArtist = it },
+        leadingContent = { artist -> MillenniumAvatar(artist.take(2).uppercase(), artist, size = 30.dp) },
+        trailingContent = { artist ->
+            MillenniumButton(
+                onClick = {
+                    favorites = if (artist in favorites) favorites - artist else favorites + artist
+                },
+                style = MillenniumButtonStyle.Quiet,
+            ) { Text(if (artist in favorites) "Saved" else "Save") }
+        },
+        menuHeader = {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                MillenniumText("MATCHING ARTISTS", size = 10.sp, weight = FontWeight.Bold)
+                MillenniumText("${suggestions.size} found", size = 10.sp, color = MillenniumTheme.colors.muted)
+            }
+        },
+        menuFooter = {
+            MillenniumText("↑ ↓ move   ·   Enter choose   ·   Esc close", size = 10.sp, color = MillenniumTheme.colors.muted)
+        },
+        emptyContent = {
+            MillenniumText("No artists found. Try another search.", color = MillenniumTheme.colors.muted)
+        },
+    )
+    MillenniumText(
+        if (selectedArtist.isEmpty()) "Keep typing to search the collection." else "Selected: $selectedArtist",
+        color = MillenniumTheme.colors.muted,
+        size = 11.sp,
     )
 }
 

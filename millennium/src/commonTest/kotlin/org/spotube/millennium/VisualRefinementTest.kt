@@ -5,6 +5,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.spotube.millennium.composables.millenniumTextLineHeight
+import org.spotube.millennium.composables.nextAutocompleteIndex
+import org.spotube.millennium.composables.autocompleteMenuShouldShow
 import org.spotube.millennium.theme.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -57,5 +59,59 @@ class VisualRefinementTest {
         assertTrue(theme.dialogTheme.states.default.titleBarHeight >= 44.dp)
         assertEquals(1f, theme.radioGroupTheme.states.hovered.alpha)
         assertEquals(1f, theme.radioGroupTheme.states.pressed.alpha)
+    }
+
+    @Test
+    fun autocompleteHighlightNavigationClampsAndHandlesEmptyResults() {
+        assertEquals(0, nextAutocompleteIndex(-1, 4, forward = true))
+        assertEquals(3, nextAutocompleteIndex(-1, 4, forward = false))
+        assertEquals(2, nextAutocompleteIndex(1, 4, forward = true))
+        assertEquals(1, nextAutocompleteIndex(2, 4, forward = false))
+        assertEquals(3, nextAutocompleteIndex(3, 4, forward = true))
+        assertEquals(0, nextAutocompleteIndex(0, 4, forward = false))
+        assertEquals(-1, nextAutocompleteIndex(-1, 0, forward = true))
+    }
+
+    @Test
+    fun autocompletePopupTracksFocusAndEscapeDismissesOnlyCurrentQuery() {
+        assertTrue(autocompleteMenuShouldShow(true, true, "air", true, dismissedQuery = null))
+        assertTrue(!autocompleteMenuShouldShow(true, false, "air", true, dismissedQuery = null))
+        assertTrue(!autocompleteMenuShouldShow(false, true, "air", true, dismissedQuery = null))
+        assertTrue(!autocompleteMenuShouldShow(true, true, "air", true, dismissedQuery = "air"))
+        assertTrue(autocompleteMenuShouldShow(true, true, "air m", true, dismissedQuery = "air"))
+        assertTrue(!autocompleteMenuShouldShow(true, true, "air", false, dismissedQuery = null))
+    }
+
+    @Test
+    fun autocompleteMenuThemeIsCustomizablePerAppearance() {
+        val defaults = MillenniumThemeConfig()
+        val lightAutocomplete = defaults.light.autocompleteTheme
+        assertTrue(lightAutocomplete.states.default.itemMinimumHeight >= 44.dp)
+        assertEquals(320.dp, lightAutocomplete.states.default.menuMaxHeight)
+        val custom = defaults.copy(
+            light = defaults.light.copy(
+                autocompleteTheme = lightAutocomplete.copy(
+                    states = lightAutocomplete.states.copy(
+                        default = lightAutocomplete.states.default.copy(
+                            minimumMenuWidth = 300.dp,
+                            menuMaxHeight = 420.dp,
+                        ),
+                    ),
+                ),
+            ),
+        )
+        assertEquals(300.dp, custom.light.autocompleteTheme.states.default.minimumMenuWidth)
+        assertEquals(420.dp, custom.light.autocompleteTheme.states.default.menuMaxHeight)
+        assertEquals(defaults.dark.autocompleteTheme, custom.dark.autocompleteTheme)
+        assertEquals(defaults.light.buttonTheme, custom.light.buttonTheme)
+    }
+
+    @Test
+    fun autocompleteMenuAndHoverTransitionsUseDistinctDurations() {
+        val properties = MillenniumThemeConfig().light.autocompleteTheme.states.default
+        assertTrue(properties.openAnimationMillis >= 150)
+        assertTrue(properties.closeAnimationMillis in 100..properties.openAnimationMillis)
+        assertTrue(properties.itemStateAnimationMillis >= 100)
+        assertTrue(properties.itemMinimumHeight >= 44.dp)
     }
 }
