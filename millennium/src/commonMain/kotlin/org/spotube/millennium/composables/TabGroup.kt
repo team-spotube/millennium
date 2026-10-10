@@ -1,24 +1,110 @@
 package org.spotube.millennium.composables
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.LocalIndication
-import androidx.compose.foundation.interaction.*
-import androidx.compose.foundation.layout.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import com.composeunstyled.*
-import com.composeunstyled.LocalTextStyle
-import org.spotube.millennium.theme.MillenniumTheme
-import org.spotube.millennium.theme.beveled
-import org.spotube.millennium.theme.MillenniumVisualStyle
-import org.spotube.millennium.theme.MillenniumVisualState
-import org.spotube.millennium.theme.componentStyle
-import org.spotube.millennium.theme.gelBrush
-import org.spotube.millennium.theme.resolve
-import org.spotube.millennium.theme.MillenniumPreview
-import org.spotube.millennium.theme.MillenniumText
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.composeunstyled.LocalTextStyle
+import com.composeunstyled.Tab
+import com.composeunstyled.TabList
+import com.composeunstyled.TabPanel
+import com.composeunstyled.Text
+import com.composeunstyled.UnstyledTabGroup
+import org.spotube.millennium.theme.MillenniumColors
+import org.spotube.millennium.theme.MillenniumControlState
+import org.spotube.millennium.theme.MillenniumControlStateProperty
+import org.spotube.millennium.theme.MillenniumTheme
+import org.spotube.millennium.theme.MillenniumPreview
+import org.spotube.millennium.theme.gelBrush
+import org.spotube.millennium.theme.millenniumBevelBrush
+import org.spotube.millennium.theme.millenniumSurface
+
+@Immutable
+data class MillenniumTabGroupThemeProperties(
+    val colors: MillenniumColors,
+    val listBackground: Brush,
+    val listShape: Shape,
+    val listBorderColor: Color,
+    val listBorderWidth: Dp,
+    val listPadding: Dp,
+    val listInnerSpacing: Dp,
+    val groupContentSpacing: Dp,
+    val tabShape: Shape,
+    val selectedTabBackground: Brush,
+    val unselectedTabBackground: Brush,
+    val selectedTabForeground: Color,
+    val unselectedTabForeground: Color,
+    val tabTextStyle: TextStyle,
+    val minimumTabHeight: Dp,
+    val tabPadding: PaddingValues,
+    val stateAnimationMillis: Int,
+    val alpha: Float = 1f,
+)
+
+@Immutable
+data class MillenniumTabGroupTheme(
+    val states: MillenniumControlStateProperty<MillenniumTabGroupThemeProperties>,
+)
+
+fun defaultMillenniumTabGroupTheme(colors: MillenniumColors): MillenniumTabGroupTheme {
+    val base = MillenniumTabGroupThemeProperties(
+        colors = colors,
+        listBackground = millenniumBevelBrush(colors, sunken = true),
+        listShape = RoundedCornerShape(10.dp),
+        listBorderColor = colors.border,
+        listBorderWidth = 1.dp,
+        listPadding = 4.dp,
+        listInnerSpacing = 4.dp,
+        groupContentSpacing = 16.dp,
+        tabShape = RoundedCornerShape(8.dp),
+        selectedTabBackground = gelBrush(colors.accentTop, colors.accentBottom),
+        unselectedTabBackground = Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent)),
+        selectedTabForeground = colors.onAccent,
+        unselectedTabForeground = colors.muted,
+        tabTextStyle = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
+        minimumTabHeight = 44.dp,
+        tabPadding = PaddingValues(vertical = 8.dp, horizontal = 12.dp),
+        stateAnimationMillis = 140,
+    )
+    return MillenniumTabGroupTheme(
+        states = MillenniumControlStateProperty(
+            default = base,
+            hovered = base.copy(unselectedTabForeground = colors.text, alpha = 0.97f),
+            focused = base.copy(listBorderColor = colors.accent, listBorderWidth = 2.dp),
+            pressed = base.copy(alpha = 0.90f),
+            disabled = base.copy(alpha = 0.45f),
+            selected = base.copy(listBorderColor = colors.accent),
+            error = base.copy(listBorderColor = colors.danger, listBorderWidth = 2.dp),
+        ),
+    )
+}
 
 @Composable
 fun <T> MillenniumTabGroup(
@@ -29,21 +115,21 @@ fun <T> MillenniumTabGroup(
     tabLabel: (T) -> String = { it.toString() },
     panel: @Composable (T) -> Unit,
 ) {
-    val tabTheme = MillenniumTheme.tabGroupTheme
-    val colors = MillenniumTheme.colorsFor(tabTheme)
-    val groupVisual = tabTheme.resolve(MillenniumVisualState.Default)
+    val groupProperties = MillenniumTheme.tabGroupTheme.states.default
     UnstyledTabGroup(selectedTab, onSelectedTabChange, tabs, modifier) {
-        Column(verticalArrangement = Arrangement.spacedBy(groupVisual.contentSpacing ?: tabTheme.spacing.large)) {
-            val listVisual = tabTheme.resolve(
-                MillenniumVisualState.Default,
-                MillenniumVisualStyle(backgroundColor = colors.inset, borderColor = colors.border,
-                    borderWidth = tabTheme.strokes.border, innerGlowColor = colors.highlight),
-            )
+        Column(verticalArrangement = Arrangement.spacedBy(groupProperties.groupContentSpacing)) {
             TabList(
-                Modifier.fillMaxWidth().beveled(colors, tabTheme.shapes.control, sunken = true)
-                    .componentStyle(listVisual, tabTheme.shapes.control).padding(tabTheme.dimensions.tabListInset),
+                Modifier.fillMaxWidth().millenniumSurface(
+                    background = groupProperties.listBackground,
+                    shape = groupProperties.listShape,
+                    borderColor = groupProperties.listBorderColor,
+                    borderWidth = groupProperties.listBorderWidth,
+                ).padding(groupProperties.listPadding),
             ) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(tabTheme.spacing.xSmall)) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(groupProperties.listInnerSpacing),
+                ) {
                     tabs.forEach { key ->
                         val isSelected = key == selectedTab
                         val interaction = remember(key) { MutableInteractionSource() }
@@ -51,34 +137,36 @@ fun <T> MillenniumTabGroup(
                         val focused by interaction.collectIsFocusedAsState()
                         val hovered by interaction.collectIsHoveredAsState()
                         val state = when {
-                            pressed -> MillenniumVisualState.Clicked
-                            focused -> MillenniumVisualState.Focused
-                            hovered -> MillenniumVisualState.Hovered
-                            isSelected -> MillenniumVisualState.Selected
-                            else -> MillenniumVisualState.Default
+                            pressed -> MillenniumControlState.Pressed
+                            focused -> MillenniumControlState.Focused
+                            hovered -> MillenniumControlState.Hovered
+                            isSelected -> MillenniumControlState.Selected
+                            else -> MillenniumControlState.Default
                         }
-                        val visual = tabTheme.resolve(
-                            state,
-                            MillenniumVisualStyle(
-                                background = if (isSelected) gelBrush(colors.accentTop, colors.accentBottom) else null,
-                                foregroundColor = if (isSelected) colors.onAccent else colors.muted,
-                                borderColor = if (isSelected) colors.accentBottom else colors.border,
-                                borderWidth = if (isSelected) tabTheme.strokes.border else 0.dp,
-                            ),
-                        )
-                        val tabShape = visual.shape ?: tabTheme.shapes.control
+                        val properties = MillenniumTheme.tabGroupTheme.states.resolve(state)
+                        val animatedAlpha = animateFloatAsState(
+                            targetValue = properties.alpha,
+                            animationSpec = tween(properties.stateAnimationMillis),
+                        ).value
+                        val tabBackground = if (isSelected) properties.selectedTabBackground else properties.unselectedTabBackground
+                        val tabForeground = if (isSelected) properties.selectedTabForeground else properties.unselectedTabForeground
                         Tab(
                             key,
-                            modifier = Modifier.weight(1f).heightIn(min = tabTheme.dimensions.touchTarget)
-                                .then(if (isSelected) Modifier.beveled(colors, tabShape, accent = true) else Modifier)
-                                .componentStyle(visual, tabShape)
-                                .padding(visual.contentPadding ?: PaddingValues(vertical = tabTheme.spacing.small)),
+                            modifier = Modifier.weight(1f).heightIn(min = properties.minimumTabHeight)
+                                .alpha(animatedAlpha)
+                                .millenniumSurface(
+                                    background = tabBackground,
+                                    shape = properties.tabShape,
+                                    borderColor = if (isSelected) properties.listBorderColor else null,
+                                    borderWidth = if (isSelected) 1.dp else 0.dp,
+                                )
+                                .padding(properties.tabPadding),
                             indication = LocalIndication.current,
                             interactionSource = interaction,
                         ) {
                             CompositionLocalProvider(
-                                LocalTextStyle provides (visual.textStyle ?: tabTheme.typography.button)
-                                    .copy(color = visual.foregroundColor ?: if (selected) colors.onAccent else colors.muted),
+                                LocalTextStyle provides LocalTextStyle.current.merge(properties.tabTextStyle)
+                                    .copy(color = tabForeground),
                             ) { Text(tabLabel(key)) }
                         }
                     }

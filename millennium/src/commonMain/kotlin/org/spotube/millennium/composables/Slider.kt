@@ -1,28 +1,103 @@
 package org.spotube.millennium.composables
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.UnstyledSlider
+import org.spotube.millennium.theme.MillenniumColors
+import org.spotube.millennium.theme.MillenniumControlState
+import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
-import org.spotube.millennium.theme.beveled
-import org.spotube.millennium.theme.gelBrush
-import org.spotube.millennium.theme.MillenniumVisualState
-import org.spotube.millennium.theme.MillenniumVisualStyle
-import org.spotube.millennium.theme.componentStyle
-import org.spotube.millennium.theme.resolve
 import org.spotube.millennium.theme.MillenniumPreview
-import androidx.compose.ui.tooling.preview.Preview
+import org.spotube.millennium.theme.gelBrush
+import org.spotube.millennium.theme.millenniumBevelBrush
+import org.spotube.millennium.theme.millenniumSurface
+
+@Immutable
+data class MillenniumSliderThemeProperties(
+    val colors: MillenniumColors,
+    val trackBackground: Brush,
+    val activeTrackBackground: Brush,
+    val thumbBackground: Brush,
+    val trackShape: Shape,
+    val thumbShape: Shape,
+    val trackHeight: Dp,
+    val thumbSize: Dp,
+    val activeThumbSize: Dp,
+    val touchTargetHeight: Dp,
+    val trackBorderColor: Color,
+    val trackBorderWidth: Dp,
+    val thumbBorderColor: Color,
+    val thumbBorderWidth: Dp,
+    val thumbElevation: Dp,
+    val thumbGlowColor: Color,
+    val stateAnimationMillis: Int,
+    val alpha: Float = 1f,
+)
+
+@Immutable
+data class MillenniumSliderTheme(
+    val states: MillenniumControlStateProperty<MillenniumSliderThemeProperties>,
+)
+
+fun defaultMillenniumSliderTheme(colors: MillenniumColors): MillenniumSliderTheme {
+    val base = MillenniumSliderThemeProperties(
+        colors = colors,
+        trackBackground = millenniumBevelBrush(colors, sunken = true),
+        activeTrackBackground = gelBrush(colors.accentTop, colors.accentBottom),
+        thumbBackground = Brush.verticalGradient(listOf(colors.raised, colors.surface)),
+        trackShape = RoundedCornerShape(50),
+        thumbShape = RoundedCornerShape(50),
+        trackHeight = 8.dp,
+        thumbSize = 22.dp,
+        activeThumbSize = 26.dp,
+        touchTargetHeight = 44.dp,
+        trackBorderColor = colors.border,
+        trackBorderWidth = 1.dp,
+        thumbBorderColor = colors.border,
+        thumbBorderWidth = 1.dp,
+        thumbElevation = 4.dp,
+        thumbGlowColor = colors.highlight.copy(alpha = 0.55f),
+        stateAnimationMillis = 120,
+    )
+    return MillenniumSliderTheme(
+        states = MillenniumControlStateProperty(
+            default = base,
+            hovered = base.copy(thumbBorderColor = colors.accent, thumbGlowColor = colors.highlight),
+            focused = base.copy(thumbBorderColor = colors.accent, thumbBorderWidth = 2.dp),
+            pressed = base.copy(thumbElevation = 2.dp),
+            disabled = base.copy(alpha = 0.45f),
+            selected = base.copy(thumbBorderColor = colors.accent),
+            error = base.copy(trackBorderColor = colors.danger, thumbBorderColor = colors.danger),
+        ),
+    )
+}
 
 @Composable
 fun MillenniumSlider(
@@ -35,53 +110,62 @@ fun MillenniumSlider(
     steps: Int = 0,
     onValueChangeFinished: (() -> Unit)? = null,
 ) {
-    val sliderTheme = MillenniumTheme.sliderTheme
-    val colors = MillenniumTheme.colorsFor(sliderTheme)
     val interaction = remember { MutableInteractionSource() }
-    val baseVisual = MillenniumVisualStyle(
-        backgroundColor = colors.inset,
-        borderColor = colors.border,
-        borderWidth = sliderTheme.strokes.border,
-        shadowElevation = sliderTheme.elevation.thumb,
-    )
-    val visualState = if (enabled) MillenniumVisualState.Default else MillenniumVisualState.Disabled
-    val visual = MillenniumTheme.sliderTheme.resolve(visualState, baseVisual)
+    val focused by interaction.collectIsFocusedAsState()
+    val pressed by interaction.collectIsPressedAsState()
+    val dragged by interaction.collectIsDraggedAsState()
+    val controlState = when {
+        !enabled -> MillenniumControlState.Disabled
+        dragged || pressed -> MillenniumControlState.Pressed
+        focused -> MillenniumControlState.Focused
+        else -> MillenniumControlState.Default
+    }
+    val properties = MillenniumTheme.sliderTheme.states.resolve(controlState)
     UnstyledSlider(
         value = value,
         onValueChange = onValueChange,
-        modifier = modifier.fillMaxWidth().heightIn(min = sliderTheme.dimensions.touchTarget)
-            .alpha(visual.alpha ?: 1f).semantics { contentDescription = label },
+        modifier = modifier.fillMaxWidth().heightIn(min = properties.touchTargetHeight)
+            .alpha(properties.alpha).semantics { contentDescription = label },
         enabled = enabled,
         interactionSource = interaction,
         valueRange = valueRange,
         steps = steps,
         onValueChangeFinished = onValueChangeFinished,
         track = { state ->
-            Box(Modifier.fillMaxWidth().height(sliderTheme.dimensions.sliderTrackHeight)
-                .beveled(colors, sliderTheme.shapes.pill, sunken = true).componentStyle(visual, sliderTheme.shapes.pill)) {
+            Box(
+                Modifier.fillMaxWidth().height(properties.trackHeight).millenniumSurface(
+                    background = properties.trackBackground,
+                    shape = properties.trackShape,
+                    borderColor = properties.trackBorderColor,
+                    borderWidth = properties.trackBorderWidth,
+                ),
+            ) {
                 Box(
                     Modifier.fillMaxHeight().fillMaxWidth(state.fraction)
-                        .background(
-                            visual.background ?: visual.foregroundColor?.let { androidx.compose.ui.graphics.Brush.verticalGradient(listOf(it, it)) }
-                                ?: gelBrush(colors.accentTop, colors.accentBottom),
-                            sliderTheme.shapes.pill,
-                        )
+                        .background(properties.activeTrackBackground, properties.trackShape),
                 )
             }
         },
         thumb = { state ->
             val thumbState = when {
-                !enabled -> MillenniumVisualState.Disabled
-                state.isDragging || state.isPressed -> MillenniumVisualState.Clicked
-                state.isFocused -> MillenniumVisualState.Focused
-                else -> MillenniumVisualState.Default
+                !enabled -> MillenniumControlState.Disabled
+                state.isDragging || state.isPressed -> MillenniumControlState.Pressed
+                state.isFocused -> MillenniumControlState.Focused
+                else -> MillenniumControlState.Default
             }
-            val thumbVisual = sliderTheme.resolve(thumbState, baseVisual)
-            val thumbShape = thumbVisual.shape ?: sliderTheme.shapes.pill
-            Box(Modifier.size(sliderTheme.dimensions.touchTarget), contentAlignment = Alignment.Center) {
+            val thumbProperties = MillenniumTheme.sliderTheme.states.resolve(thumbState)
+            val targetSize = if (state.isPressed || state.isDragging) thumbProperties.activeThumbSize else thumbProperties.thumbSize
+            val animatedSize by animateDpAsState(targetSize, tween(thumbProperties.stateAnimationMillis))
+            Box(Modifier.size(thumbProperties.touchTargetHeight), contentAlignment = Alignment.Center) {
                 Box(
-                    Modifier.size(if (state.isPressed || state.isDragging) sliderTheme.dimensions.sliderThumbActive else sliderTheme.dimensions.sliderThumb)
-                        .beveled(colors, thumbShape).componentStyle(thumbVisual, thumbShape),
+                    Modifier.size(animatedSize).millenniumSurface(
+                        background = thumbProperties.thumbBackground,
+                        shape = thumbProperties.thumbShape,
+                        borderColor = thumbProperties.thumbBorderColor,
+                        borderWidth = thumbProperties.thumbBorderWidth,
+                        shadowElevation = thumbProperties.thumbElevation,
+                        innerGlowColor = thumbProperties.thumbGlowColor,
+                    ),
                 )
             }
         },

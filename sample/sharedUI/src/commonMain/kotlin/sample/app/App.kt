@@ -33,7 +33,7 @@ import org.spotube.millennium.composables.MillenniumScrollbar
 import org.spotube.millennium.composables.MillenniumSeparator
 import org.spotube.millennium.composables.MillenniumSwitch
 import org.spotube.millennium.composables.MillenniumTriStateCheckbox
-import org.spotube.millennium.theme.MillenniumText
+import org.spotube.millennium.composables.MillenniumText
 import org.spotube.millennium.theme.MillenniumTheme
 import org.spotube.millennium.theme.gelBrush
 

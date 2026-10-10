@@ -1,9 +1,12 @@
 package org.spotube.millennium.composables
 
-import androidx.compose.runtime.Composable
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.*
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
@@ -11,15 +14,50 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathBuilder
 import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.UnstyledIcon
+import org.spotube.millennium.theme.MillenniumColors
+import org.spotube.millennium.theme.MillenniumControlState
+import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
-import org.spotube.millennium.theme.MillenniumVisualState
-import org.spotube.millennium.theme.MillenniumVisualStyle
-import org.spotube.millennium.theme.componentStyle
-import org.spotube.millennium.theme.resolve
 import org.spotube.millennium.theme.MillenniumPreview
-import androidx.compose.ui.tooling.preview.Preview
+
+@Immutable
+data class MillenniumIconThemeProperties(
+    val colors: MillenniumColors,
+    val tint: Color,
+    val size: Dp,
+    val alpha: Float,
+    val tintAnimationMillis: Int,
+)
+
+@Immutable
+data class MillenniumIconTheme(
+    val states: MillenniumControlStateProperty<MillenniumIconThemeProperties>,
+)
+
+fun defaultMillenniumIconTheme(colors: MillenniumColors): MillenniumIconTheme {
+    val base = MillenniumIconThemeProperties(
+        colors = colors,
+        tint = colors.text,
+        size = 20.dp,
+        alpha = 1f,
+        tintAnimationMillis = 120,
+    )
+    return MillenniumIconTheme(
+        states = MillenniumControlStateProperty(
+            default = base,
+            hovered = base.copy(tint = colors.accent),
+            focused = base.copy(tint = colors.accent),
+            pressed = base.copy(tint = colors.accentBottom),
+            disabled = base.copy(tint = colors.muted, alpha = 0.45f),
+            selected = base.copy(tint = colors.accent),
+            error = base.copy(tint = colors.danger),
+        ),
+    )
+}
 
 @Composable
 fun MillenniumIcon(
@@ -27,14 +65,17 @@ fun MillenniumIcon(
     contentDescription: String? = null,
     modifier: Modifier = Modifier,
     tint: Color? = null,
+    state: MillenniumControlState = MillenniumControlState.Default,
 ) {
-    val iconTheme = MillenniumTheme.iconTheme
-    val colors = MillenniumTheme.colorsFor(iconTheme)
-    val tintColor = tint ?: colors.text
-    val visual = iconTheme.resolve(MillenniumVisualState.Default, MillenniumVisualStyle(foregroundColor = tintColor))
-    val shape = visual.shape ?: iconTheme.shapes.control
-    UnstyledIcon(imageVector, contentDescription, modifier.size(iconTheme.dimensions.iconSize)
-        .componentStyle(visual, shape), visual.foregroundColor ?: tintColor)
+    val properties = MillenniumTheme.iconTheme.states.resolve(state)
+    val targetTint = tint ?: properties.tint
+    val animatedTint = animateColorAsState(targetTint, tween(properties.tintAnimationMillis)).value
+    UnstyledIcon(
+        imageVector,
+        contentDescription,
+        modifier.size(properties.size).alpha(properties.alpha),
+        animatedTint,
+    )
 }
 
 /** Small, dependency-free vector set used by the gallery and themed controls. */
@@ -50,22 +91,27 @@ object MillenniumIcons {
         moveTo(9f, 16f); curveTo(2f, 13f, 2f, 23f, 9f, 19f)
         moveTo(20f, 14f); curveTo(13f, 11f, 13f, 21f, 20f, 17f)
     }
+
     private fun icon(name: String, block: PathBuilder.() -> Unit) =
         ImageVector.Builder(name, 24.dp, 24.dp, 24f, 24f).apply {
-            path(stroke = SolidColor(Color.Black), strokeLineWidth = 1.8f, strokeLineCap = StrokeCap.Round,
-                strokeLineJoin = StrokeJoin.Round, pathBuilder = block)
+            path(
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 1.8f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round,
+                pathBuilder = block,
+            )
         }.build()
 }
 
 @Preview
 @Composable
 private fun MillenniumIconPreview() = MillenniumPreview {
-    val colors = MillenniumTheme.colorsFor(MillenniumTheme.iconTheme)
     androidx.compose.foundation.layout.Row(
         horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(20.dp),
     ) {
-        MillenniumIcon(MillenniumIcons.Sparkle, contentDescription = "Sparkle", tint = colors.accent)
+        MillenniumIcon(MillenniumIcons.Sparkle, contentDescription = "Sparkle", tint = MillenniumTheme.iconTheme.states.default.colors.accent)
         MillenniumIcon(MillenniumIcons.Music, contentDescription = "Music")
-        MillenniumIcon(MillenniumIcons.Check, contentDescription = "Check", tint = colors.success)
+        MillenniumIcon(MillenniumIcons.Check, contentDescription = "Check", tint = MillenniumTheme.iconTheme.states.default.colors.success)
     }
 }

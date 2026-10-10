@@ -51,46 +51,55 @@ their foreground style. `MillenniumCard` provides a beveled panel. Install
 
 ### Hackable theme configuration
 
-`MillenniumThemeConfig` has shared light/dark fallback color schemes and a theme
-object for each component. **All component styling belongs to its own theme:** its
-colors, dimensions, padding/spacing, shapes, typography, shadow/elevation, strokes,
-motion, and interaction states. There are no global dimensions, spacing, shape,
-stroke, elevation, or typography buckets. Each component theme has `default`, `hovered`, `focused`, `clicked`,
-`disabled`, and `selected` visuals (plus `error` for invalid inputs). A state visual
-can override its background brush/color, foreground, border, inner glow, shadow,
-alpha, shape, text style, padding, and content spacing. Unspecified values inherit
-that component's palette-aware defaults. Buttons additionally separate primary,
-secondary, quiet, and danger variants, each with its own component theme. Set a
-component theme's `colors` property to override its palette independently; the
-light/dark color schemes only provide fallback colors.
+Each component's source file defines its own `<Component>ThemeProperties`,
+`<Component>Theme`, state variations and default factory. For example, `Button.kt`
+owns button typography, colors, dimensions, shape, padding, bevel, shadow, hover/
+press feedback, and transition behavior. Every state variation is represented by
+`MillenniumControlStateProperty` (`Default`, `Hovered`, `Focused`, `Pressed`,
+`Disabled`, `Selected`, and `Error`); dimensions, spacing, typography, motion, and
+other component-specific tokens are not collected into global style buckets. The
+shared light/dark palettes are starting points; component theme properties own the
+actual values used by each control.
 
 ```kotlin
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import org.spotube.millennium.theme.*
+import org.spotube.millennium.composables.*
 
-val appTheme = MillenniumThemeConfig(
-    colorSchemes = MillenniumColorSchemes(
-        light = MillenniumLightColors.copy(accent = Color(0xFF8A3FFC)),
-        dark = MillenniumDarkColors.copy(accent = Color(0xFFC6A0FF)),
-    ),
-    buttonTheme = MillenniumButtonTheme(
-        dimensions = MillenniumDimensions(touchTarget = 48.dp),
-        primary = MillenniumComponentTheme(
-            default = MillenniumVisualStyle(
-                background = gelBrush(Color(0xFFFF9A44), Color(0xFF9C2FCA)),
-                foregroundColor = Color.White,
-                shadowElevation = 8.dp,
-                innerGlowColor = Color.White.copy(alpha = 0.32f),
+val customLightColors = MillenniumLightColors.copy(
+    accent = Color(0xFFCC2255),
+    accentTop = Color(0xFFE570A0),
+    accentBottom = Color(0xFFCC2255),
+)
+val defaults = MillenniumThemeConfig(
+    light = defaultMillenniumThemeComponents(customLightColors),
+)
+val light = defaults.light
+val appTheme = defaults.copy(
+    light = light.copy(
+        buttonTheme = light.buttonTheme.copy(
+            primary = light.buttonTheme.primary.copy(
+                default = light.buttonTheme.primary.default.copy(
+                    background = gelBrush(Color(0xFFFF9A44), Color(0xFF9C2FCA)),
+                    foreground = Color.White,
+                    shadowElevation = 8.dp,
+                    innerGlowColor = Color.White.copy(alpha = 0.32f),
+                    motion = MillenniumButtonMotion(stateChangeMillis = 190, pressedScale = 0.96f),
+                ),
+                hovered = light.buttonTheme.primary.hovered.copy(
+                    innerGlowColor = Color.White.copy(alpha = 0.55f),
+                ),
             ),
-            hovered = MillenniumVisualStyle(innerGlowColor = Color.White.copy(alpha = 0.55f)),
-            focused = MillenniumVisualStyle(borderColor = Color(0xFFFFD966), borderWidth = 3.dp),
-            clicked = MillenniumVisualStyle(shadowElevation = 0.dp),
         ),
-    ),
-    checkboxTheme = MillenniumCheckboxTheme(
-        colors = MillenniumLightColors.copy(accent = Color(0xFFCC2255)),
-        dimensions = MillenniumDimensions(checkboxSize = 26.dp),
+        checkboxTheme = light.checkboxTheme.copy(
+            states = light.checkboxTheme.states.copy(
+                default = light.checkboxTheme.states.default.copy(
+                    faceSize = androidx.compose.ui.unit.DpSize(26.dp, 26.dp),
+                    selectedFaceBackground = gelBrush(Color(0xFFE570A0), Color(0xFFCC2255)),
+                ),
+            ),
+        ),
     ),
 )
 
@@ -99,10 +108,12 @@ MillenniumTheme(config = appTheme) {
 }
 ```
 
-Every component-specific theme is accessible in content, for example
-`MillenniumTheme.buttonTheme`, `MillenniumTheme.cardTheme`, and
-`MillenniumTheme.textFieldTheme`. Configure one component without affecting its
-neighbors by copying just its theme, e.g. `buttonTheme.copy(dimensions = ...)`.
+`MillenniumThemeConfig` groups complete `light` and `dark` component-theme sets.
+Within each set, `MillenniumTheme.buttonTheme`, `MillenniumTheme.cardTheme`, and
+`MillenniumTheme.textFieldTheme` expose the active component themes. Copy only the
+component (and the state/variant you want to change) to leave neighboring components
+and the other appearance untouched. `Theme.kt` assembles the light/dark defaults;
+component properties and variants live next to their composables.
 
 Bottom sheets use Compose Unstyled's `rememberBottomSheetState` and
 `rememberModalBottomSheetState`; drawers use `rememberMillenniumDrawerState`.

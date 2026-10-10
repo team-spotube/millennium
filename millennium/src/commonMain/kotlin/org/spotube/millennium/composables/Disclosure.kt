@@ -1,25 +1,110 @@
 package org.spotube.millennium.composables
 
-import androidx.compose.animation.*
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.LocalIndication
-import androidx.compose.foundation.interaction.*
-import androidx.compose.foundation.layout.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.unit.dp
-import com.composeunstyled.*
-import org.spotube.millennium.theme.MillenniumTheme
-import org.spotube.millennium.theme.beveled
-import org.spotube.millennium.theme.MillenniumPreview
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import org.spotube.millennium.theme.MillenniumText
-import org.spotube.millennium.theme.MillenniumVisualState
-import org.spotube.millennium.theme.MillenniumVisualStyle
-import org.spotube.millennium.theme.componentStyle
-import org.spotube.millennium.theme.resolve
-import org.spotube.millennium.theme.MillenniumComponentContent
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.composeunstyled.DisclosedContent
+import com.composeunstyled.DisclosureButton
+import com.composeunstyled.Text
+import com.composeunstyled.UnstyledDisclosure
+import org.spotube.millennium.theme.MillenniumColors
+import org.spotube.millennium.theme.MillenniumControlState
+import org.spotube.millennium.theme.MillenniumControlStateProperty
+import org.spotube.millennium.theme.MillenniumTheme
+import org.spotube.millennium.theme.MillenniumPreview
+import org.spotube.millennium.theme.MillenniumStyledContent
+import org.spotube.millennium.theme.millenniumBevelBrush
+import org.spotube.millennium.theme.millenniumSurface
+
+@Immutable
+data class MillenniumDisclosureThemeProperties(
+    val colors: MillenniumColors,
+    val background: Brush,
+    val foreground: Color,
+    val shape: Shape,
+    val borderColor: Color,
+    val borderWidth: Dp,
+    val shadowElevation: Dp,
+    val innerGlowColor: Color,
+    val titleStyle: TextStyle,
+    val contentStyle: TextStyle,
+    val minimumHeaderHeight: Dp,
+    val headerPadding: PaddingValues,
+    val contentPadding: PaddingValues,
+    val headerContentSpacing: Dp,
+    val contentSpacing: Dp,
+    val animationMillis: Int,
+    val alpha: Float = 1f,
+)
+
+@Immutable
+data class MillenniumDisclosureTheme(
+    val states: MillenniumControlStateProperty<MillenniumDisclosureThemeProperties>,
+)
+
+fun defaultMillenniumDisclosureTheme(colors: MillenniumColors): MillenniumDisclosureTheme {
+    val base = MillenniumDisclosureThemeProperties(
+        colors = colors,
+        background = millenniumBevelBrush(colors),
+        foreground = colors.text,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+        borderColor = colors.border,
+        borderWidth = 1.dp,
+        shadowElevation = 0.dp,
+        innerGlowColor = colors.highlight.copy(alpha = 0.5f),
+        titleStyle = TextStyle(fontSize = 15.sp, lineHeight = 21.sp, fontWeight = FontWeight.SemiBold),
+        contentStyle = TextStyle(fontSize = 14.sp, lineHeight = 21.sp),
+        minimumHeaderHeight = 48.dp,
+        headerPadding = PaddingValues(12.dp),
+        contentPadding = PaddingValues(16.dp),
+        headerContentSpacing = 12.dp,
+        contentSpacing = 12.dp,
+        animationMillis = 180,
+    )
+    return MillenniumDisclosureTheme(
+        states = MillenniumControlStateProperty(
+            default = base,
+            hovered = base.copy(borderColor = colors.accent),
+            focused = base.copy(borderColor = colors.accent, borderWidth = 2.dp),
+            pressed = base.copy(shadowElevation = 2.dp),
+            disabled = base.copy(alpha = 0.45f, foreground = colors.muted),
+            selected = base.copy(borderColor = colors.accent),
+            error = base.copy(borderColor = colors.danger, borderWidth = 2.dp),
+        ),
+    )
+}
 
 @Composable
 fun MillenniumDisclosure(
@@ -29,42 +114,62 @@ fun MillenniumDisclosure(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    val disclosureTheme = MillenniumTheme.disclosureTheme
-    val colors = MillenniumTheme.colorsFor(disclosureTheme)
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val focused by interaction.collectIsFocusedAsState()
     val hovered by interaction.collectIsHoveredAsState()
     val state = when {
-        pressed -> MillenniumVisualState.Clicked
-        focused -> MillenniumVisualState.Focused
-        hovered -> MillenniumVisualState.Hovered
-        expanded -> MillenniumVisualState.Selected
-        else -> MillenniumVisualState.Default
+        pressed -> MillenniumControlState.Pressed
+        focused -> MillenniumControlState.Focused
+        hovered -> MillenniumControlState.Hovered
+        expanded -> MillenniumControlState.Selected
+        else -> MillenniumControlState.Default
     }
-    val visual = MillenniumTheme.disclosureTheme.resolve(
-        state,
-        MillenniumVisualStyle(backgroundColor = colors.surface, foregroundColor = colors.text, borderColor = colors.border,
-            borderWidth = disclosureTheme.strokes.border, innerGlowColor = colors.highlight),
+    val properties = MillenniumTheme.disclosureTheme.states.resolve(state)
+    val arrowRotation by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        animationSpec = tween(properties.animationMillis),
     )
-    val shape = visual.shape ?: disclosureTheme.shapes.control
-    UnstyledDisclosure(expanded, onExpandedChange, modifier.beveled(colors, shape).componentStyle(visual, shape)) {
+    UnstyledDisclosure(
+        expanded = expanded,
+        onExpandedChange = onExpandedChange,
+        modifier = modifier.millenniumSurface(
+            background = properties.background,
+            shape = properties.shape,
+            borderColor = properties.borderColor,
+            borderWidth = properties.borderWidth,
+            shadowElevation = properties.shadowElevation,
+            innerGlowColor = properties.innerGlowColor,
+        ).alpha(properties.alpha),
+    ) {
         Column {
             DisclosureButton(
-                Modifier.fillMaxWidth().heightIn(min = disclosureTheme.dimensions.disclosureMinHeight)
-                    .componentStyle(visual, shape),
-                contentPadding = visual.contentPadding ?: PaddingValues(disclosureTheme.spacing.medium),
+                modifier = Modifier.fillMaxWidth().heightIn(min = properties.minimumHeaderHeight)
+                    .padding(properties.headerPadding),
+                contentPadding = PaddingValues(0.dp),
                 indication = LocalIndication.current,
                 interactionSource = interaction,
             ) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(title, modifier = Modifier.weight(1f), color = visual.foregroundColor ?: colors.text)
-                    MillenniumIcon(MillenniumIcons.Chevron, modifier = Modifier.rotate(if (expanded) 180f else 0f))
+                    Text(title, modifier = Modifier.weight(1f), style = properties.titleStyle, color = properties.foreground)
+                    MillenniumIcon(
+                        MillenniumIcons.Chevron,
+                        modifier = Modifier.rotate(arrowRotation),
+                        tint = properties.foreground,
+                    )
                 }
             }
-            DisclosedContent(enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
-                Column(Modifier.padding(disclosureTheme.spacing.large), verticalArrangement = Arrangement.spacedBy(disclosureTheme.spacing.medium)) {
-                    MillenniumComponentContent(visual) { content() }
+            DisclosedContent(
+                enter = expandVertically(animationSpec = tween(properties.animationMillis)) +
+                    fadeIn(animationSpec = tween(properties.animationMillis)),
+                exit = shrinkVertically(animationSpec = tween(properties.animationMillis)) +
+                    fadeOut(animationSpec = tween(properties.animationMillis)),
+            ) {
+                Column(
+                    Modifier.padding(properties.contentPadding),
+                    verticalArrangement = Arrangement.spacedBy(properties.contentSpacing),
+                ) {
+                    MillenniumStyledContent(properties.contentStyle, properties.foreground, content)
                 }
             }
         }

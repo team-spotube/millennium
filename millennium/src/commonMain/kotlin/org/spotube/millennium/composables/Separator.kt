@@ -1,32 +1,58 @@
 package org.spotube.millennium.composables
 
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.composeunstyled.UnstyledHorizontalSeparator
 import com.composeunstyled.UnstyledVerticalSeparator
+import org.spotube.millennium.theme.MillenniumColors
+import org.spotube.millennium.theme.MillenniumControlState
+import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
-import org.spotube.millennium.theme.MillenniumVisualState
-import org.spotube.millennium.theme.MillenniumVisualStyle
-import org.spotube.millennium.theme.resolve
 import org.spotube.millennium.theme.MillenniumPreview
-import org.spotube.millennium.theme.MillenniumText
-import androidx.compose.ui.tooling.preview.Preview
+
+@Immutable
+data class MillenniumSeparatorThemeProperties(
+    val colors: MillenniumColors,
+    val color: androidx.compose.ui.graphics.Color,
+    val thickness: Dp,
+    val alpha: Float,
+)
+
+@Immutable
+data class MillenniumSeparatorTheme(
+    val states: MillenniumControlStateProperty<MillenniumSeparatorThemeProperties>,
+)
+
+fun defaultMillenniumSeparatorTheme(colors: MillenniumColors): MillenniumSeparatorTheme {
+    val base = MillenniumSeparatorThemeProperties(colors, colors.border, 1.dp, 1f)
+    return MillenniumSeparatorTheme(
+        MillenniumControlStateProperty(
+            default = base,
+            hovered = base.copy(color = colors.accent),
+            focused = base.copy(color = colors.accent, thickness = 2.dp),
+            pressed = base.copy(alpha = 0.7f),
+            disabled = base.copy(alpha = 0.4f),
+            selected = base.copy(color = colors.accent),
+            error = base.copy(color = colors.danger),
+        ),
+    )
+}
 
 @Composable
 fun MillenniumSeparator(modifier: Modifier = Modifier, vertical: Boolean = false) {
-    val separatorTheme = MillenniumTheme.separatorTheme
-    val colors = MillenniumTheme.colorsFor(separatorTheme)
-    val visual = separatorTheme.resolve(
-        MillenniumVisualState.Default,
-        MillenniumVisualStyle(foregroundColor = colors.border),
-    )
-    val color = visual.foregroundColor ?: visual.borderColor ?: colors.border
-    val thickness = visual.borderWidth ?: separatorTheme.strokes.separator
-    if (vertical) UnstyledVerticalSeparator(color, modifier, thickness)
-    else UnstyledHorizontalSeparator(color, modifier, thickness)
+    val properties = MillenniumTheme.separatorTheme.states.resolve(MillenniumControlState.Default)
+    if (vertical) {
+        UnstyledVerticalSeparator(properties.color, modifier.alpha(properties.alpha), properties.thickness)
+    } else {
+        UnstyledHorizontalSeparator(properties.color, modifier.alpha(properties.alpha), properties.thickness)
+    }
 }
 
 @Preview

@@ -3,20 +3,16 @@ package org.spotube.millennium
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
-import org.spotube.millennium.theme.MillenniumComponentTheme
-import org.spotube.millennium.theme.MillenniumButtonTheme
-import org.spotube.millennium.theme.MillenniumCardTheme
-import org.spotube.millennium.theme.MillenniumCheckboxTheme
+import org.spotube.millennium.composables.defaultMillenniumButtonTheme
+import org.spotube.millennium.theme.MillenniumControlState
+import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumDarkColors
-import org.spotube.millennium.theme.MillenniumDimensions
 import org.spotube.millennium.theme.MillenniumLightColors
 import org.spotube.millennium.theme.MillenniumThemeConfig
-import org.spotube.millennium.theme.MillenniumVisualState
-import org.spotube.millennium.theme.MillenniumVisualStyle
-import org.spotube.millennium.theme.resolve
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class ThemeTest {
@@ -35,8 +31,10 @@ class ThemeTest {
     fun gelButtonLabelsMeetAAAcrossTheEntireGradient() {
         listOf(MillenniumLightColors, MillenniumDarkColors).forEach { palette ->
             (0..20).forEach { step ->
-                assertTrue(contrast(palette.onAccent, lerp(palette.accentTop, palette.accentBottom, step / 20f)) >= 4.5,
-                    "Gel labels must remain legible even at the brightest gradient stop")
+                assertTrue(
+                    contrast(palette.onAccent, lerp(palette.accentTop, palette.accentBottom, step / 20f)) >= 4.5,
+                    "Gel labels must remain legible even at the brightest gradient stop",
+                )
             }
         }
     }
@@ -51,60 +49,80 @@ class ThemeTest {
     }
 
     @Test
-    fun componentStateStylesInheritDefaultsAndOverrideIndependently() {
-        val base = MillenniumVisualStyle(
-            background = SolidColor(Color.Black),
-            foregroundColor = Color.White,
-            shadowElevation = 2.dp,
-        )
-        val theme = MillenniumComponentTheme(
-            default = MillenniumVisualStyle(foregroundColor = Color(0xFF224466), shadowElevation = 6.dp),
-            hovered = MillenniumVisualStyle(backgroundColor = Color(0xFF112233), innerGlowColor = Color.White),
-        )
-
-        val hovered = theme.resolve(MillenniumVisualState.Hovered, base)
-        assertTrue(hovered.background == null, "A color override replaces the inherited brush")
-        assertTrue(hovered.backgroundColor == Color(0xFF112233))
-        assertTrue(hovered.foregroundColor == Color(0xFF224466), "Hover inherits the component default foreground")
-        assertTrue(hovered.shadowElevation == 6.dp, "Hover inherits the component default elevation")
-        assertTrue(hovered.innerGlowColor == Color.White)
-        assertTrue(theme.resolve(MillenniumVisualState.Disabled, base).background == SolidColor(Color.Black),
-            "Unspecified states leave their base appearance unchanged")
+    fun dangerButtonTextMeetsAAInBothPalettes() {
+        listOf(MillenniumLightColors, MillenniumDarkColors).forEach { palette ->
+            val labelColor = defaultMillenniumButtonTheme(palette).danger.default.foreground
+            assertTrue(
+                contrast(labelColor, palette.danger) >= 4.5,
+                "Danger button labels use the component surface color over the danger fill",
+            )
+        }
     }
 
     @Test
-    fun themeConfigKeepsComponentThemesIndependentlyHackable() {
-        val customButtonTheme = MillenniumButtonTheme(
-            primary = MillenniumComponentTheme(
-                hovered = MillenniumVisualStyle(innerGlowColor = Color(0xFFFFCC55), shadowElevation = 12.dp),
+    fun controlStatePropertyResolvesEveryStateAndCopiesIndependently() {
+        val property = MillenniumControlStateProperty(
+            default = "default",
+            hovered = "hovered",
+            focused = "focused",
+            pressed = "pressed",
+            disabled = "disabled",
+            selected = "selected",
+            error = "error",
+        )
+        assertEquals("default", property.resolve(MillenniumControlState.Default))
+        assertEquals("hovered", property.resolve(MillenniumControlState.Hovered))
+        assertEquals("focused", property.resolve(MillenniumControlState.Focused))
+        assertEquals("pressed", property.resolve(MillenniumControlState.Pressed))
+        assertEquals("disabled", property.resolve(MillenniumControlState.Disabled))
+        assertEquals("selected", property.resolve(MillenniumControlState.Selected))
+        assertEquals("error", property.resolve(MillenniumControlState.Error))
+        assertEquals("default", property.copy(hovered = "custom hover").default)
+    }
+
+    @Test
+    fun componentThemesCanBeCustomizedWithoutChangingNeighborsOrDarkDefaults() {
+        val defaults = MillenniumThemeConfig()
+        val light = defaults.light
+        val customButton = light.buttonTheme.copy(
+            primary = light.buttonTheme.primary.copy(
+                default = light.buttonTheme.primary.default.copy(shadowElevation = 12.dp),
             ),
         )
-        val customCheckboxTheme = MillenniumCheckboxTheme(
-            colors = MillenniumLightColors.copy(accent = Color(0xFFCC2255)),
-            disabled = MillenniumVisualStyle(alpha = 0.25f),
-        )
-        val customCardTheme = MillenniumCardTheme(
-            colors = MillenniumLightColors.copy(surface = Color(0xFFFFF3E8)),
-            dimensions = MillenniumDimensions(cardMaxWidth = 520.dp),
-        )
-        val config = MillenniumThemeConfig(
-            colorSchemes = org.spotube.millennium.theme.MillenniumColorSchemes(
-                light = MillenniumLightColors.copy(accent = Color(0xFF8A3FFC)),
-                dark = MillenniumDarkColors.copy(accent = Color(0xFFC6A0FF)),
+        val customCheckbox = light.checkboxTheme.copy(
+            states = light.checkboxTheme.states.copy(
+                disabled = light.checkboxTheme.states.disabled.copy(faceAlpha = 0.25f),
             ),
-            buttonTheme = customButtonTheme,
-            checkboxTheme = customCheckboxTheme,
-            cardTheme = customCardTheme,
+        )
+        val customCard = light.cardTheme.copy(
+            states = light.cardTheme.states.copy(
+                default = light.cardTheme.states.default.copy(maxWidth = 520.dp),
+            ),
+        )
+        val config = defaults.copy(
+            light = light.copy(
+                buttonTheme = customButton,
+                checkboxTheme = customCheckbox,
+                cardTheme = customCard,
+            ),
         )
 
-        assertTrue(config.colorSchemes.light.accent == Color(0xFF8A3FFC))
-        assertTrue(config.buttonTheme.primary.hovered.innerGlowColor == Color(0xFFFFCC55))
-        assertTrue(config.buttonTheme.primary.hovered.shadowElevation == 12.dp)
-        assertTrue(config.checkboxTheme.disabled.alpha == 0.25f)
-        assertTrue(config.checkboxTheme.colors?.accent == Color(0xFFCC2255))
-        assertTrue(config.cardTheme.colors?.surface == Color(0xFFFFF3E8))
-        assertTrue(config.cardTheme.dimensions.cardMaxWidth == 520.dp)
-        assertTrue(config.radioGroupTheme.disabled.alpha != 0.25f, "Component themes remain independently configurable")
+        assertEquals(12.dp, config.light.buttonTheme.primary.default.shadowElevation)
+        assertEquals(0.25f, config.light.checkboxTheme.states.disabled.faceAlpha)
+        assertEquals(520.dp, config.light.cardTheme.states.default.maxWidth)
+        assertNotEquals(0.25f, config.light.triStateCheckboxTheme.states.disabled.faceAlpha)
+        assertNotEquals(12.dp, config.dark.buttonTheme.primary.default.shadowElevation)
+    }
+
+    @Test
+    fun lightAndDarkDefaultsAreSeparateComponentThemeSets() {
+        val config = MillenniumThemeConfig()
+        assertEquals(MillenniumLightColors, config.light.colors)
+        assertEquals(MillenniumDarkColors, config.dark.colors)
+        assertNotEquals(
+            config.light.buttonTheme.primary.default.colors.accentTop,
+            config.dark.buttonTheme.primary.default.colors.accentTop,
+        )
     }
 
     private fun contrast(a: Color, b: Color): Float {

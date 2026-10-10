@@ -1,17 +1,107 @@
 package org.spotube.millennium.composables
 
 import androidx.compose.foundation.LocalIndication
-import androidx.compose.foundation.interaction.*
-import androidx.compose.foundation.layout.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.state.ToggleableState
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import com.composeunstyled.*
-import org.spotube.millennium.theme.*
+import com.composeunstyled.LocalTextStyle
+import com.composeunstyled.Text
+import com.composeunstyled.UnstyledTriStateCheckbox
+import org.spotube.millennium.theme.MillenniumColors
+import org.spotube.millennium.theme.MillenniumControlState
+import org.spotube.millennium.theme.MillenniumControlStateProperty
+import org.spotube.millennium.theme.MillenniumTheme
+import org.spotube.millennium.theme.MillenniumPreview
+import org.spotube.millennium.theme.gelBrush
+import org.spotube.millennium.theme.millenniumBevelBrush
+
+@Immutable
+data class MillenniumTriStateCheckboxThemeProperties(
+    override val colors: MillenniumColors,
+    override val faceBackground: Brush,
+    override val selectedFaceBackground: Brush,
+    override val selectedFaceForeground: Color,
+    override val faceShape: Shape,
+    override val faceSize: DpSize,
+    override val markSize: Dp,
+    override val dashSize: DpSize,
+    override val faceBorderColor: Color,
+    override val faceBorderWidth: Dp,
+    override val faceGlowColor: Color,
+    override val faceElevation: Dp,
+    override val faceAlpha: Float,
+    override val stateChangeMillis: Int,
+    override val labelForeground: Color,
+    override val labelStyle: TextStyle,
+    override val minimumTouchHeight: Dp,
+    override val contentPadding: PaddingValues,
+    override val contentSpacing: Dp,
+) : MillenniumCheckFaceStyle
+
+@Immutable
+data class MillenniumTriStateCheckboxTheme(
+    val states: MillenniumControlStateProperty<MillenniumTriStateCheckboxThemeProperties>,
+)
+
+fun defaultMillenniumTriStateCheckboxTheme(colors: MillenniumColors): MillenniumTriStateCheckboxTheme {
+    val base = MillenniumTriStateCheckboxThemeProperties(
+        colors = colors,
+        faceBackground = millenniumBevelBrush(colors, sunken = true),
+        selectedFaceBackground = gelBrush(colors.accentTop, colors.accentBottom),
+        selectedFaceForeground = colors.onAccent,
+        faceShape = androidx.compose.foundation.shape.RoundedCornerShape(5.dp),
+        faceSize = DpSize(22.dp, 22.dp),
+        markSize = 16.dp,
+        dashSize = DpSize(11.dp, 2.dp),
+        faceBorderColor = colors.border,
+        faceBorderWidth = 1.dp,
+        faceGlowColor = colors.highlight.copy(alpha = 0.55f),
+        faceElevation = 0.dp,
+        faceAlpha = 1f,
+        stateChangeMillis = 120,
+        labelForeground = colors.text,
+        labelStyle = TextStyle(fontWeight = FontWeight.Normal),
+        minimumTouchHeight = 44.dp,
+        contentPadding = PaddingValues(0.dp),
+        contentSpacing = 12.dp,
+    )
+    return MillenniumTriStateCheckboxTheme(
+        states = MillenniumControlStateProperty(
+            default = base,
+            hovered = base.copy(faceBorderColor = colors.accent, faceGlowColor = colors.highlight),
+            focused = base.copy(faceBorderColor = colors.accent, faceBorderWidth = 2.dp),
+            pressed = base.copy(faceElevation = 0.dp),
+            disabled = base.copy(faceAlpha = 0.45f, labelForeground = colors.muted),
+            selected = base.copy(
+                faceBorderColor = colors.accentBottom,
+            ),
+            error = base.copy(faceBorderColor = colors.danger, faceBorderWidth = 2.dp),
+        ),
+    )
+}
 
 @Composable
 fun MillenniumTriStateCheckbox(
@@ -25,34 +115,34 @@ fun MillenniumTriStateCheckbox(
     val pressed by source.collectIsPressedAsState()
     val focused by source.collectIsFocusedAsState()
     val hovered by source.collectIsHoveredAsState()
-    val visualState = when {
-        !enabled -> MillenniumVisualState.Disabled
-        pressed -> MillenniumVisualState.Clicked
-        focused -> MillenniumVisualState.Focused
-        hovered -> MillenniumVisualState.Hovered
-        value != ToggleableState.Off -> MillenniumVisualState.Selected
-        else -> MillenniumVisualState.Default
+    val state = when {
+        !enabled -> MillenniumControlState.Disabled
+        pressed -> MillenniumControlState.Pressed
+        focused -> MillenniumControlState.Focused
+        hovered -> MillenniumControlState.Hovered
+        value != ToggleableState.Off -> MillenniumControlState.Selected
+        else -> MillenniumControlState.Default
     }
-    val triStateTheme = MillenniumTheme.triStateCheckboxTheme
-    val colors = MillenniumTheme.colorsFor(triStateTheme)
-    val visual = triStateTheme.resolve(visualState, MillenniumVisualStyle(foregroundColor = colors.text, borderColor = colors.border))
+    val properties = MillenniumTheme.triStateCheckboxTheme.states.resolve(state)
     UnstyledTriStateCheckbox(
         value = value,
         onClick = onClick,
-        modifier = modifier.heightIn(min = triStateTheme.dimensions.touchTarget)
-            .componentStyle(visual, triStateTheme.shapes.control).alpha(visual.alpha ?: 1f),
+        modifier = modifier.heightIn(min = properties.minimumTouchHeight),
         enabled = enabled,
         accessibilityLabel = label,
         indication = LocalIndication.current,
         interactionSource = source,
     ) {
         Row(
-            modifier = Modifier.padding(visual.contentPadding ?: PaddingValues(0.dp)),
+            modifier = Modifier.padding(properties.contentPadding),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(visual.contentSpacing ?: triStateTheme.spacing.medium),
+            horizontalArrangement = Arrangement.spacedBy(properties.contentSpacing),
         ) {
-            MillenniumCheckFace(value, triStateTheme, !enabled, hovered, focused, pressed)
-            CompositionLocalProvider(LocalTextStyle provides LocalTextStyle.current.copy(color = visual.foregroundColor ?: colors.text)) { Text(label) }
+            MillenniumCheckFace(value, properties, state)
+            CompositionLocalProvider(
+                LocalTextStyle provides LocalTextStyle.current.merge(properties.labelStyle)
+                    .copy(color = properties.labelForeground),
+            ) { Text(label) }
         }
     }
 }
