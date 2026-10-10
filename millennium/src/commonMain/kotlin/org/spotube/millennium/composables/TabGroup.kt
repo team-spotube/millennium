@@ -64,6 +64,9 @@ data class MillenniumTabGroupThemeProperties(
     val tabPadding: PaddingValues,
     val stateAnimationMillis: Int,
     val alpha: Float = 1f,
+    val tabBorderWidth: Dp = 1.dp,
+    val tabElevation: Dp = 2.dp,
+    val tabGlowColor: Color? = null,
 )
 
 @Immutable
@@ -156,12 +159,15 @@ fun <T> MillenniumTabGroup(
                                 .millenniumSurface(
                                     background = tabBackground,
                                     shape = properties.tabShape,
-                                    borderColor = if (isSelected) tabBorder else null,
-                                    borderWidth = if (isSelected) 1.dp else 0.dp,
+                                    borderColor = if (focused) colors.accent else if (isSelected) tabBorder else null,
+                                    borderWidth = if (focused) maxOf(2.dp, properties.tabBorderWidth) else properties.tabBorderWidth,
+                                    shadowElevation = if (isSelected) properties.tabElevation else 0.dp,
+                                    innerGlowColor = if (isSelected) properties.tabGlowColor ?: colors.highlight.copy(alpha = 0.45f) else null,
                                 )
                                 .padding(properties.tabPadding),
                             indication = LocalIndication.current,
                             interactionSource = interaction,
+                            contentAlignment = androidx.compose.ui.Alignment.Center,
                         ) {
                             CompositionLocalProvider(
                                 LocalTextStyle provides LocalTextStyle.current.merge(properties.tabTextStyle)

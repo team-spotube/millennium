@@ -42,6 +42,16 @@ private val categories =
 
 @Composable
 fun App() {
+    var study by rememberSaveable { mutableStateOf(true) }
+    if (study) {
+        AeroDesignStudy(onOpenGallery = { study = false })
+    } else {
+        GalleryApp(onOpenStudy = { study = true })
+    }
+}
+
+@Composable
+private fun GalleryApp(onOpenStudy: () -> Unit) {
     var dark by rememberSaveable { mutableStateOf(false) }
     var category by rememberSaveable { mutableStateOf("All components") }
     var dialog by rememberSaveable { mutableStateOf(false) }
@@ -54,6 +64,7 @@ fun App() {
                 val wide = maxWidth >= 900.dp
                 Column(Modifier.fillMaxSize()) {
                     Header(dark, { dark = it }, wide)
+                    MillenniumButton(onOpenStudy, style = MillenniumButtonStyle.Quiet) { Text("Back to design study") }
                     MillenniumSeparator()
                     Row(Modifier.weight(1f)) {
                         if (wide) Sidebar(category) { category = it }

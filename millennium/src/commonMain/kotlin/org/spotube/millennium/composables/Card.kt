@@ -25,6 +25,7 @@ import org.spotube.millennium.theme.MillenniumStyledContent
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
+import org.spotube.millennium.theme.millenniumPanelBrush
 
 @Immutable
 data class MillenniumCardThemeProperties(
@@ -41,6 +42,7 @@ data class MillenniumCardThemeProperties(
     val borderWidth: Dp,
     val innerGlowColor: Color? = null,
     val alpha: Float = 1f,
+    val bottomRimColor: Color? = null,
 )
 
 @Immutable
@@ -50,12 +52,12 @@ data class MillenniumCardTheme(
 
 fun defaultMillenniumCardTheme(): MillenniumCardTheme {
     val base = MillenniumCardThemeProperties(
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
         maxWidth = 640.dp,
         contentPadding = PaddingValues(20.dp),
         contentSpacing = 16.dp,
         contentTextStyle = TextStyle(fontWeight = FontWeight.Normal),
-        shadowElevation = 8.dp,
+        shadowElevation = 10.dp,
         borderWidth = 1.dp,
     )
     return MillenniumCardTheme(
@@ -84,13 +86,14 @@ fun MillenniumCard(
         modifier = modifier
             .widthIn(max = properties.maxWidth)
             .millenniumSurface(
-                background = properties.background ?: millenniumBevelBrush(colors),
+                background = properties.background ?: millenniumPanelBrush(colors),
                 shape = properties.shape,
                 borderColor = properties.borderColor ?: colors.border,
                 borderWidth = properties.borderWidth,
                 shadowElevation = properties.shadowElevation,
                 shadowColor = properties.shadowColor ?: Color.Black.copy(alpha = 0.14f),
                 innerGlowColor = properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f),
+                bottomRimColor = properties.bottomRimColor ?: colors.highlight.copy(alpha = 0.5f),
             )
             .padding(contentPadding ?: properties.contentPadding)
             .alpha(properties.alpha),

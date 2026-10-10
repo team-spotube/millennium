@@ -92,7 +92,8 @@ fun MillenniumAvatar(
             borderWidth = properties.borderWidth,
             shadowElevation = properties.shadowElevation,
             shadowColor = properties.shadowColor ?: Color.Black.copy(alpha = 0.16f),
-            innerGlowColor = properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f),
+                innerGlowColor = properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f),
+                bottomRimColor = colors.highlight.copy(alpha = 0.4f),
         ).alpha(properties.alpha),
         underlay = {
             val fontSize = properties.textStyle.fontSize.takeUnless { it == androidx.compose.ui.unit.TextUnit.Unspecified }

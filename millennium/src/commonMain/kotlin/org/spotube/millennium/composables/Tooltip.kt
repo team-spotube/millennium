@@ -26,6 +26,7 @@ import org.spotube.millennium.theme.MillenniumTheme
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
+import org.spotube.millennium.theme.millenniumPanelBrush
 
 @Immutable
 data class MillenniumTooltipThemeProperties(
@@ -83,7 +84,7 @@ fun MillenniumTooltipHost(modifier: Modifier = Modifier, content: @Composable ()
 fun MillenniumTooltip(text: String, anchor: @Composable () -> Unit) {
     val properties = MillenniumTheme.tooltipTheme.states.default
     val colors = MillenniumTheme.colors
-    val background = properties.background ?: millenniumBevelBrush(colors)
+    val background = properties.background ?: millenniumPanelBrush(colors)
     val borderColor = properties.borderColor ?: colors.border
     val glowColor = properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.5f)
     val foreground = properties.foreground ?: colors.text

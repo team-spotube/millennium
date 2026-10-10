@@ -40,19 +40,19 @@ data class MillenniumColors(
 
 /** Pearl surfaces and clear navy text for light appearances. */
 val MillenniumLightColors = MillenniumColors(
-    background = Color(0xFFE9EFF5), surface = Color(0xFFF8FAFD), raised = Color.White,
-    inset = Color(0xFFE1E8F0), text = Color(0xFF182C43), muted = Color(0xFF52667C),
-    border = Color(0xFFB3C3D4), highlight = Color.White, accent = Color(0xFF0064C8),
-    accentTop = Color(0xFF3375B5), accentBottom = Color(0xFF0051AF), onAccent = Color.White,
+    background = Color(0xFFE4EDF3), surface = Color(0xFFF4F8FB), raised = Color.White,
+    inset = Color(0xFFDCE6ED), text = Color(0xFF172C42), muted = Color(0xFF4A6075),
+    border = Color(0xFF98ADBF), highlight = Color.White, accent = Color(0xFF005CB9),
+    accentTop = Color(0xFF1675B8), accentBottom = Color(0xFF003B91), onAccent = Color.White,
     success = Color(0xFF257B51), danger = Color(0xFFBC334A), scrim = Color(0x99101E30),
 )
 
 /** Smoked navy surfaces and bright accessible foregrounds for dark appearances. */
 val MillenniumDarkColors = MillenniumColors(
-    background = Color(0xFF0D1522), surface = Color(0xFF182536), raised = Color(0xFF26374B),
-    inset = Color(0xFF101C2A), text = Color(0xFFEAF2FC), muted = Color(0xFFA5B7CC),
-    border = Color(0xFF43566F), highlight = Color(0xFF63768C), accent = Color(0xFF79C4FF),
-    accentTop = Color(0xFF2F75B9), accentBottom = Color(0xFF003E83), onAccent = Color.White,
+    background = Color(0xFF0B1420), surface = Color(0xFF172838), raised = Color(0xFF2B4053),
+    inset = Color(0xFF0D1B28), text = Color(0xFFF0F6FC), muted = Color(0xFFB0C3D3),
+    border = Color(0xFF587187), highlight = Color(0xFF8CAABD), accent = Color(0xFF79CFFF),
+    accentTop = Color(0xFF1976B9), accentBottom = Color(0xFF002D74), onAccent = Color.White,
     success = Color(0xFF7AE2AE), danger = Color(0xFFFF98A9), scrim = Color(0xBB030912),
 )
 

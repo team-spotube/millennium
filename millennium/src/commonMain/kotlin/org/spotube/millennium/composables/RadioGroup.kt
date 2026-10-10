@@ -2,7 +2,6 @@ package org.spotube.millennium.composables
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -68,6 +67,8 @@ data class MillenniumRadioGroupThemeProperties(
     val selectedLabelColor: Color? = null,
     val stateAnimationMillis: Int,
     val alpha: Float = 1f,
+    val indicatorGlowColor: Color? = null,
+    val indicatorElevation: Dp = 0.dp,
 )
 
 @Immutable
@@ -91,9 +92,9 @@ fun defaultMillenniumRadioGroupTheme(): MillenniumRadioGroupTheme {
     return MillenniumRadioGroupTheme(
         states = MillenniumControlStateProperty(
             default = base,
-            hovered = base.copy(alpha = 0.96f),
+            hovered = base,
             focused = base.copy(indicatorBorderWidth = 2.dp),
-            pressed = base.copy(alpha = 0.90f),
+            pressed = base,
             disabled = base.copy(alpha = 0.45f),
             selected = base,
             error = base.copy(indicatorBorderWidth = 2.dp),
@@ -133,7 +134,9 @@ fun <T> MillenniumRadioGroup(
                     animationSpec = tween(itemProperties.stateAnimationMillis),
                 ).value
                 val indicatorBorderColor = itemProperties.indicatorBorderColor ?: when (state) {
-                    MillenniumControlState.Focused, MillenniumControlState.Hovered, MillenniumControlState.Selected -> colors.accent
+                    MillenniumControlState.Focused -> colors.accent
+                    MillenniumControlState.Hovered -> colors.border
+                    MillenniumControlState.Selected -> colors.accent
                     MillenniumControlState.Error -> colors.danger
                     else -> colors.border
                 }
@@ -145,7 +148,9 @@ fun <T> MillenniumRadioGroup(
                     modifier = Modifier.heightIn(min = itemProperties.minimumTouchHeight)
                         .alpha(animatedAlpha)
                         .padding(itemProperties.optionPadding),
-                    indication = LocalIndication.current,
+                    // Keep hover feedback on the small control; a row-wide ripple
+                    // creates a distracting blue slab behind the option label.
+                    indication = null,
                     interactionSource = interaction,
                 ) {
                     Row(
@@ -160,6 +165,9 @@ fun <T> MillenniumRadioGroup(
                                 shape = itemProperties.indicatorShape,
                                 borderColor = indicatorBorderColor,
                                 borderWidth = itemProperties.indicatorBorderWidth,
+                                shadowElevation = itemProperties.indicatorElevation,
+                                innerGlowColor = itemProperties.indicatorGlowColor
+                                    ?: if (selected) colors.highlight.copy(alpha = 0.32f) else null,
                             ),
                             contentAlignment = Alignment.Center,
                         ) {

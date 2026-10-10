@@ -94,6 +94,7 @@ fun MillenniumProgress(progress: Float, modifier: Modifier = Modifier) {
             borderColor = borderColor,
             borderWidth = properties.borderWidth,
             innerGlowColor = glowColor,
+            bottomRimColor = colors.highlight.copy(alpha = 0.3f),
         ).alpha(properties.alpha),
     ) {
         Indicator(
@@ -126,6 +127,7 @@ fun MillenniumIndeterminateProgress(modifier: Modifier = Modifier) {
             borderColor = borderColor,
             borderWidth = properties.borderWidth,
             innerGlowColor = glowColor,
+            bottomRimColor = colors.highlight.copy(alpha = 0.3f),
         ).alpha(properties.alpha),
     ) {
         Box(Modifier.fillMaxSize(), contentAlignment = BiasAlignment(offset * 2f - 1f, 0f)) {

@@ -207,6 +207,18 @@ tri-state selection, input validation, indeterminate progress, and real overlays
 
 ### Design & accessibility
 
+The material language combines Aqua gel, pearl enamel and Vista-like smoked
+glass. Primary actions are convex capsules with a sharp reflection break and
+luminous lower lip; secondary controls have an enamel bevel. Panels use a quieter
+glass gradient and tighter framing. Fields and slider tracks have recessed inner
+edges. Gel stops remain within contrast-tested endpoints rather than washing white
+over labels. Menus, tabs, selection controls and navigation share the jewel-blue
+accent. `millenniumSurface` can opt into
+the legacy straight highlight with `innerGlowFollowsShape = false` (also exposed
+by button theme properties), and accepts optional `bottomRimColor` and
+`insetShadeColor`. Explicit `MillenniumText` sizes scale the configured
+line height so multiline titles remain readable.
+
 - Explicit semantic palettes for both light and dark; no inverted light-theme shortcut.
 - Interactive controls use 44dp minimum targets and visible interaction states.
 - Text contrast tests cover neutral surfaces, semantic text, and the entire gel gradient.
@@ -214,6 +226,13 @@ tri-state selection, input validation, indeterminate progress, and real overlays
 - Rounded surfaces and restrained motion soften the retro styling without copying an OS.
 
 ### Run Sample App
+
+The sample initially opens **Aero / Design Study 01**, an isolated reference-led
+composition with interactive preferences, a music panel and bottom navigation.
+Its light/dark component overrides live in `sample/sharedUI/.../AeroDesignStudy.kt`,
+not the library defaults. Choose **Component gallery** to access the full gallery;
+**Back to design study** returns to the specimen. This direction is pending visual
+approval before it is applied throughout the library.
 
  - Desktop JVM: `./gradlew :sample:desktopApp:run`
  - Android: `open project in Android Studio and run the sample app`

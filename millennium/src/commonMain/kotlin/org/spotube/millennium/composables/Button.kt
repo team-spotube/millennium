@@ -20,6 +20,10 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -48,7 +52,7 @@ typealias MillenniumButtonVariant = MillenniumButtonStyle
 data class MillenniumButtonMotion(
     val stateChangeMillis: Int = 150,
     val hoverScale: Float = 1.015f,
-    val pressedScale: Float = 0.975f,
+    val pressedScale: Float = 0.985f,
 )
 
 /** Complete, state-specific button appearance and layout configuration. */
@@ -70,6 +74,8 @@ data class MillenniumButtonThemeProperties(
     val innerGlowTop: Dp = 1.dp,
     val alpha: Float = 1f,
     val motion: MillenniumButtonMotion = MillenniumButtonMotion(),
+    val innerGlowFollowsShape: Boolean = true,
+    val bottomRimColor: Color? = null,
 )
 
 /** Four independently configurable variants, each with all control states. */
@@ -90,11 +96,11 @@ fun defaultMillenniumButtonTheme(): MillenniumButtonTheme {
                 lineHeight = 20.sp,
                 fontWeight = FontWeight.SemiBold,
             ),
-            shape = RoundedCornerShape(10.dp),
+            shape = RoundedCornerShape(if (style == MillenniumButtonStyle.Primary) 10.dp else 8.dp),
             padding = PaddingValues(horizontal = 18.dp, vertical = 10.dp),
             minSize = DpSize(48.dp, 44.dp),
             borderWidth = if (isQuiet) 0.dp else 1.dp,
-            shadowElevation = if (isQuiet) 0.dp else 3.dp,
+            shadowElevation = if (isQuiet) 0.dp else 5.dp,
         )
         return MillenniumControlStateProperty(
             default = base,
@@ -154,7 +160,10 @@ fun MillenniumButton(
         MillenniumButtonStyle.Primary -> gelBrush(colors.accentTop, colors.accentBottom)
         MillenniumButtonStyle.Secondary -> millenniumBevelBrush(colors)
         MillenniumButtonStyle.Quiet -> Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
-        MillenniumButtonStyle.Danger -> Brush.verticalGradient(listOf(colors.danger, colors.danger))
+        MillenniumButtonStyle.Danger -> gelBrush(
+            colors.danger,
+            lerp(colors.danger, if (colors.surface.luminance() > colors.danger.luminance()) Color.Black else Color.White, 0.20f),
+        )
     }
     val borderColor = properties.borderColor ?: when (state) {
         MillenniumControlState.Focused, MillenniumControlState.Selected -> colors.accent
@@ -169,7 +178,7 @@ fun MillenniumButton(
     val innerGlowColor = properties.innerGlowColor ?: when (state) {
         MillenniumControlState.Hovered, MillenniumControlState.Focused -> colors.highlight.copy(alpha = 0.60f)
         MillenniumControlState.Pressed -> colors.inset.copy(alpha = 0.32f)
-        else -> colors.highlight.copy(alpha = 0.35f)
+        else -> colors.highlight.copy(alpha = 0.70f)
     }
     val shadowColors = properties.shadows ?: listOf(Color.Black.copy(alpha = 0.16f))
     val targetScale = when {
@@ -206,10 +215,15 @@ fun MillenniumButton(
                 innerGlowWidth = properties.innerGlowWidth,
                 innerGlowInset = properties.innerGlowInset,
                 innerGlowTop = properties.innerGlowTop,
+                innerGlowFollowsShape = properties.innerGlowFollowsShape,
+                bottomRimColor = properties.bottomRimColor ?: if (style != MillenniumButtonStyle.Quiet) colors.highlight.copy(alpha = 0.28f) else null,
             ),
         contentPadding = properties.padding,
     ) {
-        MillenniumStyledContent(properties.textStyle, foreground, content)
+        val labelStyle = if (style == MillenniumButtonStyle.Primary && properties.textStyle.shadow == null) {
+            properties.textStyle.copy(shadow = Shadow(colors.accentBottom, Offset(0f, 1f), 1f))
+        } else properties.textStyle
+        MillenniumStyledContent(labelStyle, foreground, content)
     }
 }
 

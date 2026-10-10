@@ -40,6 +40,7 @@ import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.MillenniumStyledContent
 import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
+import org.spotube.millennium.theme.millenniumPanelBrush
 
 @Immutable
 data class MillenniumDrawerThemeProperties(
@@ -105,7 +106,7 @@ fun MillenniumDrawer(
 ) {
     val colors = MillenniumTheme.colors
     val properties = MillenniumTheme.drawerTheme.states.resolve(MillenniumControlState.Default)
-    val background = properties.background ?: millenniumBevelBrush(colors)
+    val background = properties.background ?: millenniumPanelBrush(colors)
     val foreground = properties.foreground ?: colors.text
     val borderColor = properties.borderColor ?: colors.border
     val glowColor = properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f)

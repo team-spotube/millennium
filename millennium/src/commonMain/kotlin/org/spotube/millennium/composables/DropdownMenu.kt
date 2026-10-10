@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -40,6 +41,7 @@ import org.spotube.millennium.theme.MillenniumTheme
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
+import org.spotube.millennium.theme.millenniumPanelBrush
 
 @Immutable
 data class MillenniumDropdownMenuThemeProperties(
@@ -61,6 +63,10 @@ data class MillenniumDropdownMenuThemeProperties(
     val itemSpacing: Dp,
     val stateAnimationMillis: Int,
     val alpha: Float = 1f,
+    val itemBorderColor: Color? = null,
+    val itemBorderWidth: Dp = 1.dp,
+    val itemGlowColor: Color? = null,
+    val itemWidth: Dp = 192.dp,
 )
 
 @Immutable
@@ -107,7 +113,7 @@ fun MillenniumDropdownMenu(
 ) {
     val colors = MillenniumTheme.colors
     val panelProperties = MillenniumTheme.dropdownMenuTheme.states.default
-    val panelBackground = panelProperties.panelBackground ?: millenniumBevelBrush(colors)
+    val panelBackground = panelProperties.panelBackground ?: millenniumPanelBrush(colors)
     val panelBorderColor = panelProperties.panelBorderColor ?: colors.border
     val panelGlowColor = panelProperties.panelGlowColor ?: colors.highlight.copy(alpha = 0.5f)
     UnstyledDropdownMenu(
@@ -141,14 +147,15 @@ fun MillenniumDropdownMenu(
                         }
                         val properties = MillenniumTheme.dropdownMenuTheme.states.resolve(state)
                         val itemBackground = properties.itemBackground ?: when (state) {
-                            MillenniumControlState.Hovered, MillenniumControlState.Focused -> millenniumBevelBrush(colors)
-                            MillenniumControlState.Pressed -> millenniumBevelBrush(colors, sunken = true)
+                            MillenniumControlState.Hovered, MillenniumControlState.Focused,
+                            MillenniumControlState.Pressed -> millenniumBevelBrush(colors, accent = true)
                             MillenniumControlState.Selected -> millenniumBevelBrush(colors, accent = true)
                             else -> Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
                         }
                         val itemForeground = properties.itemForeground ?: when (state) {
                             MillenniumControlState.Disabled -> colors.muted
-                            MillenniumControlState.Selected -> colors.onAccent
+                            MillenniumControlState.Selected, MillenniumControlState.Hovered,
+                            MillenniumControlState.Focused, MillenniumControlState.Pressed -> colors.onAccent
                             else -> colors.text
                         }
                         val animatedAlpha = animateFloatAsState(
@@ -159,12 +166,21 @@ fun MillenniumDropdownMenu(
                             onClick = { onItemClick(item) },
                             indication = LocalIndication.current,
                             interactionSource = interaction,
-                            modifier = Modifier.fillMaxWidth().heightIn(min = properties.itemMinimumHeight)
+                            modifier = Modifier.width(properties.itemWidth).heightIn(min = properties.itemMinimumHeight)
                                 .alpha(animatedAlpha)
-                                .millenniumSurface(itemBackground, properties.itemShape)
-                                .padding(properties.itemPadding),
+                                .millenniumSurface(
+                                    itemBackground, properties.itemShape,
+                                    borderColor = properties.itemBorderColor ?: if (hovered || focused || pressed) colors.accentBottom else null,
+                                    borderWidth = properties.itemBorderWidth,
+                                    innerGlowColor = properties.itemGlowColor ?: if (hovered || focused || pressed) colors.highlight.copy(alpha = 0.35f) else null,
+                                ),
                         ) {
-                            Text(item, style = properties.itemTextStyle, color = itemForeground)
+                            Text(
+                                item,
+                                modifier = Modifier.fillMaxWidth().padding(properties.itemPadding),
+                                style = properties.itemTextStyle,
+                                color = itemForeground,
+                            )
                         }
                     }
                 }

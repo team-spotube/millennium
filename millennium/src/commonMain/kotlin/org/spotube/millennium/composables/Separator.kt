@@ -6,6 +6,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -21,6 +24,8 @@ data class MillenniumSeparatorThemeProperties(
     val color: androidx.compose.ui.graphics.Color? = null,
     val thickness: Dp,
     val alpha: Float,
+    val highlightColor: Color? = null,
+    val highlightWidth: Dp = 0.5.dp,
 )
 
 @Immutable
@@ -47,10 +52,24 @@ fun defaultMillenniumSeparatorTheme(): MillenniumSeparatorTheme {
 fun MillenniumSeparator(modifier: Modifier = Modifier, vertical: Boolean = false) {
     val properties = MillenniumTheme.separatorTheme.states.resolve(MillenniumControlState.Default)
     val color = properties.color ?: MillenniumTheme.colors.border
+    val highlight = properties.highlightColor ?: MillenniumTheme.colors.highlight.copy(alpha = 0.65f)
+    val beveledModifier = modifier.alpha(properties.alpha).drawWithContent {
+        drawContent()
+        if (properties.highlightWidth > 0.dp) {
+            val stroke = properties.highlightWidth.toPx()
+            if (vertical) {
+                val x = size.width - stroke / 2f
+                drawLine(highlight, Offset(x, 0f), Offset(x, size.height), stroke)
+            } else {
+                val y = size.height - stroke / 2f
+                drawLine(highlight, Offset(0f, y), Offset(size.width, y), stroke)
+            }
+        }
+    }
     if (vertical) {
-        UnstyledVerticalSeparator(color, modifier.alpha(properties.alpha), properties.thickness)
+        UnstyledVerticalSeparator(color, beveledModifier, properties.thickness)
     } else {
-        UnstyledHorizontalSeparator(color, modifier.alpha(properties.alpha), properties.thickness)
+        UnstyledHorizontalSeparator(color, beveledModifier, properties.thickness)
     }
 }
 

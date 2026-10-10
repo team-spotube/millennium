@@ -1,7 +1,6 @@
 package org.spotube.millennium.composables
 
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -64,6 +63,9 @@ data class MillenniumToggleSwitchThemeProperties(
     val contentSpacing: Dp,
     val thumbAnimationMillis: Int,
     val alpha: Float = 1f,
+    val thumbBorderColor: Color? = null,
+    val thumbBorderWidth: Dp = 1.dp,
+    val thumbGlowColor: Color? = null,
 )
 
 @Immutable
@@ -124,12 +126,13 @@ fun MillenniumSwitch(
     val trackBackground = properties.trackBackground ?: millenniumBevelBrush(colors, sunken = true)
     val selectedTrackBackground = properties.selectedTrackBackground ?: gelBrush(colors.accentTop, colors.accentBottom)
     val trackBorderColor = properties.trackBorderColor ?: when (state) {
-        MillenniumControlState.Focused, MillenniumControlState.Hovered, MillenniumControlState.Selected -> colors.accent
+        MillenniumControlState.Focused, MillenniumControlState.Selected -> colors.accent
+        MillenniumControlState.Hovered -> colors.border
         MillenniumControlState.Error -> colors.danger
         else -> colors.border
     }
-    val trackGlowColor = properties.trackGlowColor ?: colors.highlight.copy(alpha = 0.45f)
-    val thumbBackground = properties.thumbBackground ?: Brush.verticalGradient(listOf(colors.raised, colors.surface))
+    val trackGlowColor = properties.trackGlowColor ?: if (checked) colors.highlight.copy(alpha = 0.35f) else null
+    val thumbBackground = properties.thumbBackground ?: gelBrush(colors.raised, colors.inset)
     val labelForeground = properties.labelForeground ?: if (state == MillenniumControlState.Disabled) colors.muted else colors.text
     UnstyledSwitch(
         checked = checked,
@@ -137,7 +140,9 @@ fun MillenniumSwitch(
         modifier = modifier.heightIn(min = properties.minimumTouchHeight).alpha(properties.alpha),
         enabled = enabled,
         accessibilityLabel = label,
-        indication = LocalIndication.current,
+        // State feedback is drawn on the track and thumb; don't wash the whole
+        // labelled row with the app-wide hover indication.
+        indication = null,
         interactionSource = interaction,
     ) {
         Row(
@@ -165,6 +170,9 @@ fun MillenniumSwitch(
                             background = thumbBackground,
                             shape = properties.thumbShape,
                             shadowElevation = properties.thumbElevation,
+                            borderColor = properties.thumbBorderColor ?: colors.border,
+                            borderWidth = properties.thumbBorderWidth,
+                            innerGlowColor = properties.thumbGlowColor ?: colors.highlight.copy(alpha = 0.36f),
                         ),
                 )
             }

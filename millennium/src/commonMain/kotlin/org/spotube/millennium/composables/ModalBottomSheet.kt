@@ -42,6 +42,7 @@ import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.MillenniumStyledContent
 import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
+import org.spotube.millennium.theme.millenniumPanelBrush
 
 @Immutable
 data class MillenniumModalBottomSheetThemeProperties(
@@ -99,7 +100,7 @@ fun MillenniumModalBottomSheet(
 ) {
     val colors = MillenniumTheme.colors
     val properties = MillenniumTheme.modalBottomSheetTheme.states.resolve(MillenniumControlState.Default)
-    val background = properties.background ?: millenniumBevelBrush(colors)
+    val background = properties.background ?: millenniumPanelBrush(colors)
     val foreground = properties.foreground ?: colors.text
     val handleColor = properties.handleColor ?: colors.muted
     val borderColor = properties.borderColor ?: colors.border

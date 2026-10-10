@@ -7,6 +7,7 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,6 +18,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -62,6 +64,9 @@ data class MillenniumTextFieldThemeProperties(
     val contentSpacing: Dp,
     val stateAnimationMillis: Int,
     val alpha: Float = 1f,
+    val insetShadeColor: Color? = null,
+    val innerGlowColor: Color? = null,
+    val bottomRimColor: Color? = null,
 )
 
 @Immutable
@@ -71,7 +76,7 @@ data class MillenniumTextFieldTheme(
 
 fun defaultMillenniumTextFieldTheme(): MillenniumTextFieldTheme {
     val base = MillenniumTextFieldThemeProperties(
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(7.dp),
         textStyle = TextStyle(fontSize = 14.sp, lineHeight = 21.sp),
         labelStyle = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium),
         placeholderStyle = TextStyle(fontSize = 14.sp, lineHeight = 21.sp),
@@ -149,7 +154,7 @@ fun MillenniumTextField(
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(properties.contentSpacing)) {
             Text(label, style = properties.labelStyle.copy(color = foreground))
-            TextInput(
+            Box(
                 Modifier
                     .fillMaxWidth()
                     .heightIn(min = properties.minimumHeight)
@@ -158,12 +163,23 @@ fun MillenniumTextField(
                         shape = properties.shape,
                         borderColor = animatedBorder,
                         borderWidth = properties.borderWidth,
-                    )
-                    .padding(properties.contentPadding),
-                placeholder = {
-                    Text(placeholder, style = properties.placeholderStyle.copy(color = placeholderColor), color = placeholderColor)
-                },
-            )
+                        insetShadeColor = properties.insetShadeColor ?: colors.text.copy(alpha = 0.09f),
+                        innerGlowColor = properties.innerGlowColor ?: colors.border.copy(alpha = 0.4f),
+                        bottomRimColor = properties.bottomRimColor ?: colors.highlight.copy(alpha = 0.8f),
+                    ),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                TextInput(
+                    Modifier.fillMaxWidth().padding(properties.contentPadding),
+                    placeholder = {
+                        Text(
+                            placeholder,
+                            style = properties.placeholderStyle.copy(color = placeholderColor),
+                            color = placeholderColor,
+                        )
+                    },
+                )
+            }
             if (error != null) {
                 Text(error, style = properties.errorStyle.copy(color = errorColor), color = errorColor)
             }

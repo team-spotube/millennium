@@ -57,6 +57,8 @@ data class MillenniumSliderThemeProperties(
     val thumbGlowColor: Color? = null,
     val stateAnimationMillis: Int,
     val alpha: Float = 1f,
+    val thumbBottomRimColor: Color? = null,
+    val trackInsetShadeColor: Color? = null,
 )
 
 @Immutable
@@ -67,9 +69,9 @@ data class MillenniumSliderTheme(
 fun defaultMillenniumSliderTheme(): MillenniumSliderTheme {
     val base = MillenniumSliderThemeProperties(
         trackShape = RoundedCornerShape(50),
-        thumbShape = RoundedCornerShape(50),
-        trackHeight = 8.dp,
-        thumbSize = 22.dp,
+        thumbShape = RoundedCornerShape(6.dp),
+        trackHeight = 10.dp,
+        thumbSize = 24.dp,
         activeThumbSize = 26.dp,
         touchTargetHeight = 44.dp,
         trackBorderWidth = 1.dp,
@@ -134,6 +136,7 @@ fun MillenniumSlider(
                     shape = properties.trackShape,
                     borderColor = trackBorderColor,
                     borderWidth = properties.trackBorderWidth,
+                    insetShadeColor = properties.trackInsetShadeColor ?: colors.text.copy(alpha = 0.1f),
                 ),
             ) {
                 Box(
@@ -151,7 +154,7 @@ fun MillenniumSlider(
             }
             val thumbProperties = MillenniumTheme.sliderTheme.states.resolve(thumbState)
             val thumbBackground = thumbProperties.thumbBackground
-                ?: Brush.verticalGradient(listOf(colors.raised, colors.surface))
+                ?: millenniumBevelBrush(colors)
             val thumbBorderColor = thumbProperties.thumbBorderColor ?: when (thumbState) {
                 MillenniumControlState.Focused, MillenniumControlState.Selected -> colors.accent
                 MillenniumControlState.Error -> colors.danger
@@ -169,6 +172,7 @@ fun MillenniumSlider(
                         borderWidth = thumbProperties.thumbBorderWidth,
                         shadowElevation = thumbProperties.thumbElevation,
                         innerGlowColor = thumbGlowColor,
+                        bottomRimColor = thumbProperties.thumbBottomRimColor ?: colors.highlight.copy(alpha = 0.6f),
                     ),
                 )
             }

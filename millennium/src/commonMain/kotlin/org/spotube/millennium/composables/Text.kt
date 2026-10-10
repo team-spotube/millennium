@@ -57,8 +57,14 @@ fun MillenniumText(
         modifier = modifier,
         color = color,
         fontSize = size,
-        lineHeight = style.lineHeight,
+        lineHeight = millenniumTextLineHeight(size, style.fontSize, style.lineHeight),
         fontWeight = weight,
         fontFamily = style.fontFamily,
     )
 }
+
+/** Scale the configured leading with explicit font sizes rather than overlapping lines. */
+internal fun millenniumTextLineHeight(size: TextUnit, baseSize: TextUnit, baseLineHeight: TextUnit): TextUnit =
+    if (size.isSp && baseSize.isSp && baseLineHeight.isSp && baseSize.value > 0f) {
+        (size.value * baseLineHeight.value / baseSize.value).sp
+    } else baseLineHeight

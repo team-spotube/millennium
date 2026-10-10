@@ -60,7 +60,7 @@ data class MillenniumScrollbarTheme(
 fun defaultMillenniumScrollbarTheme(): MillenniumScrollbarTheme {
     val base = MillenniumScrollbarThemeProperties(
         shape = RoundedCornerShape(50),
-        thickness = 10.dp,
+        thickness = 8.dp,
         borderWidth = 1.dp,
         alpha = 0.74f,
         stateAnimationMillis = 120,
@@ -100,7 +100,7 @@ fun MillenniumScrollbar(
         MillenniumControlState.Hovered, MillenniumControlState.Focused -> Brush.verticalGradient(listOf(colors.accent, colors.accentBottom))
         MillenniumControlState.Pressed, MillenniumControlState.Selected -> millenniumBevelBrush(colors, accent = true)
         MillenniumControlState.Error -> Brush.verticalGradient(listOf(colors.danger, colors.danger))
-        else -> Brush.verticalGradient(listOf(colors.border, colors.muted))
+        else -> Brush.verticalGradient(listOf(colors.border, androidx.compose.ui.graphics.lerp(colors.border, colors.muted, 0.45f)))
     }
     val borderColor = properties.borderColor ?: colors.border
     val animatedAlpha = animateFloatAsState(
@@ -122,6 +122,7 @@ fun MillenniumScrollbar(
                 Modifier.fillMaxHeight().millenniumSurface(
                     background = thumbBackground,
                     shape = properties.shape,
+                    innerGlowColor = colors.highlight.copy(alpha = 0.4f),
                 ).alpha(animatedAlpha),
             )
         }
@@ -140,6 +141,7 @@ fun MillenniumScrollbar(
                 Modifier.fillMaxWidth().millenniumSurface(
                     background = thumbBackground,
                     shape = properties.shape,
+                    innerGlowColor = colors.highlight.copy(alpha = 0.4f),
                 ).alpha(animatedAlpha),
             )
         }

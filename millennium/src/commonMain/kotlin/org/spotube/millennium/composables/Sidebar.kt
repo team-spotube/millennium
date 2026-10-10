@@ -72,6 +72,7 @@ import org.spotube.millennium.theme.MillenniumTheme
 import org.spotube.millennium.theme.gelBrush
 import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
+import org.spotube.millennium.theme.millenniumPanelBrush
 
 // ---------------------------------------------------------------------------
 // Theme
@@ -212,7 +213,7 @@ fun defaultMillenniumSidebarTheme(): MillenniumSidebarTheme {
     val root = MillenniumSidebarRootProperties(
         width = 264.dp,
         collapsedWidth = 76.dp,
-        shape = RoundedCornerShape(topEnd = 20.dp, bottomEnd = 20.dp),
+        shape = RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp),
         borderWidth = 1.dp,
         shadowElevation = 8.dp,
         stateAnimationMillis = 180,
@@ -416,7 +417,7 @@ fun MillenniumSidebar(
                 .width(animatedWidth)
                 .fillMaxHeight()
                 .millenniumSurface(
-                    background = properties.background ?: millenniumBevelBrush(colors),
+                    background = properties.background ?: millenniumPanelBrush(colors),
                     shape = properties.shape,
                     borderColor = properties.borderColor ?: colors.border,
                     borderWidth = properties.borderWidth,

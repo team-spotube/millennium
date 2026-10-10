@@ -13,6 +13,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.inset
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -66,12 +70,19 @@ data class MillenniumControlStateProperty<T>(
     }
 }
 
-/** Four-stop gel highlight: the hard midpoint is a deliberate 2007 reference. */
+/** Convex Aqua gel: bright cap, crisp reflection break and a luminous lower lip. */
 fun gelBrush(top: Color, bottom: Color): Brush = Brush.verticalGradient(
-    0f to top,
-    0.48f to androidx.compose.ui.graphics.lerp(top, bottom, 0.30f),
-    0.50f to androidx.compose.ui.graphics.lerp(top, bottom, 0.64f),
-    1f to bottom,
+    *millenniumGelStops(top, bottom).toTypedArray(),
+)
+
+/** Every stop stays between the endpoints, preserving the tested label contrast. */
+internal fun millenniumGelStops(top: Color, bottom: Color): List<Pair<Float, Color>> = listOf(
+    0f to lerp(top, bottom, 0.18f),
+    0.08f to top,
+    0.46f to lerp(top, bottom, 0.06f),
+    0.49f to lerp(top, bottom, 0.70f),
+    0.80f to bottom,
+    1f to lerp(bottom, top, 0.32f),
 )
 
 /** Surface brush used by component-local default themes. */
@@ -82,8 +93,33 @@ fun millenniumBevelBrush(
 ): Brush = if (accent) {
     gelBrush(colors.accentTop, colors.accentBottom)
 } else {
-    Brush.verticalGradient(listOf(if (sunken) colors.inset else colors.raised, colors.surface))
+    millenniumNeutralBrush(colors, sunken)
 }
+
+/** Neutral stops stay within tested palette surfaces; no white wash over labels. */
+internal fun millenniumNeutralStops(colors: MillenniumColors, sunken: Boolean): List<Color> =
+    if (sunken) listOf(colors.inset, lerp(colors.inset, colors.surface, 0.55f), colors.surface)
+    else listOf(colors.raised, colors.surface, lerp(colors.surface, colors.inset, 0.65f))
+
+private fun millenniumNeutralBrush(colors: MillenniumColors, sunken: Boolean): Brush {
+    val stops = millenniumNeutralStops(colors, sunken)
+    return if (sunken) Brush.verticalGradient(0f to stops[0], 0.18f to stops[1], 1f to stops[2])
+    else Brush.verticalGradient(
+        0f to stops[0],
+        0.47f to stops[1],
+        0.50f to stops[2],
+        1f to stops[1],
+    )
+}
+
+/** Pearl enamel / smoked glass panel, distinct from the stronger control gel. */
+fun millenniumPanelBrush(colors: MillenniumColors): Brush = Brush.verticalGradient(
+    0f to colors.raised,
+    0.12f to lerp(colors.raised, colors.surface, 0.45f),
+    0.22f to colors.surface,
+    0.85f to colors.surface,
+    1f to lerp(colors.surface, colors.inset, 0.35f),
+)
 
 /** Applies one complete surface layer, avoiding a second background/bevel pass. */
 fun Modifier.millenniumSurface(
@@ -98,6 +134,9 @@ fun Modifier.millenniumSurface(
     innerGlowWidth: Dp = 1.dp,
     innerGlowInset: Dp = 8.dp,
     innerGlowTop: Dp = 1.dp,
+    innerGlowFollowsShape: Boolean = true,
+    bottomRimColor: Color? = null,
+    insetShadeColor: Color? = null,
 ): Modifier {
     var result = this
     if (shadowElevation > 0.dp) {
@@ -115,15 +154,45 @@ fun Modifier.millenniumSurface(
     if (borderColor != null && borderWidth > 0.dp) {
         result = result.border(borderWidth, borderColor, shape)
     }
-    if (innerGlowColor != null) {
+    if (innerGlowColor != null || bottomRimColor != null || insetShadeColor != null) {
         result = result.drawWithContent {
             drawContent()
-            drawLine(
-                color = innerGlowColor,
-                start = Offset(innerGlowInset.toPx(), innerGlowTop.toPx()),
-                end = Offset(size.width - innerGlowInset.toPx(), innerGlowTop.toPx()),
-                strokeWidth = innerGlowWidth.toPx(),
-            )
+            val stroke = innerGlowWidth.toPx()
+            val edgeInset = maxOf(borderWidth.toPx(), innerGlowTop.toPx()) + stroke / 2f
+            // Shade only the inner perimeter, never the input's label or value.
+            if (insetShadeColor != null && size.minDimension > edgeInset * 4f) {
+                inset(edgeInset) {
+                    drawOutline(
+                        shape.createOutline(size, layoutDirection, this),
+                        brush = Brush.verticalGradient(0f to insetShadeColor, 0.4f to Color.Transparent),
+                        style = Stroke(3.dp.toPx()),
+                    )
+                }
+            }
+            if (innerGlowFollowsShape && stroke > 0f && size.minDimension > edgeInset * 2f) {
+                // A fine inner rim follows rounded corners instead of a floating
+                // horizontal line. It fades before the lower edge, keeping the
+                // highlight off the label and avoiding a second surface layer.
+                inset(edgeInset) {
+                    drawOutline(
+                        outline = shape.createOutline(size, layoutDirection, this),
+                        brush = Brush.verticalGradient(
+                            0f to (innerGlowColor ?: Color.Transparent),
+                            0.3f to (innerGlowColor?.copy(alpha = innerGlowColor.alpha * 0.35f) ?: Color.Transparent),
+                            0.65f to Color.Transparent,
+                            1f to (bottomRimColor ?: Color.Transparent),
+                        ),
+                        style = Stroke(stroke),
+                    )
+                }
+            } else if (innerGlowColor != null && !innerGlowFollowsShape && size.width > innerGlowInset.toPx() * 2f) {
+                drawLine(
+                    color = innerGlowColor,
+                    start = Offset(innerGlowInset.toPx(), innerGlowTop.toPx()),
+                    end = Offset(size.width - innerGlowInset.toPx(), innerGlowTop.toPx()),
+                    strokeWidth = stroke,
+                )
+            }
         }
     }
     return result
