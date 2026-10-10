@@ -14,21 +14,41 @@ import org.spotube.millennium.theme.MillenniumTheme
 import org.spotube.millennium.theme.beveled
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.MillenniumText
+import org.spotube.millennium.theme.MillenniumVisualState
+import org.spotube.millennium.theme.MillenniumVisualStyle
+import org.spotube.millennium.theme.componentStyle
+import org.spotube.millennium.theme.resolve
+import org.spotube.millennium.theme.MillenniumComponentContent
 
 
 /** A softly raised pearl/glass panel for grouping related content. */
 @Composable
 fun MillenniumCard(
     modifier: Modifier = Modifier,
-    contentPadding: PaddingValues = PaddingValues(20.dp),
+    contentPadding: PaddingValues? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val cardTheme = MillenniumTheme.cardTheme
+    val colors = MillenniumTheme.colorsFor(cardTheme)
+    val visual = cardTheme.resolve(
+        MillenniumVisualState.Default,
+        MillenniumVisualStyle(
+            backgroundColor = colors.surface,
+            foregroundColor = colors.text,
+            shadowElevation = cardTheme.elevation.card,
+            borderColor = colors.border,
+            borderWidth = cardTheme.strokes.border,
+            innerGlowColor = colors.highlight,
+        ),
+    )
+    val shape = visual.shape ?: cardTheme.shapes.panel
     Column(
-        modifier = modifier.shadow(8.dp, MillenniumTheme.panelShape)
-            .beveled(MillenniumTheme.colors, MillenniumTheme.panelShape)
-            .padding(contentPadding),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        content = content,
+        modifier = modifier.shadow(visual.shadowElevation ?: cardTheme.elevation.card, shape)
+            .beveled(colors, shape)
+            .componentStyle(visual, shape)
+            .padding(visual.contentPadding ?: contentPadding ?: PaddingValues(cardTheme.spacing.cardPadding)),
+        verticalArrangement = Arrangement.spacedBy(visual.contentSpacing ?: cardTheme.spacing.large),
+        content = { MillenniumComponentContent(visual) { content() } },
     )
 }
 
@@ -37,6 +57,6 @@ fun MillenniumCard(
 private fun MillenniumCardPreview() = MillenniumPreview {
     MillenniumCard {
         MillenniumText("A little nostalgia", weight = androidx.compose.ui.text.font.FontWeight.SemiBold)
-        MillenniumText("Pearl surfaces, a fine bevel, and a soft lift.", color = MillenniumTheme.colors.muted)
+        MillenniumText("Pearl surfaces, a fine bevel, and a soft lift.", color = MillenniumTheme.colorsFor(MillenniumTheme.cardTheme).muted)
     }
 }

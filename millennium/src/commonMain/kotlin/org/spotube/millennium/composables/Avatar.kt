@@ -1,10 +1,8 @@
 package org.spotube.millennium.composables
 
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -15,6 +13,11 @@ import com.composeunstyled.Text
 import com.composeunstyled.UnstyledAvatar
 import org.spotube.millennium.theme.MillenniumTheme
 import org.spotube.millennium.theme.beveled
+import org.spotube.millennium.theme.MillenniumVisualState
+import org.spotube.millennium.theme.MillenniumVisualStyle
+import org.spotube.millennium.theme.componentStyle
+import org.spotube.millennium.theme.gelBrush
+import org.spotube.millennium.theme.resolve
 import org.spotube.millennium.theme.MillenniumPreview
 
 @Composable
@@ -23,15 +26,29 @@ fun MillenniumAvatar(
     contentDescription: String,
     modifier: Modifier = Modifier,
     painter: Painter? = null,
-    size: Dp = 48.dp,
+    size: Dp? = null,
 ) {
+    val avatarTheme = MillenniumTheme.avatarTheme
+    val avatarSize = size ?: avatarTheme.dimensions.avatarSize
+    val colors = MillenniumTheme.colorsFor(avatarTheme)
+    val visual = MillenniumTheme.avatarTheme.resolve(
+        MillenniumVisualState.Default,
+        MillenniumVisualStyle(background = gelBrush(colors.accentTop, colors.accentBottom), foregroundColor = colors.onAccent,
+            shadowElevation = avatarTheme.elevation.avatar, borderColor = colors.accentBottom,
+            borderWidth = avatarTheme.strokes.border, innerGlowColor = colors.highlight),
+    )
+    val avatarShape = visual.shape ?: avatarTheme.shapes.avatar
     UnstyledAvatar(
         painter = painter,
         contentDescription = contentDescription,
-        modifier = modifier.size(size).shadow(3.dp, CircleShape)
-            .beveled(MillenniumTheme.colors, CircleShape, accent = true),
+        modifier = modifier.size(avatarSize)
+            .beveled(colors, avatarShape, accent = true).componentStyle(visual, avatarShape),
         underlay = {
-            Text(initials, color = MillenniumTheme.colors.onAccent, fontWeight = FontWeight.Bold, fontSize = (size.value * 0.3f).sp)
+            Text(initials, style = visual.textStyle ?: avatarTheme.typography.avatar,
+                color = visual.foregroundColor ?: colors.onAccent,
+                fontSize = visual.textStyle?.fontSize?.takeUnless { it == androidx.compose.ui.unit.TextUnit.Unspecified }
+                    ?: avatarTheme.typography.avatar.fontSize.takeUnless { it == androidx.compose.ui.unit.TextUnit.Unspecified }
+                    ?: (avatarSize.value * 0.3f).sp)
         },
     )
 }

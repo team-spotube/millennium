@@ -1,16 +1,21 @@
 package org.spotube.millennium.composables
 
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.interaction.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.*
 import org.spotube.millennium.theme.MillenniumTheme
 import org.spotube.millennium.theme.beveled
+import org.spotube.millennium.theme.MillenniumVisualStyle
+import org.spotube.millennium.theme.MillenniumVisualState
+import org.spotube.millennium.theme.componentStyle
+import org.spotube.millennium.theme.resolve
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.MillenniumText
 import androidx.compose.ui.tooling.preview.Preview
@@ -22,17 +27,34 @@ fun MillenniumScrollbar(
     horizontal: Boolean = false
 ) {
     val state = rememberScrollbarState(scrollState)
-    val colors = MillenniumTheme.colors
+    val scrollbarTheme = MillenniumTheme.scrollbarTheme
+    val colors = MillenniumTheme.colorsFor(scrollbarTheme)
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
+    val dragged by interaction.collectIsDraggedAsState()
+    val visualState = when {
+        dragged -> MillenniumVisualState.Clicked
+        hovered -> MillenniumVisualState.Hovered
+        else -> MillenniumVisualState.Default
+    }
+    val visual = MillenniumTheme.scrollbarTheme.resolve(visualState,
+        MillenniumVisualStyle(backgroundColor = colors.border, foregroundColor = colors.accent,
+            borderColor = colors.border, borderWidth = scrollbarTheme.strokes.border))
+    val shape = visual.shape ?: scrollbarTheme.shapes.pill
     if (horizontal) UnstyledHorizontalScrollbar(
         state,
-        modifier.height(10.dp).beveled(colors, CircleShape, sunken = true)
+        modifier.height(scrollbarTheme.dimensions.scrollbarThickness).beveled(colors, shape, sunken = true)
+            .componentStyle(visual, shape),
+        interactionSource = interaction,
     ) {
-        Thumb(Modifier.fillMaxHeight().beveled(colors, CircleShape))
+        Thumb(Modifier.fillMaxHeight().beveled(colors, shape).componentStyle(visual, shape))
     } else UnstyledVerticalScrollbar(
         state,
-        modifier.width(10.dp).beveled(colors, CircleShape, sunken = true)
+        modifier.width(scrollbarTheme.dimensions.scrollbarThickness).beveled(colors, shape, sunken = true)
+            .componentStyle(visual, shape),
+        interactionSource = interaction,
     ) {
-        Thumb(Modifier.fillMaxWidth().beveled(colors, CircleShape))
+        Thumb(Modifier.fillMaxWidth().beveled(colors, shape).componentStyle(visual, shape))
     }
 }
 

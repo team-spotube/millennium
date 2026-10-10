@@ -37,7 +37,8 @@ import org.spotube.millennium.theme.MillenniumText
 import org.spotube.millennium.theme.MillenniumTheme
 import org.spotube.millennium.theme.gelBrush
 
-private val categories = listOf("All components", "Actions", "Inputs", "Navigation", "Feedback", "Overlays")
+private val categories =
+    listOf("All components", "Actions", "Inputs", "Navigation", "Feedback", "Overlays")
 
 @Composable
 fun App() {
@@ -46,7 +47,7 @@ fun App() {
     var dialog by rememberSaveable { mutableStateOf(false) }
     val drawer = rememberMillenniumDrawerState()
     val modalSheet = rememberModalBottomSheetState(initialDetent = SheetDetent.Hidden)
-    org.spotube.millennium.theme.MillenniumTheme(dark) {
+    MillenniumTheme(dark) {
         MillenniumTooltipHost {
             val c = MillenniumTheme.colors
             BoxWithConstraints(Modifier.fillMaxSize().background(c.background)) {
@@ -204,15 +205,21 @@ fun App() {
 
 @Composable
 private fun Brand() {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))
-            .background(
-                gelBrush(
-                    MillenniumTheme.colors.accentTop,
-                    MillenniumTheme.colors.accentBottom
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Box(
+            Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))
+                .background(
+                    gelBrush(
+                        MillenniumTheme.colors.accentTop,
+                        MillenniumTheme.colors.accentBottom
+                    )
                 )
-            )
-            .border(1.dp, MillenniumTheme.colors.accentBottom, RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
+                .border(1.dp, MillenniumTheme.colors.accentBottom, RoundedCornerShape(10.dp)),
+            contentAlignment = Alignment.Center
+        ) {
             MillenniumIcon(MillenniumIcons.Sparkle, tint = Color.White)
         }
         MillenniumText("Millennium", size = 24.sp, weight = FontWeight.Bold)
@@ -222,8 +229,12 @@ private fun Brand() {
 @Composable
 private fun Header(dark: Boolean, onDarkChange: (Boolean) -> Unit, wide: Boolean) {
     val c = MillenniumTheme.colors
-    Row(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(c.raised, c.surface))).padding(horizontal = if (wide) 28.dp else 20.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+    Row(
+        Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(c.raised, c.surface)))
+            .padding(horizontal = if (wide) 28.dp else 20.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
         Brand()
         if (wide) {
             MillenniumSeparator(Modifier.height(24.dp), vertical = true)
@@ -241,7 +252,11 @@ private fun Header(dark: Boolean, onDarkChange: (Boolean) -> Unit, wide: Boolean
 @Composable
 private fun Sidebar(category: String, onSelect: (String) -> Unit) {
     val c = MillenniumTheme.colors
-    Column(Modifier.width(212.dp).fillMaxHeight().background(c.surface.copy(alpha = 0.7f)).verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(
+        Modifier.width(212.dp).fillMaxHeight().background(c.surface.copy(alpha = 0.7f))
+            .verticalScroll(rememberScrollState()).padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
         MillenniumText(
             "EXPLORER",
             size = 10.sp,
@@ -273,7 +288,11 @@ private fun Sidebar(category: String, onSelect: (String) -> Unit) {
             color = c.muted,
             modifier = Modifier.padding(top = 16.dp)
         )
-        listOf("01   Light you can feel", "02   Depth with purpose", "03   Familiar, not dated").forEach {
+        listOf(
+            "01   Light you can feel",
+            "02   Depth with purpose",
+            "03   Familiar, not dated"
+        ).forEach {
             MillenniumText(
                 it,
                 color = c.muted,
@@ -303,7 +322,11 @@ private fun Sidebar(category: String, onSelect: (String) -> Unit) {
 @Composable
 private fun Hero(compact: Boolean) {
     val c = MillenniumTheme.colors
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(28.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(28.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Badge("THE NEXT WAVE OF NOSTALGIA", c.accent)
             MillenniumText(
@@ -316,22 +339,50 @@ private fun Hero(compact: Boolean) {
                 color = c.muted,
                 size = 14.sp
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(top = 4.dp)
+            ) {
                 Badge("COMPOSE UNSTYLED", c.muted)
                 Badge("LIGHT + DARK", c.muted)
             }
         }
         if (!compact) {
-            Box(Modifier.size(174.dp).clip(CircleShape).background(Brush.radialGradient(listOf(c.accentTop.copy(alpha = 0.25f), Color.Transparent))), contentAlignment = Alignment.Center) {
-                Box(Modifier.size(116.dp).clip(CircleShape).background(
-                    gelBrush(
-                        c.accentTop,
-                        c.accentBottom
+            Box(
+                Modifier.size(174.dp).clip(CircleShape).background(
+                    Brush.radialGradient(
+                        listOf(
+                            c.accentTop.copy(alpha = 0.25f),
+                            Color.Transparent
+                        )
                     )
-                ).border(1.dp, c.accentBottom, CircleShape), contentAlignment = Alignment.Center) {
-                    Box(Modifier.align(Alignment.TopCenter).padding(top = 7.dp).size(88.dp, 48.dp).clip(CircleShape)
-                        .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.45f), Color.Transparent))))
-                    MillenniumIcon(MillenniumIcons.Sparkle, modifier = Modifier.size(48.dp), tint = Color.White)
+                ), contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    Modifier.size(116.dp).clip(CircleShape).background(
+                        gelBrush(
+                            c.accentTop,
+                            c.accentBottom
+                        )
+                    ).border(1.dp, c.accentBottom, CircleShape), contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        Modifier.align(Alignment.TopCenter).padding(top = 7.dp).size(88.dp, 48.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        Color.White.copy(alpha = 0.45f),
+                                        Color.Transparent
+                                    )
+                                )
+                            )
+                    )
+                    MillenniumIcon(
+                        MillenniumIcons.Sparkle,
+                        modifier = Modifier.size(48.dp),
+                        tint = Color.White
+                    )
                 }
             }
         }
@@ -349,13 +400,30 @@ private fun Badge(text: String, color: Color) {
 }
 
 @Composable
-private fun Gallery(category: String, compact: Boolean, openDialog: () -> Unit, openSheet: () -> Unit, openDrawer: () -> Unit) {
+private fun Gallery(
+    category: String,
+    compact: Boolean,
+    openDialog: () -> Unit,
+    openSheet: () -> Unit,
+    openDrawer: () -> Unit
+) {
     val stateHolder = rememberSaveableStateHolder()
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val columns = if (compact) 1 else if (maxWidth >= 1100.dp) 3 else 2
         val cardWidth = (maxWidth - 20.dp * (columns - 1)) / columns
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalArrangement = Arrangement.spacedBy(20.dp), maxItemsInEachRow = columns) {
-            @Composable fun Card(group: String, number: String, title: String, description: String, content: @Composable ColumnScope.() -> Unit) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(20.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+            maxItemsInEachRow = columns
+        ) {
+            @Composable
+            fun Card(
+                group: String,
+                number: String,
+                title: String,
+                description: String,
+                content: @Composable ColumnScope.() -> Unit
+            ) {
                 if (category == "All components" || category == group) {
                     MillenniumCard(
                         Modifier.width(cardWidth),
@@ -384,15 +452,55 @@ private fun Gallery(category: String, compact: Boolean, openDialog: () -> Unit, 
                 }
             }
             Card("Actions", "01", "Buttons", "A little gloss. A satisfying click.") { ButtonDemo() }
-            Card("Inputs", "02–04", "Selection controls", "Small details. Clear decisions.") { SelectionDemo() }
-            Card("Inputs", "05", "Text fields", "A welcoming place for your thoughts.") { TextFieldDemo() }
-            Card("Inputs", "06–07", "Sliders & radio groups", "Find exactly the right setting.") { RangeDemo() }
+            Card(
+                "Inputs",
+                "02–04",
+                "Selection controls",
+                "Small details. Clear decisions."
+            ) { SelectionDemo() }
+            Card(
+                "Inputs",
+                "05",
+                "Text fields",
+                "A welcoming place for your thoughts."
+            ) { TextFieldDemo() }
+            Card(
+                "Inputs",
+                "06–07",
+                "Sliders & radio groups",
+                "Find exactly the right setting."
+            ) { RangeDemo() }
             Card("Navigation", "08", "Tab group", "One place. A few perspectives.") { TabsDemo() }
-            Card("Feedback", "09–10", "Avatars & icons", "A familiar face. A recognizable sign.") { IdentityDemo() }
-            Card("Feedback", "11", "Progress indicators", "Make the waiting feel lighter.") { ProgressDemo() }
-            Card("Actions", "12", "Disclosure", "A little more, only when you need it.") { DisclosureDemo() }
-            Card("Navigation", "13", "Dropdown menu", "Everything, right where you expect it.") { MenuDemo() }
-            Card("Feedback", "14–15", "Scrollbars & separators", "Subtle structure. Tactile navigation.") { ScrollDemo() }
+            Card(
+                "Feedback",
+                "09–10",
+                "Avatars & icons",
+                "A familiar face. A recognizable sign."
+            ) { IdentityDemo() }
+            Card(
+                "Feedback",
+                "11",
+                "Progress indicators",
+                "Make the waiting feel lighter."
+            ) { ProgressDemo() }
+            Card(
+                "Actions",
+                "12",
+                "Disclosure",
+                "A little more, only when you need it."
+            ) { DisclosureDemo() }
+            Card(
+                "Navigation",
+                "13",
+                "Dropdown menu",
+                "Everything, right where you expect it."
+            ) { MenuDemo() }
+            Card(
+                "Feedback",
+                "14–15",
+                "Scrollbars & separators",
+                "Subtle structure. Tactile navigation."
+            ) { ScrollDemo() }
             Card("Feedback", "16", "Tooltip", "Helpful words, without the clutter.") {
                 MillenniumTooltip("A hint of the past. Built for today.") {
                     MillenniumButton(openDialog, style = MillenniumButtonStyle.Secondary) {
@@ -411,7 +519,12 @@ private fun Gallery(category: String, compact: Boolean, openDialog: () -> Unit, 
                     color = MillenniumTheme.colors.muted
                 )
             }
-            Card("Overlays", "17–19", "Dialog, drawer & modal sheet", "A focused moment, beautifully framed.") {
+            Card(
+                "Overlays",
+                "17–19",
+                "Dialog, drawer & modal sheet",
+                "A focused moment, beautifully framed."
+            ) {
                 MillenniumButton(
                     openDialog,
                     modifier = Modifier.fillMaxWidth()
@@ -429,7 +542,12 @@ private fun Gallery(category: String, compact: Boolean, openDialog: () -> Unit, 
                     ) { Text("Modal sheet") }
                 }
             }
-            Card("Overlays", "20", "Bottom sheet", "Slide into something a little more useful.") { BottomSheetDemo() }
+            Card(
+                "Overlays",
+                "20",
+                "Bottom sheet",
+                "Slide into something a little more useful."
+            ) { BottomSheetDemo() }
         }
     }
 }
@@ -437,7 +555,10 @@ private fun Gallery(category: String, compact: Boolean, openDialog: () -> Unit, 
 @Composable
 private fun ButtonDemo() {
     var clicks by rememberSaveable { mutableIntStateOf(0) }
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
         MillenniumButton({ clicks++ }) { Text("Let’s go →") }
         MillenniumButton(
             { clicks++ },
@@ -458,7 +579,9 @@ private fun SelectionDemo() {
     var first by rememberSaveable { mutableStateOf(true) }
     var second by rememberSaveable { mutableStateOf(false) }
     var enabled by rememberSaveable { mutableStateOf(true) }
-    val parent = when { first && second -> ToggleableState.On; !first && !second -> ToggleableState.Off; else -> ToggleableState.Indeterminate }
+    val parent = when {
+        first && second -> ToggleableState.On; !first && !second -> ToggleableState.Off; else -> ToggleableState.Indeterminate
+    }
     MillenniumTriStateCheckbox(
         parent,
         { val next = parent != ToggleableState.On; first = next; second = next },
@@ -477,8 +600,10 @@ private fun TextFieldDemo() {
     val name = rememberTextFieldState("Alex")
     val email = rememberTextFieldState()
     MillenniumTextField(name, "Display name", placeholder = "Your name")
-    MillenniumTextField(email, "Email address", placeholder = "you@the-internet.com",
-        error = if (email.text.isNotEmpty() && '@' !in email.text) "Add an @ to complete your email." else null)
+    MillenniumTextField(
+        email, "Email address", placeholder = "you@the-internet.com",
+        error = if (email.text.isNotEmpty() && '@' !in email.text) "Add an @ to complete your email." else null
+    )
 }
 
 @Composable
@@ -494,14 +619,22 @@ private fun RangeDemo() {
         )
     }
     MillenniumSlider(volume, { volume = it }, "Volume")
-    MillenniumRadioGroup(quality, { quality = it }, listOf("Original", "Remastered"), "Playback quality")
+    MillenniumRadioGroup(
+        quality,
+        { quality = it },
+        listOf("Original", "Remastered"),
+        "Playback quality"
+    )
 }
 
 @Composable
 private fun TabsDemo() {
     var tab by rememberSaveable { mutableStateOf("Discover") }
     MillenniumTabGroup(tab, { tab = it }, listOf("Discover", "Saved")) { selected ->
-        Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             MillenniumAvatar(if (selected == "Discover") "07" else "26", "Playlist cover")
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 MillenniumText(
@@ -520,12 +653,18 @@ private fun TabsDemo() {
 
 @Composable
 private fun IdentityDemo() {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         MillenniumAvatar("AJ", "Alex Jordan", size = 36.dp)
         MillenniumAvatar("MK", "Morgan Kim")
         MillenniumAvatar("YOU", "Your profile", size = 60.dp)
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(18.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         MillenniumIcon(MillenniumIcons.Sparkle, "Sparkle", tint = MillenniumTheme.colors.accent)
         MillenniumIcon(MillenniumIcons.Music, "Music")
         MillenniumIcon(MillenniumIcons.Check, "Check", tint = MillenniumTheme.colors.success)
@@ -599,10 +738,24 @@ private fun MenuDemo() {
 @Composable
 private fun ScrollDemo() {
     val scroll = rememberScrollState()
-    Box(Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(8.dp)).background(
-        MillenniumTheme.colors.inset).padding(12.dp)) {
-        Column(Modifier.fillMaxWidth().padding(end = 18.dp).verticalScroll(scroll), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            listOf("AIM away messages", "The first iPhone", "Mixtapes for the internet", "Your favorite wallpaper", "One more song", "The future looked glossy", "Some things stay with us").forEachIndexed { index, item ->
+    Box(
+        Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(8.dp)).background(
+            MillenniumTheme.colors.inset
+        ).padding(12.dp)
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(end = 18.dp).verticalScroll(scroll),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            listOf(
+                "AIM away messages",
+                "The first iPhone",
+                "Mixtapes for the internet",
+                "Your favorite wallpaper",
+                "One more song",
+                "The future looked glossy",
+                "Some things stay with us"
+            ).forEachIndexed { index, item ->
                 MillenniumText("0${index + 1}   $item", size = 12.sp)
                 MillenniumSeparator()
             }
@@ -614,9 +767,16 @@ private fun ScrollDemo() {
 @Composable
 private fun BottomSheetDemo() {
     val state = rememberBottomSheetState(initialDetent = SheetDetent.Hidden)
-    Box(Modifier.fillMaxWidth().height(250.dp).clip(RoundedCornerShape(12.dp)).background(
-        MillenniumTheme.colors.inset)) {
-        Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Box(
+        Modifier.fillMaxWidth().height(250.dp).clip(RoundedCornerShape(12.dp)).background(
+            MillenniumTheme.colors.inset
+        )
+    ) {
+        Column(
+            Modifier.align(Alignment.Center),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             MillenniumText(
                 "An in-place, draggable sheet",
                 color = MillenniumTheme.colors.muted,

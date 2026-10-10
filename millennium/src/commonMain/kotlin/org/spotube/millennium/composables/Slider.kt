@@ -2,12 +2,13 @@ package org.spotube.millennium.composables
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
@@ -16,6 +17,10 @@ import com.composeunstyled.UnstyledSlider
 import org.spotube.millennium.theme.MillenniumTheme
 import org.spotube.millennium.theme.beveled
 import org.spotube.millennium.theme.gelBrush
+import org.spotube.millennium.theme.MillenniumVisualState
+import org.spotube.millennium.theme.MillenniumVisualStyle
+import org.spotube.millennium.theme.componentStyle
+import org.spotube.millennium.theme.resolve
 import org.spotube.millennium.theme.MillenniumPreview
 import androidx.compose.ui.tooling.preview.Preview
 
@@ -30,30 +35,53 @@ fun MillenniumSlider(
     steps: Int = 0,
     onValueChangeFinished: (() -> Unit)? = null,
 ) {
-    val colors = MillenniumTheme.colors
+    val sliderTheme = MillenniumTheme.sliderTheme
+    val colors = MillenniumTheme.colorsFor(sliderTheme)
+    val interaction = remember { MutableInteractionSource() }
+    val baseVisual = MillenniumVisualStyle(
+        backgroundColor = colors.inset,
+        borderColor = colors.border,
+        borderWidth = sliderTheme.strokes.border,
+        shadowElevation = sliderTheme.elevation.thumb,
+    )
+    val visualState = if (enabled) MillenniumVisualState.Default else MillenniumVisualState.Disabled
+    val visual = MillenniumTheme.sliderTheme.resolve(visualState, baseVisual)
     UnstyledSlider(
         value = value,
         onValueChange = onValueChange,
-        modifier = modifier.fillMaxWidth().heightIn(min = 44.dp)
-            .alpha(if (enabled) 1f else 0.45f).semantics { contentDescription = label },
+        modifier = modifier.fillMaxWidth().heightIn(min = sliderTheme.dimensions.touchTarget)
+            .alpha(visual.alpha ?: 1f).semantics { contentDescription = label },
         enabled = enabled,
+        interactionSource = interaction,
         valueRange = valueRange,
         steps = steps,
         onValueChangeFinished = onValueChangeFinished,
         track = { state ->
-            Box(Modifier.fillMaxWidth().height(8.dp).beveled(colors, CircleShape, sunken = true)) {
+            Box(Modifier.fillMaxWidth().height(sliderTheme.dimensions.sliderTrackHeight)
+                .beveled(colors, sliderTheme.shapes.pill, sunken = true).componentStyle(visual, sliderTheme.shapes.pill)) {
                 Box(
                     Modifier.fillMaxHeight().fillMaxWidth(state.fraction)
-                        .background(gelBrush(colors.accentTop, colors.accentBottom))
+                        .background(
+                            visual.background ?: visual.foregroundColor?.let { androidx.compose.ui.graphics.Brush.verticalGradient(listOf(it, it)) }
+                                ?: gelBrush(colors.accentTop, colors.accentBottom),
+                            sliderTheme.shapes.pill,
+                        )
                 )
             }
         },
         thumb = { state ->
-            Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
+            val thumbState = when {
+                !enabled -> MillenniumVisualState.Disabled
+                state.isDragging || state.isPressed -> MillenniumVisualState.Clicked
+                state.isFocused -> MillenniumVisualState.Focused
+                else -> MillenniumVisualState.Default
+            }
+            val thumbVisual = sliderTheme.resolve(thumbState, baseVisual)
+            val thumbShape = thumbVisual.shape ?: sliderTheme.shapes.pill
+            Box(Modifier.size(sliderTheme.dimensions.touchTarget), contentAlignment = Alignment.Center) {
                 Box(
-                    Modifier.size(if (state.isPressed || state.isDragging) 26.dp else 22.dp)
-                        .shadow(4.dp, CircleShape).beveled(colors, CircleShape)
-                        .border(if (state.isFocused) 2.dp else 1.dp, colors.accent, CircleShape),
+                    Modifier.size(if (state.isPressed || state.isDragging) sliderTheme.dimensions.sliderThumbActive else sliderTheme.dimensions.sliderThumb)
+                        .beveled(colors, thumbShape).componentStyle(thumbVisual, thumbShape),
                 )
             }
         },

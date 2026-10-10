@@ -11,6 +11,11 @@ import com.composeunstyled.TooltipPanel
 import com.composeunstyled.UnstyledTooltip
 import org.spotube.millennium.theme.MillenniumTheme
 import org.spotube.millennium.theme.beveled
+import org.spotube.millennium.theme.MillenniumVisualState
+import org.spotube.millennium.theme.MillenniumVisualStyle
+import org.spotube.millennium.theme.componentStyle
+import org.spotube.millennium.theme.resolve
+import org.spotube.millennium.theme.MillenniumComponentContent
 import org.spotube.millennium.theme.MillenniumPreview
 import androidx.compose.ui.tooling.preview.Preview
 import org.spotube.millennium.composables.MillenniumButton
@@ -22,11 +27,24 @@ fun MillenniumTooltipHost(modifier: Modifier = Modifier, content: @Composable ()
 
 @Composable
 fun MillenniumTooltip(text: String, anchor: @Composable () -> Unit) {
-    UnstyledTooltip(hoverDelayMillis = 350, sideOffset = 8.dp, panel = {
+    val tooltipTheme = MillenniumTheme.tooltipTheme
+    val colors = MillenniumTheme.colorsFor(tooltipTheme)
+    val visual = MillenniumTheme.tooltipTheme.resolve(
+        MillenniumVisualState.Default,
+        MillenniumVisualStyle(backgroundColor = colors.raised, foregroundColor = colors.text,
+            borderColor = colors.border, borderWidth = tooltipTheme.strokes.border,
+            shadowElevation = tooltipTheme.elevation.card, innerGlowColor = colors.highlight),
+    )
+    val shape = visual.shape ?: tooltipTheme.shapes.control
+    UnstyledTooltip(hoverDelayMillis = tooltipTheme.motion.tooltipDelayMillis, sideOffset = tooltipTheme.spacing.small, panel = {
         TooltipPanel(
-            Modifier.widthIn(max = 280.dp).beveled(MillenniumTheme.colors).padding(12.dp)
+            Modifier.widthIn(max = tooltipTheme.dimensions.tooltipMaxWidth)
+                .beveled(colors, shape).componentStyle(visual, shape)
+                .padding(visual.contentPadding ?: PaddingValues(tooltipTheme.spacing.medium))
         ) {
-            Text(text, fontSize = 12.sp)
+            MillenniumComponentContent(visual.copy(textStyle = visual.textStyle ?: tooltipTheme.typography.caption)) {
+                Text(text, color = visual.foregroundColor ?: colors.text)
+            }
         }
     }, anchor = anchor)
 }

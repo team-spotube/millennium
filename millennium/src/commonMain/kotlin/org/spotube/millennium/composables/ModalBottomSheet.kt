@@ -16,6 +16,11 @@ import com.composeunstyled.Sheet
 import com.composeunstyled.UnstyledModalBottomSheet
 import org.spotube.millennium.theme.MillenniumTheme
 import org.spotube.millennium.theme.beveled
+import org.spotube.millennium.theme.MillenniumVisualState
+import org.spotube.millennium.theme.MillenniumVisualStyle
+import org.spotube.millennium.theme.componentStyle
+import org.spotube.millennium.theme.resolve
+import org.spotube.millennium.theme.MillenniumComponentContent
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.MillenniumText
 import androidx.compose.ui.tooling.preview.Preview
@@ -27,23 +32,31 @@ fun MillenniumModalBottomSheet(
     state: ModalBottomSheetState,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val colors = MillenniumTheme.colors
+    val sheetTheme = MillenniumTheme.modalBottomSheetTheme
+    val colors = MillenniumTheme.colorsFor(sheetTheme)
+    val visual = sheetTheme.resolve(
+        MillenniumVisualState.Default,
+        MillenniumVisualStyle(backgroundColor = colors.surface, foregroundColor = colors.text,
+            borderColor = colors.border, borderWidth = sheetTheme.strokes.border,
+            shadowElevation = sheetTheme.elevation.card, innerGlowColor = colors.highlight),
+    )
+    val shape = visual.shape ?: sheetTheme.shapes.panel
     UnstyledModalBottomSheet(
         state = state,
         overlay = { Scrim(scrimColor = colors.scrim, enter = fadeIn(), exit = fadeOut()) },
     ) {
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
             Sheet(
-                Modifier.widthIn(max = 640.dp).fillMaxWidth()
-                    .beveled(colors, MillenniumTheme.panelShape)
+                Modifier.widthIn(max = sheetTheme.dimensions.cardMaxWidth).fillMaxWidth()
+                    .beveled(colors, shape).componentStyle(visual, shape)
             ) {
                 Column(
-                    Modifier.padding(24.dp).navigationBarsPadding(),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    Modifier.padding(visual.contentPadding ?: PaddingValues(sheetTheme.spacing.panelContent)).navigationBarsPadding(),
+                    verticalArrangement = Arrangement.spacedBy(visual.contentSpacing ?: sheetTheme.spacing.large),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    DragIndication(Modifier.size(40.dp, 5.dp).background(colors.muted, CircleShape))
-                    content()
+                    DragIndication(Modifier.size(sheetTheme.dimensions.dragHandle).background(colors.muted, CircleShape))
+                    MillenniumComponentContent(visual) { content() }
                 }
             }
         }
@@ -56,6 +69,6 @@ private fun MillenniumModalBottomSheetPreview() = MillenniumPreview {
     val state = rememberModalBottomSheetState(initialDetent = SheetDetent.FullyExpanded)
     MillenniumModalBottomSheet(state) {
         MillenniumText("Your next favorite track", weight = androidx.compose.ui.text.font.FontWeight.SemiBold)
-        MillenniumText("A modal sheet with a soft glass finish.", color = MillenniumTheme.colors.muted)
+        MillenniumText("A modal sheet with a soft glass finish.", color = MillenniumTheme.colorsFor(MillenniumTheme.modalBottomSheetTheme).muted)
     }
 }

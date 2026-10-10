@@ -3,6 +3,8 @@ package org.spotube.millennium.composables
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.TextFieldLineLimits
@@ -20,6 +22,10 @@ import androidx.compose.ui.unit.sp
 import com.composeunstyled.*
 import org.spotube.millennium.theme.MillenniumTheme
 import org.spotube.millennium.theme.beveled
+import org.spotube.millennium.theme.MillenniumVisualStyle
+import org.spotube.millennium.theme.MillenniumVisualState
+import org.spotube.millennium.theme.componentStyle
+import org.spotube.millennium.theme.resolve
 import org.spotube.millennium.theme.MillenniumPreview
 import androidx.compose.ui.tooling.preview.Preview
 
@@ -32,32 +38,57 @@ fun MillenniumTextField(
     enabled: Boolean = true,
     error: String? = null,
 ) {
-    val colors = MillenniumTheme.colors
+    val fieldTheme = MillenniumTheme.textFieldTheme
+    val colors = MillenniumTheme.colorsFor(fieldTheme)
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
+    val hovered by interaction.collectIsHoveredAsState()
+    val pressed by interaction.collectIsPressedAsState()
+    val visualState = when {
+        !enabled -> MillenniumVisualState.Disabled
+        error != null -> MillenniumVisualState.Error
+        pressed -> MillenniumVisualState.Clicked
+        focused -> MillenniumVisualState.Focused
+        hovered -> MillenniumVisualState.Hovered
+        else -> MillenniumVisualState.Default
+    }
+    val visual = MillenniumTheme.textFieldTheme.resolve(
+        visualState,
+        MillenniumVisualStyle(
+            backgroundColor = colors.inset,
+            foregroundColor = colors.text,
+            borderColor = when {
+                error != null -> colors.danger
+                focused -> colors.accent
+                else -> colors.border
+            },
+            borderWidth = if (focused || error != null) fieldTheme.strokes.focus else fieldTheme.strokes.border,
+        ),
+    )
     UnstyledTextField(
         state = state,
-        modifier = modifier.alpha(if (enabled) 1f else 0.45f),
+        modifier = modifier.componentStyle(visual, fieldTheme.shapes.control).alpha(visual.alpha ?: 1f),
         enabled = enabled,
         accessibilityLabel = label,
         interactionSource = interaction,
         lineLimits = TextFieldLineLimits.SingleLine,
-        textStyle = TextStyle(color = colors.text, fontSize = 14.sp, lineHeight = 21.sp),
-        cursorBrush = SolidColor(colors.accent),
+        textStyle = visual.textStyle ?: fieldTheme.typography.body.copy(color = visual.foregroundColor ?: colors.text),
+        cursorBrush = SolidColor(visual.foregroundColor ?: colors.accent),
         selectionColors = TextSelectionColors(colors.accent, colors.accent.copy(alpha = 0.25f)),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(label, fontWeight = FontWeight.Medium)
+        Column(verticalArrangement = Arrangement.spacedBy(visual.contentSpacing ?: fieldTheme.spacing.small)) {
+            Text(label, style = visual.textStyle ?: fieldTheme.typography.label, color = visual.foregroundColor ?: colors.text)
             TextInput(
-                Modifier.fillMaxWidth().heightIn(min = 46.dp).beveled(colors, sunken = true)
-                    .border(
-                        if (focused || error != null) 2.dp else 0.dp,
-                        if (error != null) colors.danger else if (focused) colors.accent else Color.Transparent,
-                        MillenniumTheme.shape,
-                    ).padding(horizontal = 14.dp, vertical = 12.dp),
+                Modifier.fillMaxWidth().heightIn(min = fieldTheme.dimensions.textFieldMinHeight)
+                    .beveled(colors, visual.shape ?: fieldTheme.shapes.control, sunken = true)
+                    .componentStyle(visual, visual.shape ?: fieldTheme.shapes.control)
+                    .padding(visual.contentPadding ?: PaddingValues(
+                        horizontal = fieldTheme.spacing.textFieldHorizontal,
+                        vertical = fieldTheme.spacing.textFieldVertical,
+                    )),
                 placeholder = { Text(placeholder, color = colors.muted) },
             )
-            if (error != null) Text(error, color = colors.danger, fontSize = 12.sp)
+            if (error != null) Text(error, style = fieldTheme.typography.caption, color = colors.danger)
         }
     }
 }

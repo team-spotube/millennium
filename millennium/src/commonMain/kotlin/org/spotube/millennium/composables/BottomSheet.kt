@@ -13,6 +13,11 @@ import com.composeunstyled.Sheet
 import com.composeunstyled.UnstyledBottomSheet
 import org.spotube.millennium.theme.MillenniumTheme
 import org.spotube.millennium.theme.beveled
+import org.spotube.millennium.theme.MillenniumVisualState
+import org.spotube.millennium.theme.MillenniumVisualStyle
+import org.spotube.millennium.theme.componentStyle
+import org.spotube.millennium.theme.resolve
+import org.spotube.millennium.theme.MillenniumComponentContent
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.MillenniumText
 import androidx.compose.ui.tooling.preview.Preview
@@ -25,17 +30,26 @@ fun MillenniumBottomSheet(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val colors = MillenniumTheme.colors
+    val sheetTheme = MillenniumTheme.bottomSheetTheme
+    val colors = MillenniumTheme.colorsFor(sheetTheme)
+    val visual = sheetTheme.resolve(
+        MillenniumVisualState.Default,
+        MillenniumVisualStyle(backgroundColor = colors.surface, foregroundColor = colors.text,
+            borderColor = colors.border, borderWidth = sheetTheme.strokes.border,
+            shadowElevation = sheetTheme.elevation.card, innerGlowColor = colors.highlight),
+    )
+    val shape = visual.shape ?: sheetTheme.shapes.panel
     UnstyledBottomSheet(state, modifier) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-            Sheet(Modifier.widthIn(max = 640.dp).fillMaxWidth().beveled(colors, MillenniumTheme.panelShape)) {
+            Sheet(Modifier.widthIn(max = sheetTheme.dimensions.cardMaxWidth).fillMaxWidth()
+                .beveled(colors, shape).componentStyle(visual, shape)) {
                 Column(
-                    Modifier.padding(24.dp).navigationBarsPadding(),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    Modifier.padding(visual.contentPadding ?: PaddingValues(sheetTheme.spacing.panelContent)).navigationBarsPadding(),
+                    verticalArrangement = Arrangement.spacedBy(visual.contentSpacing ?: sheetTheme.spacing.large),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    DragIndication(Modifier.size(40.dp, 5.dp).background(colors.muted, CircleShape))
-                    content()
+                    DragIndication(Modifier.size(sheetTheme.dimensions.dragHandle).background(colors.muted, CircleShape))
+                    MillenniumComponentContent(visual) { content() }
                 }
             }
         }
@@ -48,6 +62,6 @@ private fun MillenniumBottomSheetPreview() = MillenniumPreview {
     val state = rememberBottomSheetState(initialDetent = SheetDetent.FullyExpanded)
     MillenniumBottomSheet(state) {
         MillenniumText("Hello from down here.", weight = androidx.compose.ui.text.font.FontWeight.SemiBold)
-        MillenniumText("A softly raised sheet with a tactile handle.", color = MillenniumTheme.colors.muted)
+        MillenniumText("A softly raised sheet with a tactile handle.", color = MillenniumTheme.colorsFor(MillenniumTheme.bottomSheetTheme).muted)
     }
 }

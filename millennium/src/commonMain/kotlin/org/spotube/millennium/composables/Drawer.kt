@@ -9,6 +9,11 @@ import androidx.compose.ui.unit.dp
 import com.composeunstyled.*
 import org.spotube.millennium.theme.MillenniumTheme
 import org.spotube.millennium.theme.beveled
+import org.spotube.millennium.theme.MillenniumVisualState
+import org.spotube.millennium.theme.MillenniumVisualStyle
+import org.spotube.millennium.theme.componentStyle
+import org.spotube.millennium.theme.resolve
+import org.spotube.millennium.theme.MillenniumComponentContent
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.MillenniumText
 import androidx.compose.ui.tooling.preview.Preview
@@ -32,7 +37,15 @@ fun MillenniumDrawer(
     state: UnstyledDrawerState<MillenniumDrawerValue>,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val colors = MillenniumTheme.colors
+    val drawerTheme = MillenniumTheme.drawerTheme
+    val colors = MillenniumTheme.colorsFor(drawerTheme)
+    val visual = drawerTheme.resolve(
+        MillenniumVisualState.Default,
+        MillenniumVisualStyle(backgroundColor = colors.surface, foregroundColor = colors.text,
+            borderColor = colors.border, borderWidth = drawerTheme.strokes.border,
+            shadowElevation = drawerTheme.elevation.card, innerGlowColor = colors.highlight),
+    )
+    val shape = visual.shape ?: drawerTheme.shapes.panel
     UnstyledDrawer(
         state,
         placement = DrawerPlacement.Start,
@@ -40,11 +53,12 @@ fun MillenniumDrawer(
         overlay = { Overlay { Box(Modifier.fillMaxSize().background(colors.scrim)) } },
     ) {
         Viewport(Modifier.fillMaxSize()) {
-            Panel(Modifier.widthIn(max = 320.dp).fillMaxWidth().fillMaxHeight().beveled(colors, MillenniumTheme.panelShape)) {
+            Panel(Modifier.widthIn(max = drawerTheme.dimensions.drawerMaxWidth).fillMaxWidth().fillMaxHeight()
+                .beveled(colors, shape).componentStyle(visual, shape)) {
                 Column(
-                    Modifier.padding(24.dp).systemBarsPadding(),
-                    verticalArrangement = Arrangement.spacedBy(20.dp),
-                    content = content,
+                    Modifier.padding(visual.contentPadding ?: PaddingValues(drawerTheme.spacing.panelContent)).systemBarsPadding(),
+                    verticalArrangement = Arrangement.spacedBy(visual.contentSpacing ?: drawerTheme.spacing.xLarge),
+                    content = { MillenniumComponentContent(visual) { content() } },
                 )
             }
         }
@@ -59,6 +73,6 @@ private fun MillenniumDrawerPreview() = MillenniumPreview {
     LaunchedEffect(state) { state.targetValue = MillenniumDrawerValue.Open }
     MillenniumDrawer(state) {
         MillenniumText("A little more space", weight = androidx.compose.ui.text.font.FontWeight.SemiBold)
-        MillenniumText("A softly raised edge drawer.", color = MillenniumTheme.colors.muted)
+        MillenniumText("A softly raised edge drawer.", color = MillenniumTheme.colorsFor(MillenniumTheme.drawerTheme).muted)
     }
 }

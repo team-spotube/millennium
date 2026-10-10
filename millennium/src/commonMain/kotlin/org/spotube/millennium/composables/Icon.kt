@@ -14,6 +14,10 @@ import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.UnstyledIcon
 import org.spotube.millennium.theme.MillenniumTheme
+import org.spotube.millennium.theme.MillenniumVisualState
+import org.spotube.millennium.theme.MillenniumVisualStyle
+import org.spotube.millennium.theme.componentStyle
+import org.spotube.millennium.theme.resolve
 import org.spotube.millennium.theme.MillenniumPreview
 import androidx.compose.ui.tooling.preview.Preview
 
@@ -22,8 +26,16 @@ fun MillenniumIcon(
     imageVector: ImageVector,
     contentDescription: String? = null,
     modifier: Modifier = Modifier,
-    tint: Color = MillenniumTheme.colors.text,
-) = UnstyledIcon(imageVector, contentDescription, modifier.size(20.dp), tint)
+    tint: Color? = null,
+) {
+    val iconTheme = MillenniumTheme.iconTheme
+    val colors = MillenniumTheme.colorsFor(iconTheme)
+    val tintColor = tint ?: colors.text
+    val visual = iconTheme.resolve(MillenniumVisualState.Default, MillenniumVisualStyle(foregroundColor = tintColor))
+    val shape = visual.shape ?: iconTheme.shapes.control
+    UnstyledIcon(imageVector, contentDescription, modifier.size(iconTheme.dimensions.iconSize)
+        .componentStyle(visual, shape), visual.foregroundColor ?: tintColor)
+}
 
 /** Small, dependency-free vector set used by the gallery and themed controls. */
 object MillenniumIcons {
@@ -48,11 +60,12 @@ object MillenniumIcons {
 @Preview
 @Composable
 private fun MillenniumIconPreview() = MillenniumPreview {
+    val colors = MillenniumTheme.colorsFor(MillenniumTheme.iconTheme)
     androidx.compose.foundation.layout.Row(
         horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(20.dp),
     ) {
-        MillenniumIcon(MillenniumIcons.Sparkle, contentDescription = "Sparkle", tint = MillenniumTheme.colors.accent)
+        MillenniumIcon(MillenniumIcons.Sparkle, contentDescription = "Sparkle", tint = colors.accent)
         MillenniumIcon(MillenniumIcons.Music, contentDescription = "Music")
-        MillenniumIcon(MillenniumIcons.Check, contentDescription = "Check", tint = MillenniumTheme.colors.success)
+        MillenniumIcon(MillenniumIcons.Check, contentDescription = "Check", tint = colors.success)
     }
 }

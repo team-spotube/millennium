@@ -9,9 +9,10 @@
 - Preserve existing scaffold functions/tests unless necessary for compatibility.
 
 ## Current progress
-- Implemented named Compose Unstyled theme with explicit light/dark semantic palettes in `millennium/src/commonMain/kotlin/org/spotube/millennium/Theme.kt`.
-- Every themed component has its own source file in `millennium/src/commonMain/kotlin/org/spotube/millennium/`: Button, Checkbox, TriStateCheckbox, ToggleSwitch, TextField, Slider, RadioGroup, TabGroup, Avatar, Icon, Disclosure, Dialog, DropdownMenu, Tooltip, Progress, Separator, Scrollbar, BottomSheet, ModalBottomSheet, Drawer, and Card.
+- Implemented explicit light/dark palettes and a configurable theme in `millennium/src/commonMain/kotlin/org/spotube/millennium/theme/Theme.kt`.
+- Every themed component has its own source file in `millennium/src/commonMain/kotlin/org/spotube/millennium/composables/`: Button, Checkbox, TriStateCheckbox, ToggleSwitch, TextField, Slider, RadioGroup, TabGroup, Avatar, Icon, Disclosure, Dialog, DropdownMenu, Tooltip, Progress, Separator, Scrollbar, BottomSheet, ModalBottomSheet, Drawer, and Card.
 - `Card.kt` provides the public `MillenniumCard` raised Aero/glass surface. `Theme.kt` holds shared theme tokens and bevel/gel helpers.
+- `MillenniumThemeConfig` has shared light/dark fallback schemes and per-component theme entries; every component theme has its own optional color palette plus typography, shapes, dimensions, spacing/padding, elevation, strokes, motion, and default/hover/focus/click/disabled/selected/error visual overrides. No global dimensions/spacing/shape/stroke/elevation/typography getters remain. Buttons have separately configurable primary/secondary/quiet/danger component themes.
 - All 21 composable files now have a `@Preview` in their own file, using `androidx.compose.ui.tooling.preview.Preview`. `Theme.kt` owns the shared `MillenniumPreview` light-theme frame and one default theme preview; per-component previews reuse that frame.
 - Android Studio's `ComposeViewAdapter` preview failure was fixed by adding AndroidX `androidx.compose.ui:ui-tooling` to the sample app's `debugImplementation`; keep this tooling dependency in the sample app, not in the published common library.
 - Shared interactive gallery in `sample/sharedUI/src/commonMain/kotlin/sample/app/App.kt`: category filtering, responsive 1–3 column layouts, light/dark switch, parent/child tri-state selection, input validation, tabs, menus, progress and overlays.
@@ -29,16 +30,16 @@
 - Known run configurations: `sample [hot] 🔥`, `sample [js]`, `sample.androidApp`.
 - A full repository `build` exposed missing `binaries.executable()` declarations on both JS targets; those are fixed. It then exposed a host browser mismatch (only Firefox is installed, while Karma defaulted to ChromeHeadless). Both JS targets now use Firefox for Karma tests, and `kotlinUpgradeYarnLock` updated the checked-in lock file.
 - Kotlin sources moved to match the valid `org.spotube.millennium` package directory, removing the IDE's package-location warnings. Exported the primitive/colored-indication dependencies needed by public wrappers and declared Compose Unstyled directly in the sample for IDE classpath resolution.
-- `./gradlew build` passed with common previews on JVM/JS/Native. After adding Android preview tooling, `./gradlew :sample:androidApp:assembleDebug` passes. Verify the Android Studio preview renderer in the IDE when available (do not use screen capture or UI-inspection tools).
+- Full `./gradlew build` passes after making component themes own their colors, dimensions, typography, layout, elevation, strokes and motion. Four JVM tests and Firefox-based JS tests pass; Android lint/build, desktop/web compilation and iOS target compilation also pass. iOS simulator tests are skipped on Linux. Verify Android Studio previews in the IDE when available (do not use screen capture or UI-inspection tools).
 - Android Studio MCP's project model is stale after renaming the Gradle root/module: its inspections still report unresolved library imports in the sample, while Gradle successfully compiles those same sources. A Gradle project reload/sync in Android Studio is needed to refresh the IDE model; no sync action is exposed through the available IDE MCP tools.
 - `MainViewController` has two expected IDE warnings (iOS-exported entry point has an uppercase platform-required name and is referenced from Swift, so Kotlin inspection sees no Kotlin caller); leave its name intact.
-- Tests cover normal/muted text contrast on every neutral surface, semantic foreground contrast and gel-label contrast through both gradients.
+- Tests cover normal/muted text contrast on every neutral surface, semantic foreground contrast, gel-label contrast through both gradients, and independent per-component state-style inheritance.
 - No completed visual verification. Earlier screenshot-tool requests timed out; do not retry, per the user's explicit constraint.
 - iOS runtime/simulator verification is unavailable on Linux and still requires macOS/Xcode.
-- Three JVM palette/gradient contrast tests pass with no failures/skips; Firefox-based JS tests pass.
+- Four JVM tests pass with no failures/skips; Firefox-based JS tests pass.
 - Final Android Studio MCP build request timed out with limited diagnostics; direct Gradle validation subsequently succeeded. Gradle still reports pre-existing deprecation warnings and disabled iOS simulator tests on Linux.
 - Remaining follow-up: user-led visual/interaction checks on target devices; iOS compilation/runtime checks on macOS. Do not inspect the user's screen to perform these.
-- This workspace has no Git repository. No issue or pull request was supplied for this work.
+- This workspace is a Git repository. No issue or pull request was supplied for this work.
 
 ## Run commands
 - Desktop: `./gradlew :sample:desktopApp:run`
