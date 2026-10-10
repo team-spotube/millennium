@@ -40,7 +40,7 @@ state and modifiers; there is no Material dependency.
 | Surfaces | `MillenniumCard` |
 | Actions | `MillenniumButton` (primary, secondary, quiet, danger), `MillenniumDisclosure` |
 | Inputs | `MillenniumCheckbox`, `MillenniumTriStateCheckbox`, `MillenniumSwitch`, `MillenniumTextField`, `MillenniumSlider`, `MillenniumRadioGroup` |
-| Navigation | `MillenniumTabGroup`, `MillenniumDropdownMenu`, `MillenniumSidebar` |
+| Navigation | `MillenniumTabGroup`, `MillenniumDropdownMenu`, `MillenniumSidebar`, `MillenniumBottomNavigationBar` |
 | Feedback | `MillenniumAvatar`, `MillenniumIcon`, `MillenniumProgress`, `MillenniumIndeterminateProgress`, `MillenniumScrollbar`, `MillenniumSeparator`, `MillenniumTooltip` |
 | Overlays | `MillenniumDialog`, `MillenniumDrawer`, `MillenniumBottomSheet`, `MillenniumModalBottomSheet` |
 
@@ -57,6 +57,11 @@ fixed while `MillenniumSidebarContent` scrolls (with a themed scrollbar).
 rows with optional icons and `MillenniumSidebarBadge` counters.
 `MillenniumSidebarTrigger` folds the rail to icon width, driven by
 `rememberMillenniumSidebarState` (or plain hoisted `Boolean` state).
+The default sidebar uses pearl/smoked-glass chrome, beveled group headers,
+blue gel selection with white labels, inset counter pills, and a raised collapse
+button. Selection persists through hover/focus/press. Group label surfaces and
+badge/trigger borders, glows, and trigger elevation are independently overridable
+through `MillenniumTheme.sidebarTheme`; all defaults follow the active palette.
 
 ```kotlin
 val sidebar = rememberMillenniumSidebarState()
@@ -86,6 +91,48 @@ Row(Modifier.fillMaxSize()) {
 ```
 
 ### Hackable theme configuration
+
+#### Bottom navigation
+
+`MillenniumBottomNavigationBar` supplies pearl/smoked-glass chrome and system
+navigation-bar insets. `MillenniumBottomNavigationItem` supplies an equal-width,
+keyboard-focusable destination with selected semantics and a persistent blue gel
+selection. Selection/routing stay with the caller. Icon, label and badge are
+composable slots; a second overload exposes a fully custom `ColumnScope` body
+with `MillenniumBottomNavigationItemVisuals`.
+
+```kotlin
+var destination by rememberSaveable { mutableStateOf("Discover") }
+Column(Modifier.fillMaxSize()) {
+    Box(Modifier.weight(1f)) { /* Scrollable destination content */ }
+    MillenniumBottomNavigationBar {
+        listOf("Discover", "Library", "Saved").forEach { label ->
+            MillenniumBottomNavigationItem(
+                selected = destination == label,
+                onClick = { destination = label },
+                contentDescription = label,
+                icon = {
+                    com.composeunstyled.UnstyledIcon(
+                        MillenniumIcons.Music,
+                        contentDescription = null,
+                        tint = com.composeunstyled.LocalTextStyle.current.color,
+                    )
+                },
+                label = { Text(label) },
+            )
+        }
+    }
+}
+```
+
+Keep the bar outside scrolling content, normally with 3–5 destinations. Pass
+`windowInsets = WindowInsets(0, 0, 0, 0)` for embedded bars or when a parent already
+handles system insets. Icon-only items need a `contentDescription`. Use inherited
+`LocalTextStyle.current.color` for custom icons to follow selected/disabled colors.
+Customize chrome through `MillenniumTheme.bottomNavigationBarTheme.states`, and
+item shapes, padding, typography, surfaces and motion through its `.item` states.
+
+#### Component theme configuration
 
 Each component's source file defines its own `<Component>ThemeProperties`,
 `<Component>Theme`, state variations and default factory. For example, `Button.kt`

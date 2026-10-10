@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 import org.spotube.millennium.composables.MillenniumSidebarState
+import org.spotube.millennium.composables.sidebarItemForeground
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumDarkColors
@@ -173,6 +174,25 @@ class ThemeTest {
         assertNotEquals(52.dp, config.dark.sidebarTheme.item.default.minimumHeight)
         assertEquals(defaults.light.cardTheme, config.light.cardTheme)
         assertEquals(defaults.light.buttonTheme, config.light.buttonTheme)
+    }
+
+    @Test
+    fun sidebarSelectedLabelsStayLegibleAndControlsKeepAccessibleTargets() {
+        listOf(MillenniumLightColors, MillenniumDarkColors).forEach { colors ->
+            listOf(true, false).forEach { enabled ->
+                val foreground = sidebarItemForeground(colors, selected = true, enabled = enabled)
+                assertEquals(colors.onAccent, foreground)
+                (0..20).forEach { step ->
+                    assertTrue(contrast(foreground, lerp(colors.accentTop, colors.accentBottom, step / 20f)) >= 4.5)
+                }
+            }
+        }
+        val theme = MillenniumThemeConfig().light.sidebarTheme
+        assertTrue(theme.item.default.minimumHeight >= 44.dp)
+        assertTrue(theme.group.default.labelMinimumHeight >= 44.dp)
+        assertTrue(theme.trigger.default.size >= 44.dp)
+        assertEquals(null, theme.group.default.labelBackground)
+        assertEquals(null, theme.trigger.default.background)
     }
 
     private fun contrast(a: Color, b: Color): Float {

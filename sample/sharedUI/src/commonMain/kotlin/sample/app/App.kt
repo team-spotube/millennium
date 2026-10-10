@@ -100,7 +100,7 @@ fun App() {
                                             size = 13.sp
                                         )
                                     }
-                                    if (!compact) Badge("21 COMPONENTS", c.muted)
+                                    if (!compact) Badge("22 COMPONENTS", c.muted)
                                 }
                                 Gallery(
                                     category,
@@ -270,7 +270,7 @@ private fun Sidebar(category: String, onSelect: (String) -> Unit) {
                                 label = item,
                                 onClick = { onSelect(item) },
                                 selected = category == item,
-                                badge = if (index == 0) "21" else listOf("", "2", "6", "2", "6", "4")[index]
+                                badge = if (index == 0) "22" else listOf("", "2", "6", "4", "6", "4")[index]
                             )
                         }
                     }
@@ -475,6 +475,12 @@ private fun Gallery(
                 "A fixed header, a scrolling middle, a fixed footer."
             ) { SidebarDemo() }
             Card(
+                "Navigation",
+                "22",
+                "Bottom navigation",
+                "A gel-lit destination, always within reach."
+            ) { BottomNavigationDemo() }
+            Card(
                 "Feedback",
                 "09–10",
                 "Avatars & icons",
@@ -652,6 +658,41 @@ private fun TabsDemo() {
             }
         }
     }
+}
+
+@Composable
+private fun BottomNavigationDemo() {
+    var destination by rememberSaveable { mutableStateOf("Discover") }
+    Column(
+        Modifier.fillMaxWidth().height(220.dp).clip(RoundedCornerShape(12.dp))
+            .background(MillenniumTheme.colors.inset)
+    ) {
+        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+            MillenniumText(destination, size = 22.sp, weight = FontWeight.SemiBold)
+        }
+        MillenniumBottomNavigationBar(windowInsets = WindowInsets(0, 0, 0, 0)) {
+            listOf("Discover", "Library", "Saved").forEachIndexed { index, label ->
+                MillenniumBottomNavigationItem(
+                    selected = destination == label,
+                    onClick = { destination = label },
+                    contentDescription = label,
+                    icon = {
+                        UnstyledIcon(
+                            if (index == 0) MillenniumIcons.Sparkle else MillenniumIcons.Music,
+                            contentDescription = null,
+                            tint = LocalTextStyle.current.color
+                        )
+                    },
+                    label = { Text(label) }
+                )
+            }
+        }
+    }
+    MillenniumText(
+        "Tab to focus · Enter to select. The bar stays outside the scrolling body.",
+        size = 11.sp,
+        color = MillenniumTheme.colors.muted
+    )
 }
 
 @Composable

@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.sp
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledButton
 import org.spotube.millennium.theme.MillenniumControlState
+import org.spotube.millennium.theme.MillenniumColors
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.MillenniumStyledContent
@@ -139,6 +140,8 @@ data class MillenniumSidebarGroupProperties(
     val labelBorderWidth: Dp,
     val animationMillis: Int,
     val alpha: Float = 1f,
+    val labelBackground: Brush? = null,
+    val labelInnerGlowColor: Color? = null,
 )
 
 /** One selectable sidebar row. */
@@ -173,6 +176,9 @@ data class MillenniumSidebarBadgeProperties(
     val shape: Shape,
     val contentPadding: PaddingValues,
     val minimumHeight: Dp,
+    val borderColor: Color? = null,
+    val borderWidth: Dp = 1.dp,
+    val innerGlowColor: Color? = null,
 )
 
 /** The collapse/expand affordance, usually placed in the header. */
@@ -182,6 +188,11 @@ data class MillenniumSidebarTriggerProperties(
     val shape: Shape,
     val size: Dp,
     val animationMillis: Int,
+    val background: Brush? = null,
+    val borderColor: Color? = null,
+    val borderWidth: Dp = 1.dp,
+    val shadowElevation: Dp = 1.dp,
+    val innerGlowColor: Color? = null,
 )
 
 /** Complete, independently replaceable theme for every sidebar brick. */
@@ -226,11 +237,11 @@ fun defaultMillenniumSidebarTheme(): MillenniumSidebarTheme {
     )
     val group = MillenniumSidebarGroupProperties(
         contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp),
-        contentSpacing = 2.dp,
+        contentSpacing = 4.dp,
         groupSpacing = 4.dp,
         labelStyle = TextStyle(fontSize = 11.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp),
         labelPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-        labelMinimumHeight = 30.dp,
+        labelMinimumHeight = 44.dp,
         labelShape = RoundedCornerShape(8.dp),
         labelBorderWidth = 1.dp,
         animationMillis = 180,
@@ -239,7 +250,7 @@ fun defaultMillenniumSidebarTheme(): MillenniumSidebarTheme {
         labelStyle = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium),
         shape = RoundedCornerShape(10.dp),
         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
-        minimumHeight = 40.dp,
+        minimumHeight = 44.dp,
         iconSize = 18.dp,
         iconLabelSpacing = 10.dp,
         borderWidth = 1.dp,
@@ -256,7 +267,7 @@ fun defaultMillenniumSidebarTheme(): MillenniumSidebarTheme {
     )
     val trigger = MillenniumSidebarTriggerProperties(
         shape = RoundedCornerShape(8.dp),
-        size = 30.dp,
+        size = 44.dp,
         animationMillis = 160,
     )
     return MillenniumSidebarTheme(
@@ -279,11 +290,16 @@ fun defaultMillenniumSidebarTheme(): MillenniumSidebarTheme {
             focused = item.copy(borderWidth = 2.dp),
             pressed = item.copy(shadowElevation = 0.dp),
             disabled = item.copy(alpha = 0.45f),
-            selected = item.copy(shadowElevation = 1.dp),
+            selected = item.copy(shadowElevation = 3.dp, labelStyle = item.labelStyle.copy(fontWeight = FontWeight.SemiBold)),
             error = item.copy(borderWidth = 2.dp),
         ),
         badge = MillenniumControlStateProperty.all(badge),
-        trigger = MillenniumControlStateProperty.all(trigger),
+        trigger = MillenniumControlStateProperty(
+            default = trigger,
+            hovered = trigger.copy(shadowElevation = 2.dp),
+            focused = trigger.copy(borderWidth = 2.dp),
+            pressed = trigger.copy(shadowElevation = 0.dp),
+        ),
     )
 }
 
@@ -409,7 +425,7 @@ fun MillenniumSidebar(
                 )
                 .alpha(properties.alpha),
         ) {
-            content()
+            MillenniumStyledContent(TextStyle.Default, properties.foreground ?: colors.text) { content() }
         }
     }
 }
@@ -425,11 +441,11 @@ fun MillenniumSidebarHeader(
 ) {
     val colors = MillenniumTheme.colors
     val properties = MillenniumTheme.sidebarTheme.header.resolve(MillenniumControlState.Default)
-    val background = properties.background
+    val background = properties.background ?: gelBrush(colors.raised, colors.surface)
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .then(if (background != null) Modifier.background(background) else Modifier),
+            .background(background),
     ) {
         Column(
             Modifier
@@ -479,11 +495,11 @@ fun MillenniumSidebarFooter(
 ) {
     val colors = MillenniumTheme.colors
     val properties = MillenniumTheme.sidebarTheme.footer.resolve(MillenniumControlState.Default)
-    val background = properties.background
+    val background = properties.background ?: millenniumBevelBrush(colors, sunken = true)
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .then(if (background != null) Modifier.background(background) else Modifier),
+            .background(background),
     ) {
         SidebarHairline(properties.dividerColor ?: colors.border, properties.dividerWidth)
         Column(
@@ -502,6 +518,7 @@ fun MillenniumSidebarFooter(
 private fun SidebarHairline(color: Color, width: Dp) {
     if (width > 0.dp) {
         Box(Modifier.fillMaxWidth().height(width).background(color))
+        Box(Modifier.fillMaxWidth().height(width).background(MillenniumTheme.colors.highlight.copy(alpha = 0.45f)))
     }
 }
 
@@ -596,7 +613,6 @@ fun MillenniumSidebarGroupLabel(
     val colors = MillenniumTheme.colors
     val group = LocalMillenniumSidebarGroup.current
     val railCollapsed = LocalMillenniumSidebar.current?.collapsed == true
-    val properties = MillenniumTheme.sidebarTheme.group.resolve(MillenniumControlState.Default)
     val collapsible = group?.collapsible == true
     val expanded = group?.expanded ?: true
     val enabled = group?.enabled ?: true
@@ -609,11 +625,13 @@ fun MillenniumSidebarGroupLabel(
     val focused by interaction.collectIsFocusedAsState()
     val hovered by interaction.collectIsHoveredAsState()
     val state = when {
+        !enabled -> MillenniumControlState.Disabled
         pressed -> MillenniumControlState.Pressed
         focused -> MillenniumControlState.Focused
         hovered -> MillenniumControlState.Hovered
         else -> MillenniumControlState.Default
     }
+    val properties = MillenniumTheme.sidebarTheme.group.resolve(state)
     val rowForeground = properties.labelForeground ?: when (state) {
         MillenniumControlState.Hovered, MillenniumControlState.Focused, MillenniumControlState.Pressed -> colors.text
         else -> colors.muted
@@ -626,12 +644,12 @@ fun MillenniumSidebarGroupLabel(
         MillenniumControlState.Pressed -> Brush.verticalGradient(
             listOf(colors.accent.copy(alpha = 0.18f), colors.accent.copy(alpha = 0.10f)),
         )
-        else -> Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
+        else -> properties.labelBackground ?: millenniumBevelBrush(colors)
     }
     val borderColor = properties.labelBorderColor ?: when (state) {
         MillenniumControlState.Focused -> colors.accent
         MillenniumControlState.Error -> colors.danger
-        else -> null
+        else -> colors.border.copy(alpha = 0.6f)
     }
     val borderWidth = when (state) {
         MillenniumControlState.Focused -> maxOf(properties.labelBorderWidth, 2.dp)
@@ -668,11 +686,13 @@ fun MillenniumSidebarGroupLabel(
     val surface = Modifier
         .fillMaxWidth()
         .heightIn(min = properties.labelMinimumHeight)
+        .alpha(properties.alpha)
         .millenniumSurface(
             background = background,
             shape = properties.labelShape,
             borderColor = borderColor,
             borderWidth = borderWidth,
+            innerGlowColor = properties.labelInnerGlowColor ?: colors.highlight.copy(alpha = 0.45f),
         )
         .padding(properties.labelPadding)
 
@@ -786,13 +806,13 @@ fun MillenniumSidebarItem(
     badge: String? = null,
     contentDescription: String? = null,
 ) {
-    val itemProperties = MillenniumTheme.sidebarTheme.item.default
     SidebarItemContainer(
         onClick = onClick,
         enabled = enabled,
         selected = selected,
         modifier = modifier.sidebarItemSemantics(contentDescription ?: label, selected),
     ) { visuals ->
+        val itemProperties = MillenniumTheme.sidebarTheme.item.resolve(visuals.state)
         if (icon != null) {
             MillenniumIcon(
                 icon,
@@ -855,22 +875,21 @@ private fun SidebarItemContainer(
         else -> MillenniumControlState.Default
     }
     val properties = MillenniumTheme.sidebarTheme.item.resolve(state)
-    val foreground = properties.foreground ?: when (state) {
-        MillenniumControlState.Disabled -> colors.muted
-        MillenniumControlState.Selected -> colors.accent
-        else -> colors.text
-    }
-    val iconTint = properties.iconTint ?: when (state) {
+    val foreground = properties.foreground ?: sidebarItemForeground(colors, selected, enabled)
+    val iconTint = properties.iconTint ?: when {
+        selected -> foreground
+        else -> when (state) {
         MillenniumControlState.Disabled -> colors.muted
         MillenniumControlState.Selected, MillenniumControlState.Hovered,
         MillenniumControlState.Focused, MillenniumControlState.Pressed,
         -> colors.accent
         else -> colors.muted
+        }
     }
-    val background = properties.background ?: when (state) {
-        MillenniumControlState.Selected -> Brush.verticalGradient(
-            listOf(colors.accent.copy(alpha = 0.24f), colors.accent.copy(alpha = 0.12f)),
-        )
+    val background = properties.background ?: if (selected) {
+        gelBrush(colors.accentTop, colors.accentBottom)
+    } else when (state) {
+        MillenniumControlState.Selected -> gelBrush(colors.accentTop, colors.accentBottom)
         MillenniumControlState.Hovered -> Brush.verticalGradient(
             listOf(colors.accent.copy(alpha = 0.12f), colors.accent.copy(alpha = 0.05f)),
         )
@@ -889,9 +908,11 @@ private fun SidebarItemContainer(
     val borderColor = properties.borderColor ?: when (state) {
         MillenniumControlState.Focused -> colors.accent
         MillenniumControlState.Error -> colors.danger
-        else -> null
+        else -> if (selected) colors.accentBottom else if (hovered || pressed) colors.border else null
     }
-    val indicatorColor = properties.selectedIndicatorColor ?: colors.accent
+    val indicatorColor = properties.selectedIndicatorColor ?: colors.onAccent
+    val elevation by animateDpAsState(properties.shadowElevation, tween(properties.stateAnimationMillis))
+    val animatedAlpha by animateFloatAsState(properties.alpha, tween(properties.stateAnimationMillis))
     val visuals = remember(selected, collapsed, state, foreground, iconTint) {
         MillenniumSidebarItemVisuals(selected, collapsed, state, foreground, iconTint)
     }
@@ -903,14 +924,16 @@ private fun SidebarItemContainer(
         contentPadding = PaddingValues(0.dp),
         modifier = modifier
             .fillMaxWidth()
-            .alpha(properties.alpha)
+            .alpha(animatedAlpha)
             .millenniumSurface(
                 background = background,
                 shape = properties.shape,
                 borderColor = borderColor,
                 borderWidth = properties.borderWidth,
-                shadowElevation = properties.shadowElevation,
-                innerGlowColor = properties.innerGlowColor,
+                shadowElevation = elevation,
+                innerGlowColor = properties.innerGlowColor ?: if (selected || hovered || focused) {
+                    colors.highlight.copy(alpha = 0.35f)
+                } else null,
             ),
     ) {
         Box(Modifier.fillMaxWidth()) {
@@ -922,7 +945,7 @@ private fun SidebarItemContainer(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
             ) {
-                content(visuals)
+                MillenniumStyledContent(properties.labelStyle, foreground) { content(visuals) }
             }
             if (selected && !collapsed) {
                 Box(
@@ -938,6 +961,13 @@ private fun SidebarItemContainer(
     }
 }
 
+/** Selection remains blue with a legible label during hover, focus and press. */
+internal fun sidebarItemForeground(colors: MillenniumColors, selected: Boolean, enabled: Boolean): Color = when {
+    selected -> colors.onAccent
+    !enabled -> colors.muted
+    else -> colors.text
+}
+
 @Composable
 fun MillenniumSidebarBadge(
     text: String,
@@ -945,11 +975,13 @@ fun MillenniumSidebarBadge(
     highlighted: Boolean = false,
 ) {
     val colors = MillenniumTheme.colors
-    val properties = MillenniumTheme.sidebarTheme.badge.resolve(MillenniumControlState.Default)
+    val properties = MillenniumTheme.sidebarTheme.badge.resolve(
+        if (highlighted) MillenniumControlState.Selected else MillenniumControlState.Default,
+    )
     val background = properties.background ?: if (highlighted) {
         gelBrush(colors.accentTop, colors.accentBottom)
     } else {
-        Brush.verticalGradient(listOf(colors.inset, colors.inset))
+        millenniumBevelBrush(colors, sunken = true)
     }
     val foreground = properties.foreground ?: if (highlighted) colors.onAccent else colors.muted
     Box(
@@ -958,8 +990,9 @@ fun MillenniumSidebarBadge(
             .millenniumSurface(
                 background = background,
                 shape = properties.shape,
-                borderColor = if (highlighted) null else colors.border,
-                borderWidth = if (highlighted) 0.dp else 1.dp,
+                borderColor = properties.borderColor ?: if (highlighted) colors.onAccent.copy(alpha = 0.5f) else colors.border,
+                borderWidth = properties.borderWidth,
+                innerGlowColor = properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.25f),
             )
             .padding(properties.contentPadding),
         contentAlignment = Alignment.Center,
@@ -983,27 +1016,28 @@ fun MillenniumSidebarSeparator(modifier: Modifier = Modifier) {
 fun MillenniumSidebarTrigger(modifier: Modifier = Modifier) {
     val colors = MillenniumTheme.colors
     val scope = LocalMillenniumSidebar.current
-    val properties = MillenniumTheme.sidebarTheme.trigger.resolve(MillenniumControlState.Default)
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val focused by interaction.collectIsFocusedAsState()
     val hovered by interaction.collectIsHoveredAsState()
     val state = when {
+        scope == null -> MillenniumControlState.Disabled
         pressed -> MillenniumControlState.Pressed
         focused -> MillenniumControlState.Focused
         hovered -> MillenniumControlState.Hovered
         else -> MillenniumControlState.Default
     }
+    val properties = MillenniumTheme.sidebarTheme.trigger.resolve(state)
     val rotation by animateFloatAsState(
         targetValue = if (scope?.collapsed == true) 270f else 90f,
         animationSpec = tween(properties.animationMillis),
     )
-    val background = when (state) {
+    val background = properties.background ?: when (state) {
         MillenniumControlState.Hovered, MillenniumControlState.Focused ->
             Brush.verticalGradient(listOf(colors.accent.copy(alpha = 0.14f), colors.accent.copy(alpha = 0.06f)))
         MillenniumControlState.Pressed ->
             Brush.verticalGradient(listOf(colors.accent.copy(alpha = 0.20f), colors.accent.copy(alpha = 0.12f)))
-        else -> Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
+        else -> millenniumBevelBrush(colors, sunken = pressed)
     }
     UnstyledButton(
         onClick = { scope?.toggleCollapsed?.invoke() },
@@ -1017,11 +1051,13 @@ fun MillenniumSidebarTrigger(modifier: Modifier = Modifier) {
             .millenniumSurface(
                 background = background,
                 shape = properties.shape,
-                borderColor = when (state) {
+                borderColor = properties.borderColor ?: when (state) {
                     MillenniumControlState.Focused -> colors.accent
-                    else -> null
+                    else -> colors.border
                 },
-                borderWidth = 1.dp,
+                borderWidth = properties.borderWidth,
+                shadowElevation = properties.shadowElevation,
+                innerGlowColor = properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.5f),
             ),
     ) {
         MillenniumIcon(
