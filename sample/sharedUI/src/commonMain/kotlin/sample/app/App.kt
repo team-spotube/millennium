@@ -17,6 +17,8 @@ import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import com.composeunstyled.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.spotube.millennium.composables.*
 import org.spotube.millennium.composables.MillenniumAvatar
 import org.spotube.millennium.composables.MillenniumBottomSheet
@@ -114,7 +116,7 @@ private fun GalleryApp(onOpenStudy: () -> Unit) {
                                             size = 13.sp
                                         )
                                     }
-                                    if (!compact) Badge("26 COMPONENTS", c.muted)
+                                    if (!compact) Badge("30 COMPONENTS", c.muted)
                                 }
                                 Gallery(
                                     category,
@@ -306,7 +308,7 @@ private fun Sidebar(category: String, onSelect: (String) -> Unit) {
                                 label = item,
                                 onClick = { onSelect(item) },
                                 selected = category == item,
-                                badge = if (index == 0) "26" else listOf("", "3", "6", "6", "6", "4")[index]
+                                badge = if (index == 0) "30" else listOf("", "3", "7", "7", "8", "4")[index]
                             )
                         }
                     }
@@ -540,6 +542,30 @@ private fun Gallery(
                 "Scaffold",
                 "Leading, title and actions, aware of safe areas and fixed overlays."
             ) { ScaffoldDemo() }
+            Card(
+                "Inputs",
+                "27",
+                "Segmented button",
+                "One choice, split across a connected row."
+            ) { SegmentedButtonDemo() }
+            Card(
+                "Navigation",
+                "28",
+                "Top app bar",
+                "A glass header with a subtitle and a hairline."
+            ) { TopAppBarDemo() }
+            Card(
+                "Feedback",
+                "29",
+                "Snackbar",
+                "A short, friendly confirmation."
+            ) { SnackbarDemo() }
+            Card(
+                "Feedback",
+                "30",
+                "Pull to refresh",
+                "Drag down to fetch what's new."
+            ) { PullToRefreshDemo() }
             Card(
                 "Feedback",
                 "09–10",
@@ -849,6 +875,84 @@ private fun ScaffoldDemo() {
     }
     MillenniumText(
         "Toggle the dock to add and remove the global padding it reserves.",
+        size = 11.sp,
+        color = MillenniumTheme.colors.muted
+    )
+}
+
+@Composable
+private fun SegmentedButtonDemo() {
+    var range by rememberSaveable { mutableStateOf(0) }
+    val ranges = listOf("Day", "Week", "Month")
+    MillenniumSegmentedButtonRow {
+        ranges.forEachIndexed { index, label ->
+            MillenniumSegmentedButton(
+                selected = range == index,
+                onClick = { range = index },
+                shape = MillenniumSegmentedButtonDefaults.itemShape(index, ranges.size)
+            ) { Text(label) }
+        }
+    }
+    MillenniumText(
+        "Selected · ${ranges[range]}",
+        size = 11.sp,
+        color = MillenniumTheme.colors.muted
+    )
+}
+
+@Composable
+private fun TopAppBarDemo() {
+    MillenniumTopAppBar(
+        title = { Text("Your library") },
+        subtitle = { Text("128 tracks") },
+        navigationIcon = {
+            MillenniumIconButton(MillenniumIcons.Sparkle, "Home", {}, style = MillenniumIconButtonStyle.Quiet)
+        },
+        actions = {
+            MillenniumIconButton(MillenniumIcons.Music, "Play", {}, style = MillenniumIconButtonStyle.Quiet)
+            MillenniumIconButton(MillenniumIcons.Chevron, "More", {}, style = MillenniumIconButtonStyle.Quiet)
+        }
+    )
+}
+
+@Composable
+private fun SnackbarDemo() {
+    val host = remember { MillenniumSnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    Box {
+        MillenniumButton(
+            onClick = { scope.launch { host.showSnackbar("Saved to your library", "Undo") } }
+        ) { Text("Show snackbar") }
+        MillenniumSnackbarHost(host, Modifier.align(Alignment.BottomCenter))
+    }
+}
+
+@Composable
+private fun PullToRefreshDemo() {
+    var refreshing by rememberSaveable { mutableStateOf(false) }
+    var count by rememberSaveable { mutableIntStateOf(6) }
+    LaunchedEffect(refreshing) {
+        if (refreshing) {
+            delay(900)
+            count += 1
+            refreshing = false
+        }
+    }
+    Box(
+        Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(12.dp))
+            .background(MillenniumTheme.colors.inset)
+    ) {
+        MillenniumPullToRefreshBox(isRefreshing = refreshing, onRefresh = { refreshing = true }) {
+            Column(
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                repeat(count) { MillenniumText("Track ${it + 1}", size = 13.sp) }
+            }
+        }
+    }
+    MillenniumText(
+        "Drag down to refresh · $count tracks",
         size = 11.sp,
         color = MillenniumTheme.colors.muted
     )

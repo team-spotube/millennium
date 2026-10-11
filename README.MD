@@ -59,10 +59,18 @@ dependencies {
 | Surfaces | `MillenniumCard` |
 | Layout | `MillenniumScaffold` |
 | Actions | `MillenniumButton` (primary, secondary, quiet, danger), `MillenniumIconButton`, `MillenniumDisclosure` |
-| Inputs | `MillenniumCheckbox`, `MillenniumTriStateCheckbox`, `MillenniumSwitch`, `MillenniumTextField`, `MillenniumAutocomplete`, `MillenniumSlider`, `MillenniumRadioGroup` |
-| Navigation | `MillenniumTabGroup`, `MillenniumDropdownMenu`, `MillenniumSidebar`, `MillenniumBottomNavigationBar`, `MillenniumListTile` |
-| Feedback | `MillenniumAvatar`, `MillenniumIcon`, `MillenniumProgress`, `MillenniumIndeterminateProgress`, `MillenniumScrollbar`, `MillenniumSeparator`, `MillenniumTooltip` |
+| Inputs | `MillenniumCheckbox`, `MillenniumTriStateCheckbox`, `MillenniumSwitch`, `MillenniumTextField`, `MillenniumAutocomplete`, `MillenniumSlider`, `MillenniumRadioGroup`, `MillenniumSegmentedButton` |
+| Navigation | `MillenniumTabGroup`, `MillenniumDropdownMenu`, `MillenniumSidebar`, `MillenniumBottomNavigationBar`, `MillenniumTopAppBar`, `MillenniumListTile` |
+| Feedback | `MillenniumAvatar`, `MillenniumIcon`, `MillenniumProgress`, `MillenniumIndeterminateProgress`, `MillenniumScrollbar`, `MillenniumSeparator`, `MillenniumTooltip`, `MillenniumSnackbarHost`, `MillenniumPullToRefreshBox` |
 | Overlays | `MillenniumDialog`, `MillenniumDrawer`, `MillenniumBottomSheet`, `MillenniumModalBottomSheet` |
+
+`MillenniumTopAppBar`, `MillenniumSegmentedButton`, `MillenniumSnackbarHost` and
+`MillenniumPullToRefreshBox` are themed like the rest: each owns a
+`<Component>Theme` under `MillenniumTheme` (`.topAppBarTheme`,
+`.segmentedButtonTheme`, `.snackbarTheme`, `.pullToRefreshTheme`) and uses the shared
+pearl/smoke surfaces, gel selection and hairline bevels. For window-size dispatch
+(without pulling in Material), `org.spotube.millennium.adaptive.currentWindowAdaptiveInfo`
+returns compact/medium/expanded width and height buckets.
 
 Read semantic colors with `MillenniumTheme.colors`. Use `MillenniumText` for text
 outside component content, or Compose Unstyled `Text` inside controls to inherit

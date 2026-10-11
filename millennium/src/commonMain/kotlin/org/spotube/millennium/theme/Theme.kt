@@ -142,6 +142,10 @@ data class MillenniumThemeComponents(
     val listTileTheme: MillenniumListTileTheme = defaultMillenniumListTileTheme(),
     val scaffoldTheme: MillenniumScaffoldTheme = defaultMillenniumScaffoldTheme(),
     val iconButtonTheme: MillenniumIconButtonTheme = defaultMillenniumIconButtonTheme(),
+    val topAppBarTheme: MillenniumTopAppBarTheme = defaultMillenniumTopAppBarTheme(),
+    val segmentedButtonTheme: MillenniumSegmentedButtonTheme = defaultMillenniumSegmentedButtonTheme(),
+    val snackbarTheme: MillenniumSnackbarTheme = defaultMillenniumSnackbarTheme(),
+    val pullToRefreshTheme: MillenniumPullToRefreshTheme = defaultMillenniumPullToRefreshTheme(),
 )
 
 /** Assemble component-local defaults without embedding palette values in them. */
@@ -174,6 +178,10 @@ fun defaultMillenniumThemeComponents() = MillenniumThemeComponents(
     listTileTheme = defaultMillenniumListTileTheme(),
     scaffoldTheme = defaultMillenniumScaffoldTheme(),
     iconButtonTheme = defaultMillenniumIconButtonTheme(),
+    topAppBarTheme = defaultMillenniumTopAppBarTheme(),
+    segmentedButtonTheme = defaultMillenniumSegmentedButtonTheme(),
+    snackbarTheme = defaultMillenniumSnackbarTheme(),
+    pullToRefreshTheme = defaultMillenniumPullToRefreshTheme(),
 )
 
 val MillenniumLightThemeComponents = defaultMillenniumThemeComponents()
@@ -230,6 +238,10 @@ object MillenniumTheme {
     val listTileTheme: MillenniumListTileTheme @Composable get() = components.listTileTheme
     val scaffoldTheme: MillenniumScaffoldTheme @Composable get() = components.scaffoldTheme
     val iconButtonTheme: MillenniumIconButtonTheme @Composable get() = components.iconButtonTheme
+    val topAppBarTheme: MillenniumTopAppBarTheme @Composable get() = components.topAppBarTheme
+    val segmentedButtonTheme: MillenniumSegmentedButtonTheme @Composable get() = components.segmentedButtonTheme
+    val snackbarTheme: MillenniumSnackbarTheme @Composable get() = components.snackbarTheme
+    val pullToRefreshTheme: MillenniumPullToRefreshTheme @Composable get() = components.pullToRefreshTheme
 
     @Composable
     @Suppress("UNCHECKED_CAST")
