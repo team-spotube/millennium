@@ -26,6 +26,15 @@ kotlin {
         }
         binaries.executable()
     }
+    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
+    wasmJs {
+        browser {
+            testTask {
+                useKarma { useFirefox() }
+            }
+        }
+        binaries.executable()
+    }
     iosArm64()
     iosSimulatorArm64()
 
@@ -34,8 +43,9 @@ kotlin {
             api(libs.compose.runtime)
             api(libs.compose.ui)
             api(libs.compose.foundation)
-            implementation(libs.composeunstyled)
-            implementation(libs.composeunstyled.theming)
+            // Compose Unstyled intentionally comes in transitively through :millennium's exported
+            // (api) dependencies. The sample consumes it that way so a build failure here catches
+            // any regression in Millennium's public API surface.
             implementation(project(":millennium"))
         }
     }

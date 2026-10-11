@@ -33,6 +33,25 @@ The library, Gradle module, and Maven artifact are all named **Millennium**. Its
 Kotlin package is `org.spotube.millennium`. Public components accept caller-owned
 state and modifiers; there is no Material dependency.
 
+#### Consuming Compose Unstyled
+
+Millennium exposes Compose Unstyled as part of its own API. Declaring Millennium
+is enough to use `com.composeunstyled.*` (`Text`, `UnstyledButton`, `UnstyledIcon`,
+`LocalTextStyle`, theming, primitives, and the rest of the component surface) in
+your project; you do not add Compose Unstyled separately. Millennium's public
+components accept and return these types, so the dependency is exported
+transitively on every target (Android, JVM, JS, WebAssembly, iOS) and as `compile`
+scope in the published platform POMs. The sample relies on this: it declares only
+`project(":millennium")` and still imports Compose Unstyled directly, so the
+`build` fails if the exported API ever regresses.
+
+```kotlin
+dependencies {
+    implementation("org.spotube.millennium:millennium:1.0.0")
+    // No composeunstyled dependency needed; it comes from Millennium's API.
+}
+```
+
 ### Components
 
 | Family | Themed components |
@@ -287,6 +306,7 @@ approval before it is applied throughout the library.
  - Android: `open project in Android Studio and run the sample app`
  - iOS: `open 'sample/iosApp/iosApp.xcodeproj' in Xcode and run the sample app`
  - JavaScript: `./gradlew :sample:webApp:jsBrowserDevelopmentRun`
+ - WebAssembly: `./gradlew :sample:webApp:wasmJsBrowserDevelopmentRun`
 
 ### Validate
 
@@ -294,9 +314,9 @@ approval before it is applied throughout the library.
 ./gradlew build
 ```
 
-`build` runs the common/JVM and Firefox-based JS tests, Android lint/build, and
-compiles the desktop/web and iOS target sources. iOS simulator runtime tests require
-macOS/Xcode and are skipped on Linux.
+`build` runs the common/JVM and Firefox-based JS/WebAssembly tests, Android
+lint/build, and compiles the desktop/web and iOS target sources. iOS simulator
+runtime tests require macOS/Xcode and are skipped on Linux.
 
 ### Publish to MavenLocal
 

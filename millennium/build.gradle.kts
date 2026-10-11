@@ -24,11 +24,21 @@ kotlin {
         }
         binaries.executable()
     }
+    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
+    wasmJs {
+        browser {
+            testTask { useKarma { useFirefox() } }
+        }
+        binaries.executable()
+    }
     iosArm64()
     iosSimulatorArm64()
 
     sourceSets {
         commonMain.dependencies {
+            // Exported (api) so consuming projects can use Compose Unstyled directly alongside
+            // Millennium without re-declaring it. `composeunstyled` aggregates the full component
+            // surface; the other modules cover the pieces it does not re-export.
             api(libs.compose.runtime)
             api(libs.compose.ui)
             implementation(libs.compose.ui.tooling.preview)
