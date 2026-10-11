@@ -102,6 +102,8 @@ fun rememberMillenniumDrawerState(): UnstyledDrawerState<MillenniumDrawerValue> 
 @Composable
 fun MillenniumDrawer(
     state: UnstyledDrawerState<MillenniumDrawerValue>,
+    placement: DrawerPlacement = DrawerPlacement.Start,
+    contentPadding: PaddingValues? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = MillenniumTheme.colors
@@ -113,7 +115,7 @@ fun MillenniumDrawer(
     val scrimColor = properties.scrimColor ?: colors.scrim
     UnstyledDrawer(
         state = state,
-        placement = DrawerPlacement.Start,
+        placement = placement,
         presentation = com.composeunstyled.DrawerPresentation.Modal,
         overlay = { Overlay { androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(scrimColor)) } },
     ) {
@@ -130,7 +132,7 @@ fun MillenniumDrawer(
                     ).alpha(properties.alpha),
             ) {
                 Column(
-                    Modifier.padding(properties.contentPadding).systemBarsPadding(),
+                    Modifier.padding(contentPadding ?: properties.contentPadding).systemBarsPadding(),
                     verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(properties.contentSpacing),
                 ) {
                     MillenniumStyledContent(TextStyle(color = foreground), foreground) {

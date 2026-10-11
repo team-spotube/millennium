@@ -31,6 +31,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.composeunstyled.AnchorSide
 import com.composeunstyled.DropdownMenuPanel
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledDropdownMenu
@@ -109,6 +110,7 @@ fun MillenniumDropdownMenu(
     items: List<String>,
     onItemClick: (String) -> Unit,
     modifier: Modifier = Modifier,
+    side: AnchorSide = AnchorSide.Bottom,
     anchor: @Composable () -> Unit,
 ) {
     val colors = MillenniumTheme.colors
@@ -120,6 +122,7 @@ fun MillenniumDropdownMenu(
         expanded = expanded,
         onExpandedChange = onExpandedChange,
         modifier = modifier,
+        side = side,
         sideOffset = panelProperties.sideOffset,
         anchor = anchor,
         panel = {

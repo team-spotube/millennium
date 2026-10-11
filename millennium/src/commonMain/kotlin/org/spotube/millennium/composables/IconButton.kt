@@ -249,7 +249,7 @@ private fun IconButtonContainer(
         contentAlignment = Alignment.Center,
         modifier = modifier
             .then(semantics)
-            .requiredSize(properties.size)
+            .size(properties.size)
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .alpha(properties.alpha)
             .millenniumSurface(

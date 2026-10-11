@@ -96,6 +96,8 @@ fun defaultMillenniumModalBottomSheetTheme(): MillenniumModalBottomSheetTheme {
 @Composable
 fun MillenniumModalBottomSheet(
     state: ModalBottomSheetState,
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = MillenniumTheme.colors
@@ -128,7 +130,7 @@ fun MillenniumModalBottomSheet(
                 ).alpha(properties.alpha),
             ) {
                 Column(
-                    Modifier.padding(properties.contentPadding).navigationBarsPadding(),
+                    Modifier.padding(contentPadding ?: properties.contentPadding).navigationBarsPadding(),
                     verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(properties.contentSpacing),
                     horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
                 ) {

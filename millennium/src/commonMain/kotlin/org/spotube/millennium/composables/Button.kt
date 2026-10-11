@@ -8,13 +8,16 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import org.spotube.millennium.theme.collectIsKeyboardFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
@@ -63,6 +66,7 @@ data class MillenniumButtonThemeProperties(
     val textStyle: TextStyle,
     val shape: Shape,
     val padding: PaddingValues,
+    val contentSpacing: Dp = 6.dp,
     val minSize: DpSize,
     val borderWidth: Dp,
     val borderColor: Color? = null,
@@ -223,7 +227,12 @@ fun MillenniumButton(
         val labelStyle = if (style == MillenniumButtonStyle.Primary && properties.textStyle.shadow == null) {
             properties.textStyle.copy(shadow = Shadow(colors.accentBottom, Offset(0f, 1f), 1f))
         } else properties.textStyle
-        MillenniumStyledContent(labelStyle, foreground, content)
+        MillenniumStyledContent(labelStyle, foreground) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(properties.contentSpacing),
+            ) { content() }
+        }
     }
 }
 

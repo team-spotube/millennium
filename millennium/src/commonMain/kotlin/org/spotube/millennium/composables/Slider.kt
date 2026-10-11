@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -119,6 +120,7 @@ fun MillenniumSlider(
     val activeTrackBackground = properties.activeTrackBackground ?: gelBrush(colors.accentTop, colors.accentBottom)
     val trackBorderColor = properties.trackBorderColor
         ?: if (controlState == MillenniumControlState.Error) colors.danger else colors.border
+    val baseThumbSize = MillenniumTheme.sliderTheme.states.default.thumbSize
     UnstyledSlider(
         value = value,
         onValueChange = onValueChange,
@@ -130,19 +132,23 @@ fun MillenniumSlider(
         steps = steps,
         onValueChangeFinished = onValueChangeFinished,
         track = { state ->
-            Box(
-                Modifier.fillMaxWidth().height(properties.trackHeight).millenniumSurface(
-                    background = trackBackground,
-                    shape = properties.trackShape,
-                    borderColor = trackBorderColor,
-                    borderWidth = properties.trackBorderWidth,
-                    insetShadeColor = properties.trackInsetShadeColor ?: colors.text.copy(alpha = 0.1f),
-                ),
-            ) {
+            // The thumb travels between half-thumb insets; inset the track the same way so
+            // the active fill endpoint lines up with the thumb center.
+            Box(Modifier.fillMaxWidth().padding(horizontal = baseThumbSize / 2)) {
                 Box(
-                    Modifier.fillMaxHeight().fillMaxWidth(state.fraction)
-                        .background(activeTrackBackground, properties.trackShape),
-                )
+                    Modifier.fillMaxWidth().height(properties.trackHeight).millenniumSurface(
+                        background = trackBackground,
+                        shape = properties.trackShape,
+                        borderColor = trackBorderColor,
+                        borderWidth = properties.trackBorderWidth,
+                        insetShadeColor = properties.trackInsetShadeColor ?: colors.text.copy(alpha = 0.1f),
+                    ),
+                ) {
+                    Box(
+                        Modifier.fillMaxHeight().fillMaxWidth(state.fraction)
+                            .background(activeTrackBackground, properties.trackShape),
+                    )
+                }
             }
         },
         thumb = { state ->
@@ -163,7 +169,7 @@ fun MillenniumSlider(
             val thumbGlowColor = thumbProperties.thumbGlowColor ?: colors.highlight.copy(alpha = 0.55f)
             val targetSize = if (state.isPressed || state.isDragging) thumbProperties.activeThumbSize else thumbProperties.thumbSize
             val animatedSize by animateDpAsState(targetSize, tween(thumbProperties.stateAnimationMillis))
-            Box(Modifier.size(thumbProperties.touchTargetHeight), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(baseThumbSize), contentAlignment = Alignment.Center) {
                 Box(
                     Modifier.size(animatedSize).millenniumSurface(
                         background = thumbBackground,

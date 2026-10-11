@@ -123,7 +123,7 @@ fun MillenniumTriStateCheckbox(
         modifier = modifier.heightIn(min = properties.minimumTouchHeight),
         enabled = enabled,
         accessibilityLabel = label,
-        indication = LocalIndication.current,
+        indication = null,
         interactionSource = source,
     ) {
         Row(

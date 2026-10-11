@@ -82,8 +82,8 @@ fun defaultMillenniumTextFieldTheme(): MillenniumTextFieldTheme {
         placeholderStyle = TextStyle(fontSize = 14.sp, lineHeight = 21.sp),
         errorStyle = TextStyle(fontSize = 12.sp, lineHeight = 17.sp),
         borderWidth = 1.dp,
-        minimumHeight = 46.dp,
-        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
+        minimumHeight = 52.dp,
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 14.dp),
         contentSpacing = 8.dp,
         stateAnimationMillis = 130,
     )

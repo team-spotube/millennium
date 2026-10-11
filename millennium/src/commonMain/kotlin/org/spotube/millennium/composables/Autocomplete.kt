@@ -377,7 +377,7 @@ internal fun autocompleteMenuShouldShow(
     query: String,
     hasContent: Boolean,
     dismissedQuery: String?,
-): Boolean = enabled && focused && query.isNotBlank() && hasContent && dismissedQuery != query
+): Boolean = enabled && focused && hasContent && dismissedQuery != query
 
 @Composable
 private fun <T> AutocompleteAnimatedMenu(
