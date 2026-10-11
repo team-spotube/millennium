@@ -139,6 +139,8 @@ data class MillenniumThemeComponents(
     val sidebarTheme: MillenniumSidebarTheme,
     val bottomNavigationBarTheme: MillenniumBottomNavigationBarTheme = defaultMillenniumBottomNavigationBarTheme(),
     val autocompleteTheme: MillenniumAutocompleteTheme = defaultMillenniumAutocompleteTheme(),
+    val listTileTheme: MillenniumListTileTheme = defaultMillenniumListTileTheme(),
+    val scaffoldTheme: MillenniumScaffoldTheme = defaultMillenniumScaffoldTheme(),
 )
 
 /** Assemble component-local defaults without embedding palette values in them. */
@@ -168,6 +170,8 @@ fun defaultMillenniumThemeComponents() = MillenniumThemeComponents(
     sidebarTheme = defaultMillenniumSidebarTheme(),
     bottomNavigationBarTheme = defaultMillenniumBottomNavigationBarTheme(),
     autocompleteTheme = defaultMillenniumAutocompleteTheme(),
+    listTileTheme = defaultMillenniumListTileTheme(),
+    scaffoldTheme = defaultMillenniumScaffoldTheme(),
 )
 
 val MillenniumLightThemeComponents = defaultMillenniumThemeComponents()
@@ -221,6 +225,8 @@ object MillenniumTheme {
     val sidebarTheme: MillenniumSidebarTheme @Composable get() = components.sidebarTheme
     val bottomNavigationBarTheme: MillenniumBottomNavigationBarTheme @Composable get() = components.bottomNavigationBarTheme
     val autocompleteTheme: MillenniumAutocompleteTheme @Composable get() = components.autocompleteTheme
+    val listTileTheme: MillenniumListTileTheme @Composable get() = components.listTileTheme
+    val scaffoldTheme: MillenniumScaffoldTheme @Composable get() = components.scaffoldTheme
 
     @Composable
     @Suppress("UNCHECKED_CAST")

@@ -57,9 +57,10 @@ dependencies {
 | Family | Themed components |
 | --- | --- |
 | Surfaces | `MillenniumCard` |
+| Layout | `MillenniumScaffold` |
 | Actions | `MillenniumButton` (primary, secondary, quiet, danger), `MillenniumDisclosure` |
 | Inputs | `MillenniumCheckbox`, `MillenniumTriStateCheckbox`, `MillenniumSwitch`, `MillenniumTextField`, `MillenniumAutocomplete`, `MillenniumSlider`, `MillenniumRadioGroup` |
-| Navigation | `MillenniumTabGroup`, `MillenniumDropdownMenu`, `MillenniumSidebar`, `MillenniumBottomNavigationBar` |
+| Navigation | `MillenniumTabGroup`, `MillenniumDropdownMenu`, `MillenniumSidebar`, `MillenniumBottomNavigationBar`, `MillenniumListTile` |
 | Feedback | `MillenniumAvatar`, `MillenniumIcon`, `MillenniumProgress`, `MillenniumIndeterminateProgress`, `MillenniumScrollbar`, `MillenniumSeparator`, `MillenniumTooltip` |
 | Overlays | `MillenniumDialog`, `MillenniumDrawer`, `MillenniumBottomSheet`, `MillenniumModalBottomSheet` |
 
@@ -198,6 +199,63 @@ handles system insets. Icon-only items need a `contentDescription`. Use inherite
 Customize chrome through `MillenniumTheme.bottomNavigationBarTheme.states`, and
 item shapes, padding, typography, surfaces and motion through its `.item` states.
 
+#### List tile
+
+`MillenniumListTile` composes a `leading`, `title`, optional `subtitle` and
+`trailing` slot into one row. It becomes an accessible, keyboard-focusable button
+only when `onClick` is non-null; without it the row is a plain surface. `selected`
+uses a quieter, surface-blended pour of the accent gel rather than a primary
+button's full-strength surface, and it responds to hover, focus and press.
+`onRightClick` (pointer/desktop) receives the position of a secondary click,
+measured relative to the tile. Customize fill, typography, spacing, shape and
+motion through `MillenniumTheme.listTileTheme.states`; `selectedBackground` and
+`selectedGelStrength` override the selected fill.
+
+```kotlin
+var selected by rememberSaveable { mutableStateOf("Air") }
+MillenniumListTile(
+    title = { Text("La Femme d'Argent") },
+    leading = { MillenniumAvatar("AI", "Air") },
+    subtitle = { Text("Air · remastered") },
+    trailing = { MillenniumText("7:09", color = MillenniumTheme.colors.muted) },
+    selected = selected == "Air",
+    onClick = { selected = "Air" },
+    onRightClick = { position -> /* open a context menu at position */ },
+)
+```
+
+#### Scaffold
+
+`MillenniumScaffold` lays out a `leading`, `title` and `actions` top bar plus an
+optional `bottomBar`, and hands its `content` an `innerPadding` covering the bars
+and the system-safe area. Apply it (`Modifier.padding(innerPadding)`) so content
+never sits under system overlays or the scaffold's fixed regions. `windowInsets`
+defaults to `WindowInsets.safeDrawing`; pass `WindowInsets(0, 0, 0, 0)` when a parent
+already handles insets.
+
+Wrap a fixed composable (a bottom navigation bar, a player dock, a floating toolbar)
+in `MillenniumScaffoldPadding(padding)`: while it is composed it reserves that space
+around the scaffold content, adding to `innerPadding`, and releases it when removed.
+`MillenniumScaffoldState` / `rememberMillenniumScaffoldState` hoist those reservations
+when you need to read or drive them yourself.
+
+```kotlin
+MillenniumScaffold(
+    title = { MillenniumText("Library") },
+    leading = { MillenniumIcon(MillenniumIcons.Sparkle) },
+    actions = { MillenniumButton(onClick = {}, style = MillenniumButtonStyle.Quiet) { Text("Save") } },
+) { innerPadding ->
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(Modifier.fillMaxSize().padding(innerPadding)) { /* rows */ }
+        if (dockVisible) {
+            MillenniumScaffoldPadding(PaddingValues(bottom = 72.dp)) {
+                PlayerDock(Modifier.align(Alignment.BottomCenter))
+            }
+        }
+    }
+}
+```
+
 #### Component theme configuration
 
 Each component's source file defines its own `<Component>ThemeProperties`,
@@ -289,6 +347,7 @@ line height so multiline titles remain readable.
 
 - Explicit semantic palettes for both light and dark; no inverted light-theme shortcut.
 - Interactive controls use 44dp minimum targets and visible interaction states.
+- Focus rings are reserved for keyboard and accessibility navigation: pointer/touch focus (for example a mouse click) never shows one. Custom controls can use the public `collectIsKeyboardFocusedAsState` helper to match.
 - Text contrast tests cover neutral surfaces, semantic text, and the entire gel gradient.
 - State stays with the caller; sample preferences and control values use saveable state.
 - Rounded surfaces and restrained motion soften the retro styling without copying an OS.

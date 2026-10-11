@@ -27,6 +27,7 @@ import org.spotube.millennium.composables.MillenniumCheckbox
 import org.spotube.millennium.composables.MillenniumDisclosure
 import org.spotube.millennium.composables.MillenniumDropdownMenu
 import org.spotube.millennium.composables.MillenniumIndeterminateProgress
+import org.spotube.millennium.composables.MillenniumListTile
 import org.spotube.millennium.composables.MillenniumModalBottomSheet
 import org.spotube.millennium.composables.MillenniumProgress
 import org.spotube.millennium.composables.MillenniumScrollbar
@@ -113,7 +114,7 @@ private fun GalleryApp(onOpenStudy: () -> Unit) {
                                             size = 13.sp
                                         )
                                     }
-                                    if (!compact) Badge("23 COMPONENTS", c.muted)
+                                    if (!compact) Badge("25 COMPONENTS", c.muted)
                                 }
                                 Gallery(
                                     category,
@@ -305,7 +306,7 @@ private fun Sidebar(category: String, onSelect: (String) -> Unit) {
                                 label = item,
                                 onClick = { onSelect(item) },
                                 selected = category == item,
-                                badge = if (index == 0) "23" else listOf("", "2", "6", "4", "6", "4")[index]
+                                badge = if (index == 0) "25" else listOf("", "2", "6", "6", "6", "4")[index]
                             )
                         }
                     }
@@ -522,6 +523,18 @@ private fun Gallery(
                 "A gel-lit destination, always within reach."
             ) { BottomNavigationDemo() }
             Card(
+                "Navigation",
+                "24",
+                "List tile",
+                "Leading, title, subtitle and trailing, with a quieter selected gel."
+            ) { ListTileDemo() }
+            Card(
+                "Navigation",
+                "25",
+                "Scaffold",
+                "Leading, title and actions, aware of safe areas and fixed overlays."
+            ) { ScaffoldDemo() }
+            Card(
                 "Feedback",
                 "09–10",
                 "Avatars & icons",
@@ -731,6 +744,88 @@ private fun BottomNavigationDemo() {
     }
     MillenniumText(
         "Tab to focus · Enter to select. The bar stays outside the scrolling body.",
+        size = 11.sp,
+        color = MillenniumTheme.colors.muted
+    )
+}
+
+@Composable
+private fun ListTileDemo() {
+    var selected by rememberSaveable { mutableStateOf("Air") }
+    var rightClick by rememberSaveable { mutableStateOf("") }
+    val tracks = listOf(
+        Triple("Air", "La Femme d'Argent", "7:09"),
+        Triple("A-ha", "Take On Me", "3:46"),
+        Triple("Björk", "Jóga", "5:05"),
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        tracks.forEach { (artist, song, length) ->
+            MillenniumListTile(
+                title = { Text(song) },
+                leading = { MillenniumAvatar(artist.take(2).uppercase(), artist) },
+                subtitle = { Text("$artist · remastered") },
+                trailing = { MillenniumText(length, color = MillenniumTheme.colors.muted, size = 11.sp) },
+                selected = selected == artist,
+                onClick = { selected = artist },
+                onRightClick = { offset ->
+                    rightClick = "Right-clicked “$song” at ${offset.x.toInt()}, ${offset.y.toInt()}"
+                },
+            )
+        }
+    }
+    MillenniumText(
+        rightClick.ifEmpty { "Click to select · right-click for positional context." },
+        size = 11.sp,
+        color = MillenniumTheme.colors.muted
+    )
+}
+
+@Composable
+private fun ScaffoldDemo() {
+    var showDock by rememberSaveable { mutableStateOf(true) }
+    Box(Modifier.fillMaxWidth().height(280.dp).clip(RoundedCornerShape(12.dp))) {
+        MillenniumScaffold(
+            title = { MillenniumText("Now playing") },
+            leading = { MillenniumIcon(MillenniumIcons.Music) },
+            actions = {
+                MillenniumButton(
+                    onClick = { showDock = !showDock },
+                    style = MillenniumButtonStyle.Quiet
+                ) { Text(if (showDock) "Hide dock" else "Show dock") }
+            },
+            modifier = Modifier.fillMaxSize()
+        ) { inner ->
+            Box(Modifier.fillMaxSize()) {
+                Column(
+                    Modifier.fillMaxSize().padding(inner).padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    repeat(5) {
+                        MillenniumText("Track ${it + 1}", size = 13.sp)
+                    }
+                }
+                if (showDock) {
+                    MillenniumScaffoldPadding(PaddingValues(bottom = 56.dp)) {
+                        Box(Modifier.fillMaxSize()) {
+                            Box(
+                                Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(56.dp)
+                                    .background(MillenniumTheme.colors.surface)
+                            ) {
+                                MillenniumText(
+                                    "Fixed dock reserves bottom space",
+                                    Modifier.align(Alignment.Center),
+                                    size = 11.sp,
+                                    color = MillenniumTheme.colors.muted
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    MillenniumText(
+        "Toggle the dock to add and remove the global padding it reserves.",
         size = 11.sp,
         color = MillenniumTheme.colors.muted
     )

@@ -15,6 +15,7 @@ import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import org.spotube.millennium.theme.collectIsKeyboardFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -192,6 +193,7 @@ fun <T> MillenniumAutocomplete(
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
+    val focusRing by interaction.collectIsKeyboardFocusedAsState()
     val hovered by interaction.collectIsHoveredAsState()
     val pressed by interaction.collectIsPressedAsState()
     val query = state.text.toString()
@@ -203,7 +205,7 @@ fun <T> MillenniumAutocomplete(
         !enabled -> MillenniumControlState.Disabled
         error != null -> MillenniumControlState.Error
         pressed -> MillenniumControlState.Pressed
-        focused -> MillenniumControlState.Focused
+        focusRing -> MillenniumControlState.Focused
         hovered -> MillenniumControlState.Hovered
         else -> MillenniumControlState.Default
     }

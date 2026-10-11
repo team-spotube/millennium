@@ -4,7 +4,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import org.spotube.millennium.theme.collectIsKeyboardFocusedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Box
@@ -104,7 +104,7 @@ fun MillenniumSlider(
     onValueChangeFinished: (() -> Unit)? = null,
 ) {
     val interaction = remember { MutableInteractionSource() }
-    val focused by interaction.collectIsFocusedAsState()
+    val focused by interaction.collectIsKeyboardFocusedAsState()
     val pressed by interaction.collectIsPressedAsState()
     val dragged by interaction.collectIsDraggedAsState()
     val controlState = when {

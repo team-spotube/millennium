@@ -85,6 +85,21 @@ internal fun millenniumGelStops(top: Color, bottom: Color): List<Pair<Float, Col
     1f to lerp(bottom, top, 0.32f),
 )
 
+/**
+ * A lighter, surface-blended version of the control gel. Used for selected rows
+ * (e.g. [org.spotube.millennium.composables.MillenniumListTile]) that want a quieter
+ * selection than a primary button's full-strength gel.
+ */
+fun millenniumSelectedGelBrush(colors: MillenniumColors, strength: Float = 0.35f): Brush =
+    Brush.verticalGradient(*millenniumSelectedGelStops(colors, strength).toTypedArray())
+
+/** The individual stops behind [millenniumSelectedGelBrush], exposed for contrast tests. */
+internal fun millenniumSelectedGelStops(colors: MillenniumColors, strength: Float = 0.35f): List<Pair<Float, Color>> {
+    val amount = strength.coerceIn(0f, 1f)
+    return millenniumGelStops(colors.accentTop, colors.accentBottom)
+        .map { (stop, color) -> stop to lerp(colors.surface, color, amount) }
+}
+
 /** Surface brush used by component-local default themes. */
 fun millenniumBevelBrush(
     colors: MillenniumColors,

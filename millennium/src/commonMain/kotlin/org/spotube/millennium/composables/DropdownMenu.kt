@@ -4,7 +4,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import org.spotube.millennium.theme.collectIsKeyboardFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -137,7 +137,7 @@ fun MillenniumDropdownMenu(
                     items.forEach { item ->
                         val interaction = remember(item) { MutableInteractionSource() }
                         val pressed by interaction.collectIsPressedAsState()
-                        val focused by interaction.collectIsFocusedAsState()
+                        val focused by interaction.collectIsKeyboardFocusedAsState()
                         val hovered by interaction.collectIsHoveredAsState()
                         val state = when {
                             pressed -> MillenniumControlState.Pressed

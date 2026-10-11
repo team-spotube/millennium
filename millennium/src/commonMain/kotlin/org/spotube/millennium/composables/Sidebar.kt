@@ -11,7 +11,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import org.spotube.millennium.theme.collectIsKeyboardFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -623,7 +623,7 @@ fun MillenniumSidebarGroupLabel(
 
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val focused by interaction.collectIsFocusedAsState()
+    val focused by interaction.collectIsKeyboardFocusedAsState()
     val hovered by interaction.collectIsHoveredAsState()
     val state = when {
         !enabled -> MillenniumControlState.Disabled
@@ -865,7 +865,7 @@ private fun SidebarItemContainer(
     val collapsed = LocalMillenniumSidebar.current?.collapsed == true
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val focused by interaction.collectIsFocusedAsState()
+    val focused by interaction.collectIsKeyboardFocusedAsState()
     val hovered by interaction.collectIsHoveredAsState()
     val state = when {
         !enabled -> MillenniumControlState.Disabled
@@ -1019,7 +1019,7 @@ fun MillenniumSidebarTrigger(modifier: Modifier = Modifier) {
     val scope = LocalMillenniumSidebar.current
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val focused by interaction.collectIsFocusedAsState()
+    val focused by interaction.collectIsKeyboardFocusedAsState()
     val hovered by interaction.collectIsHoveredAsState()
     val state = when {
         scope == null -> MillenniumControlState.Disabled

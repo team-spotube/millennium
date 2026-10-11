@@ -2,7 +2,7 @@ package org.spotube.millennium.composables
 
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import org.spotube.millennium.theme.collectIsKeyboardFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -102,7 +102,7 @@ fun MillenniumTriStateCheckbox(
 ) {
     val source = remember { MutableInteractionSource() }
     val pressed by source.collectIsPressedAsState()
-    val focused by source.collectIsFocusedAsState()
+    val focused by source.collectIsKeyboardFocusedAsState()
     val hovered by source.collectIsHoveredAsState()
     val state = when {
         !enabled -> MillenniumControlState.Disabled
