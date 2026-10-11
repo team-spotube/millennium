@@ -49,14 +49,24 @@ fun defaultMillenniumSeparatorTheme(): MillenniumSeparatorTheme {
 }
 
 @Composable
-fun MillenniumSeparator(modifier: Modifier = Modifier, vertical: Boolean = false) {
-    val properties = MillenniumTheme.separatorTheme.states.resolve(MillenniumControlState.Default)
-    val color = properties.color ?: MillenniumTheme.colors.border
-    val highlight = properties.highlightColor ?: MillenniumTheme.colors.highlight.copy(alpha = 0.65f)
-    val beveledModifier = modifier.alpha(properties.alpha).drawWithContent {
+fun MillenniumSeparator(
+    modifier: Modifier = Modifier,
+    vertical: Boolean = false,
+    color: Color? = null,
+    thickness: Dp? = null,
+    alpha: Float? = null,
+    highlightColor: Color? = null,
+    highlightWidth: Dp? = null,
+    theme: MillenniumSeparatorTheme = MillenniumTheme.separatorTheme,
+) {
+    val properties = theme.states.resolve(MillenniumControlState.Default)
+    val color = color ?: properties.color ?: MillenniumTheme.colors.border
+    val highlight = highlightColor ?: properties.highlightColor ?: MillenniumTheme.colors.highlight.copy(alpha = 0.65f)
+    val highlightWidth = highlightWidth ?: properties.highlightWidth
+    val beveledModifier = modifier.alpha(alpha ?: properties.alpha).drawWithContent {
         drawContent()
-        if (properties.highlightWidth > 0.dp) {
-            val stroke = properties.highlightWidth.toPx()
+        if (highlightWidth > 0.dp) {
+            val stroke = highlightWidth.toPx()
             if (vertical) {
                 val x = size.width - stroke / 2f
                 drawLine(highlight, Offset(x, 0f), Offset(x, size.height), stroke)
@@ -67,9 +77,9 @@ fun MillenniumSeparator(modifier: Modifier = Modifier, vertical: Boolean = false
         }
     }
     if (vertical) {
-        UnstyledVerticalSeparator(color, beveledModifier, properties.thickness)
+        UnstyledVerticalSeparator(color, beveledModifier, thickness ?: properties.thickness)
     } else {
-        UnstyledHorizontalSeparator(color, beveledModifier, properties.thickness)
+        UnstyledHorizontalSeparator(color, beveledModifier, thickness ?: properties.thickness)
     }
 }
 

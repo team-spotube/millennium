@@ -110,11 +110,31 @@ fun <T> MillenniumRadioGroup(
     label: String,
     modifier: Modifier = Modifier,
     optionLabel: (T) -> String = { it.toString() },
+    indicatorBackground: Brush? = null,
+    selectedIndicatorBackground: Brush? = null,
+    indicatorShape: Shape? = null,
+    indicatorSize: DpSize? = null,
+    dotSize: Dp? = null,
+    dotColor: Color? = null,
+    indicatorBorderColor: Color? = null,
+    indicatorBorderWidth: Dp? = null,
+    indicatorGlowColor: Color? = null,
+    indicatorElevation: Dp? = null,
+    minimumTouchHeight: Dp? = null,
+    optionPadding: PaddingValues? = null,
+    optionSpacing: Dp? = null,
+    groupSpacing: Dp? = null,
+    labelStyle: TextStyle? = null,
+    labelColor: Color? = null,
+    selectedLabelColor: Color? = null,
+    stateAnimationMillis: Int? = null,
+    alpha: Float? = null,
+    theme: MillenniumRadioGroupTheme = MillenniumTheme.radioGroupTheme,
 ) {
     val colors = MillenniumTheme.colors
-    val properties = MillenniumTheme.radioGroupTheme.states.default
+    val properties = theme.states.default
     UnstyledRadioGroup(value, onValueChange, modifier, accessibilityLabel = label) {
-        Column(verticalArrangement = Arrangement.spacedBy(properties.groupSpacing)) {
+        Column(verticalArrangement = Arrangement.spacedBy(groupSpacing ?: properties.groupSpacing)) {
             options.forEach { option ->
                 val selected = value == option
                 val interaction = remember(option) { MutableInteractionSource() }
@@ -128,26 +148,26 @@ fun <T> MillenniumRadioGroup(
                     selected -> MillenniumControlState.Selected
                     else -> MillenniumControlState.Default
                 }
-                val itemProperties = MillenniumTheme.radioGroupTheme.states.resolve(state)
+                val itemProperties = theme.states.resolve(state)
                 val animatedAlpha = animateFloatAsState(
-                    targetValue = itemProperties.alpha,
-                    animationSpec = tween(itemProperties.stateAnimationMillis),
+                    targetValue = alpha ?: itemProperties.alpha,
+                    animationSpec = tween(stateAnimationMillis ?: itemProperties.stateAnimationMillis),
                 ).value
-                val indicatorBorderColor = itemProperties.indicatorBorderColor ?: when (state) {
+                val resolvedIndicatorBorderColor = indicatorBorderColor ?: itemProperties.indicatorBorderColor ?: when (state) {
                     MillenniumControlState.Focused -> colors.accent
                     MillenniumControlState.Hovered -> colors.border
                     MillenniumControlState.Selected -> colors.accent
                     MillenniumControlState.Error -> colors.danger
                     else -> colors.border
                 }
-                val labelColor = itemProperties.labelColor
+                val resolvedLabelColor = labelColor ?: itemProperties.labelColor
                     ?: if (state == MillenniumControlState.Disabled) colors.muted else colors.text
-                val selectedLabelColor = itemProperties.selectedLabelColor ?: colors.text
+                val resolvedSelectedLabelColor = selectedLabelColor ?: itemProperties.selectedLabelColor ?: colors.text
                 RadioButton(
                     value = option,
-                    modifier = Modifier.heightIn(min = itemProperties.minimumTouchHeight)
+                    modifier = Modifier.heightIn(min = minimumTouchHeight ?: itemProperties.minimumTouchHeight)
                         .alpha(animatedAlpha)
-                        .padding(itemProperties.optionPadding),
+                        .padding(optionPadding ?: itemProperties.optionPadding),
                     // Keep hover feedback on the small control; a row-wide ripple
                     // creates a distracting blue slab behind the option label.
                     indication = null,
@@ -155,29 +175,34 @@ fun <T> MillenniumRadioGroup(
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(itemProperties.optionSpacing),
+                        horizontalArrangement = Arrangement.spacedBy(optionSpacing ?: itemProperties.optionSpacing),
                     ) {
                         Box(
-                            Modifier.size(itemProperties.indicatorSize).millenniumSurface(
-                                background = if (selected) itemProperties.selectedIndicatorBackground
+                            Modifier.size(indicatorSize ?: itemProperties.indicatorSize).millenniumSurface(
+                                background = if (selected) selectedIndicatorBackground
+                                    ?: itemProperties.selectedIndicatorBackground
                                     ?: gelBrush(colors.accentTop, colors.accentBottom)
-                                else itemProperties.indicatorBackground ?: millenniumBevelBrush(colors, sunken = true),
-                                shape = itemProperties.indicatorShape,
-                                borderColor = indicatorBorderColor,
-                                borderWidth = itemProperties.indicatorBorderWidth,
-                                shadowElevation = itemProperties.indicatorElevation,
-                                innerGlowColor = itemProperties.indicatorGlowColor
+                                else indicatorBackground ?: itemProperties.indicatorBackground
+                                    ?: millenniumBevelBrush(colors, sunken = true),
+                                shape = indicatorShape ?: itemProperties.indicatorShape,
+                                borderColor = resolvedIndicatorBorderColor,
+                                borderWidth = indicatorBorderWidth ?: itemProperties.indicatorBorderWidth,
+                                shadowElevation = indicatorElevation ?: itemProperties.indicatorElevation,
+                                innerGlowColor = indicatorGlowColor ?: itemProperties.indicatorGlowColor
                                     ?: if (selected) colors.highlight.copy(alpha = 0.32f) else null,
                             ),
                             contentAlignment = Alignment.Center,
                         ) {
                             SelectedIndicator {
-                                Box(Modifier.size(itemProperties.dotSize).background(itemProperties.dotColor ?: colors.onAccent, CircleShape))
+                                Box(
+                                    Modifier.size(dotSize ?: itemProperties.dotSize)
+                                        .background(dotColor ?: itemProperties.dotColor ?: colors.onAccent, CircleShape),
+                                )
                             }
                         }
                         CompositionLocalProvider(
-                            LocalTextStyle provides LocalTextStyle.current.merge(itemProperties.labelStyle)
-                                .copy(color = if (selected) selectedLabelColor else labelColor),
+                            LocalTextStyle provides LocalTextStyle.current.merge(labelStyle ?: itemProperties.labelStyle)
+                                .copy(color = if (selected) resolvedSelectedLabelColor else resolvedLabelColor),
                         ) { Text(optionLabel(option)) }
                     }
                 }

@@ -135,6 +135,23 @@ fun MillenniumIconButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     style: MillenniumIconButtonStyle = MillenniumIconButtonStyle.Primary,
+    background: Brush? = null,
+    foreground: Color? = null,
+    shape: Shape? = null,
+    size: DpSize? = null,
+    iconSize: Dp? = null,
+    borderWidth: Dp? = null,
+    borderColor: Color? = null,
+    shadows: List<Color>? = null,
+    shadowElevation: Dp? = null,
+    innerGlowColor: Color? = null,
+    bottomRimColor: Color? = null,
+    orb: Boolean? = null,
+    orbColor: Color? = null,
+    orbStrength: Float? = null,
+    alpha: Float? = null,
+    motion: MillenniumButtonMotion? = null,
+    theme: MillenniumIconButtonTheme = MillenniumTheme.iconButtonTheme,
 ) {
     IconButtonContainer(
         onClick = onClick,
@@ -144,6 +161,23 @@ fun MillenniumIconButton(
         icon = icon,
         contentDescription = contentDescription,
         content = null,
+        theme = theme,
+        background = background,
+        foreground = foreground,
+        shape = shape,
+        size = size,
+        iconSize = iconSize,
+        borderWidth = borderWidth,
+        borderColor = borderColor,
+        shadows = shadows,
+        shadowElevation = shadowElevation,
+        innerGlowColor = innerGlowColor,
+        bottomRimColor = bottomRimColor,
+        orb = orb,
+        orbColor = orbColor,
+        orbStrength = orbStrength,
+        alpha = alpha,
+        motion = motion,
     )
 }
 
@@ -155,6 +189,23 @@ fun MillenniumIconButton(
     enabled: Boolean = true,
     style: MillenniumIconButtonStyle = MillenniumIconButtonStyle.Primary,
     contentDescription: String? = null,
+    background: Brush? = null,
+    foreground: Color? = null,
+    shape: Shape? = null,
+    size: DpSize? = null,
+    iconSize: Dp? = null,
+    borderWidth: Dp? = null,
+    borderColor: Color? = null,
+    shadows: List<Color>? = null,
+    shadowElevation: Dp? = null,
+    innerGlowColor: Color? = null,
+    bottomRimColor: Color? = null,
+    orb: Boolean? = null,
+    orbColor: Color? = null,
+    orbStrength: Float? = null,
+    alpha: Float? = null,
+    motion: MillenniumButtonMotion? = null,
+    theme: MillenniumIconButtonTheme = MillenniumTheme.iconButtonTheme,
     content: @Composable () -> Unit,
 ) {
     IconButtonContainer(
@@ -165,6 +216,23 @@ fun MillenniumIconButton(
         icon = null,
         contentDescription = contentDescription,
         content = content,
+        theme = theme,
+        background = background,
+        foreground = foreground,
+        shape = shape,
+        size = size,
+        iconSize = iconSize,
+        borderWidth = borderWidth,
+        borderColor = borderColor,
+        shadows = shadows,
+        shadowElevation = shadowElevation,
+        innerGlowColor = innerGlowColor,
+        bottomRimColor = bottomRimColor,
+        orb = orb,
+        orbColor = orbColor,
+        orbStrength = orbStrength,
+        alpha = alpha,
+        motion = motion,
     )
 }
 
@@ -177,6 +245,23 @@ private fun IconButtonContainer(
     icon: ImageVector?,
     contentDescription: String?,
     content: (@Composable () -> Unit)?,
+    theme: MillenniumIconButtonTheme,
+    background: Brush?,
+    foreground: Color?,
+    shape: Shape?,
+    size: DpSize?,
+    iconSize: Dp?,
+    borderWidth: Dp?,
+    borderColor: Color?,
+    shadows: List<Color>?,
+    shadowElevation: Dp?,
+    innerGlowColor: Color?,
+    bottomRimColor: Color?,
+    orb: Boolean?,
+    orbColor: Color?,
+    orbStrength: Float?,
+    alpha: Float?,
+    motion: MillenniumButtonMotion?,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
@@ -190,13 +275,14 @@ private fun IconButtonContainer(
         else -> MillenniumControlState.Default
     }
     val colors = MillenniumTheme.colors
-    val properties = MillenniumTheme.iconButtonTheme.forStyle(style).resolve(state)
-    val foreground = properties.foreground ?: when (style) {
+    val properties = theme.forStyle(style).resolve(state)
+    val resolvedMotion = motion ?: properties.motion
+    val resolvedForeground = foreground ?: properties.foreground ?: when (style) {
         MillenniumIconButtonStyle.Primary -> colors.onAccent
         MillenniumIconButtonStyle.Danger -> colors.surface
         else -> colors.text
     }
-    val background = properties.background ?: when (style) {
+    val resolvedBackground = background ?: properties.background ?: when (style) {
         MillenniumIconButtonStyle.Primary -> gelBrush(colors.accentTop, colors.accentBottom)
         MillenniumIconButtonStyle.Secondary -> millenniumBevelBrush(colors)
         MillenniumIconButtonStyle.Quiet -> Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
@@ -205,7 +291,7 @@ private fun IconButtonContainer(
             lerp(colors.danger, if (colors.surface.luminance() > colors.danger.luminance()) Color.Black else Color.White, 0.20f),
         )
     }
-    val borderColor = properties.borderColor ?: when (state) {
+    val resolvedBorderColor = borderColor ?: properties.borderColor ?: when (state) {
         MillenniumControlState.Focused, MillenniumControlState.Selected -> colors.accent
         MillenniumControlState.Error -> colors.danger
         else -> when (style) {
@@ -215,26 +301,29 @@ private fun IconButtonContainer(
             MillenniumIconButtonStyle.Danger -> lerp(colors.danger, Color.Black, 0.35f)
         }
     }
-    val innerGlowColor = properties.innerGlowColor ?: when (state) {
+    val resolvedInnerGlowColor = innerGlowColor ?: properties.innerGlowColor ?: when (state) {
         MillenniumControlState.Hovered, MillenniumControlState.Focused -> colors.highlight.copy(alpha = 0.60f)
         MillenniumControlState.Pressed -> colors.inset.copy(alpha = 0.32f)
         else -> colors.highlight.copy(alpha = 0.70f)
     }
-    val orbColor = if (properties.orb) {
-        properties.orbColor ?: Color.White.copy(alpha = properties.orbStrength)
+    val resolvedOrbColor = if (orb ?: properties.orb) {
+        orbColor ?: properties.orbColor ?: Color.White.copy(alpha = orbStrength ?: properties.orbStrength)
     } else {
         null
     }
     val scale by animateFloatAsState(
         targetValue = when {
             !enabled -> 1f
-            pressed -> properties.motion.pressedScale
-            hovered -> properties.motion.hoverScale
+            pressed -> resolvedMotion.pressedScale
+            hovered -> resolvedMotion.hoverScale
             else -> 1f
         },
-        animationSpec = tween(properties.motion.stateChangeMillis),
+        animationSpec = tween(resolvedMotion.stateChangeMillis),
     )
-    val elevation by animateDpAsState(properties.shadowElevation, tween(properties.motion.stateChangeMillis))
+    val elevation by animateDpAsState(
+        shadowElevation ?: properties.shadowElevation,
+        tween(resolvedMotion.stateChangeMillis),
+    )
     val semantics = if (contentDescription != null) {
         Modifier.semantics { this.contentDescription = contentDescription }
     } else {
@@ -249,26 +338,26 @@ private fun IconButtonContainer(
         contentAlignment = Alignment.Center,
         modifier = modifier
             .then(semantics)
-            .size(properties.size)
+            .size(size ?: properties.size)
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .alpha(properties.alpha)
+            .alpha(alpha ?: properties.alpha)
             .millenniumSurface(
-                background = background,
-                shape = properties.shape,
-                borderColor = borderColor,
-                borderWidth = properties.borderWidth,
+                background = resolvedBackground,
+                shape = shape ?: properties.shape,
+                borderColor = resolvedBorderColor,
+                borderWidth = borderWidth ?: properties.borderWidth,
                 shadowElevation = elevation,
-                shadowColors = properties.shadows ?: listOf(Color.Black.copy(alpha = 0.16f)),
-                innerGlowColor = innerGlowColor,
-                bottomRimColor = properties.bottomRimColor
+                shadowColors = shadows ?: properties.shadows ?: listOf(Color.Black.copy(alpha = 0.16f)),
+                innerGlowColor = resolvedInnerGlowColor,
+                bottomRimColor = bottomRimColor ?: properties.bottomRimColor
                     ?: if (style != MillenniumIconButtonStyle.Quiet) colors.highlight.copy(alpha = 0.28f) else null,
-                orbColor = orbColor,
+                orbColor = resolvedOrbColor,
             ),
     ) {
         if (icon != null) {
-            UnstyledIcon(icon, null, Modifier.size(properties.iconSize), foreground)
+            UnstyledIcon(icon, null, Modifier.size(iconSize ?: properties.iconSize), resolvedForeground)
         } else {
-            MillenniumStyledContent(TextStyle.Default, foreground) { content?.invoke() }
+            MillenniumStyledContent(TextStyle.Default, resolvedForeground) { content?.invoke() }
         }
     }
 }

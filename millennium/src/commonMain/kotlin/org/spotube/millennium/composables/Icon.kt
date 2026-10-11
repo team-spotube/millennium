@@ -62,8 +62,12 @@ fun MillenniumIcon(
     modifier: Modifier = Modifier,
     tint: Color? = null,
     state: MillenniumControlState = MillenniumControlState.Default,
+    size: Dp? = null,
+    alpha: Float? = null,
+    tintAnimationMillis: Int? = null,
+    theme: MillenniumIconTheme = MillenniumTheme.iconTheme,
 ) {
-    val properties = MillenniumTheme.iconTheme.states.resolve(state)
+    val properties = theme.states.resolve(state)
     val colors = MillenniumTheme.colors
     val targetTint = tint ?: properties.tint ?: when (state) {
         MillenniumControlState.Hovered, MillenniumControlState.Focused, MillenniumControlState.Selected -> colors.accent
@@ -72,11 +76,14 @@ fun MillenniumIcon(
         MillenniumControlState.Error -> colors.danger
         MillenniumControlState.Default -> colors.text
     }
-    val animatedTint = animateColorAsState(targetTint, tween(properties.tintAnimationMillis)).value
+    val animatedTint = animateColorAsState(
+        targetTint,
+        tween(tintAnimationMillis ?: properties.tintAnimationMillis),
+    ).value
     UnstyledIcon(
         imageVector,
         contentDescription,
-        modifier.size(properties.size).alpha(properties.alpha),
+        modifier.size(size ?: properties.size).alpha(alpha ?: properties.alpha),
         animatedTint,
     )
 }

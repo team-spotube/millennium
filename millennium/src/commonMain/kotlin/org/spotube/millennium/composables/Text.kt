@@ -50,16 +50,19 @@ fun MillenniumText(
     color: Color = MillenniumTheme.colors.text,
     size: TextUnit = MillenniumTheme.textTheme.states.default.body.fontSize,
     weight: FontWeight = MillenniumTheme.textTheme.states.default.body.fontWeight ?: FontWeight.Normal,
+    style: TextStyle? = null,
+    lineHeight: TextUnit? = null,
+    theme: MillenniumTextTheme = MillenniumTheme.textTheme,
 ) {
-    val style = MillenniumTheme.textTheme.states.resolve(MillenniumControlState.Default).body
+    val baseStyle = style ?: theme.states.resolve(MillenniumControlState.Default).body
     Text(
         text = text,
         modifier = modifier,
         color = color,
         fontSize = size,
-        lineHeight = millenniumTextLineHeight(size, style.fontSize, style.lineHeight),
+        lineHeight = lineHeight ?: millenniumTextLineHeight(size, baseStyle.fontSize, baseStyle.lineHeight),
         fontWeight = weight,
-        fontFamily = style.fontFamily,
+        fontFamily = baseStyle.fontFamily,
     )
 }
 

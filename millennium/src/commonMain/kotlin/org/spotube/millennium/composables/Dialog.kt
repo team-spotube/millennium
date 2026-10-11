@@ -113,64 +113,94 @@ fun MillenniumDialog(
     onDismissRequest: () -> Unit,
     title: String,
     modifier: Modifier = Modifier,
+    panelBackground: Brush? = null,
+    shape: Shape? = null,
+    foreground: Color? = null,
+    titleStyle: TextStyle? = null,
+    panelBorderColor: Color? = null,
+    panelBorderWidth: Dp? = null,
+    panelShadowElevation: Dp? = null,
+    panelGlowColor: Color? = null,
+    panelMaxWidth: Dp? = null,
+    overlayPadding: Dp? = null,
+    contentPadding: Dp? = null,
+    contentSpacing: Dp? = null,
+    scrimColor: Color? = null,
+    enterScale: Float? = null,
+    animationMillis: Int? = null,
+    alpha: Float? = null,
+    titleBarBackground: Brush? = null,
+    titleBarForeground: Color? = null,
+    titleBarHeight: Dp? = null,
+    titleBarPadding: PaddingValues? = null,
+    titleBarBorderColor: Color? = null,
+    theme: MillenniumDialogTheme = MillenniumTheme.dialogTheme,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = MillenniumTheme.colors
-    val properties = MillenniumTheme.dialogTheme.states.resolve(MillenniumControlState.Default)
-    val foreground = properties.foreground ?: colors.text
-    val panelBorderColor = properties.panelBorderColor ?: colors.border
-    val panelBackground = properties.panelBackground ?: millenniumPanelBrush(colors)
-    val panelGlowColor = properties.panelGlowColor ?: colors.highlight.copy(alpha = 0.6f)
-    val scrimColor = properties.scrimColor ?: colors.scrim
+    val properties = theme.states.resolve(MillenniumControlState.Default)
+    val resolvedForeground = foreground ?: properties.foreground ?: colors.text
+    val resolvedPanelBorderColor = panelBorderColor ?: properties.panelBorderColor ?: colors.border
+    val resolvedPanelBackground = panelBackground ?: properties.panelBackground ?: millenniumPanelBrush(colors)
+    val resolvedPanelGlowColor = panelGlowColor ?: properties.panelGlowColor ?: colors.highlight.copy(alpha = 0.6f)
+    val resolvedScrimColor = scrimColor ?: properties.scrimColor ?: colors.scrim
+    val resolvedAnimationMillis = animationMillis ?: properties.animationMillis
     UnstyledDialog(
         visible = visible,
         onDismissRequest = onDismissRequest,
         overlay = {
             Scrim(
-                scrimColor = scrimColor,
-                enter = fadeIn(animationSpec = tween(properties.animationMillis)),
-                exit = fadeOut(animationSpec = tween(properties.animationMillis)),
+                scrimColor = resolvedScrimColor,
+                enter = fadeIn(animationSpec = tween(resolvedAnimationMillis)),
+                exit = fadeOut(animationSpec = tween(resolvedAnimationMillis)),
             )
         },
     ) {
         Box(
-            Modifier.fillMaxSize().padding(properties.overlayPadding),
+            Modifier.fillMaxSize().padding(overlayPadding ?: properties.overlayPadding),
             contentAlignment = androidx.compose.ui.Alignment.Center,
         ) {
             DialogPanel(
-                modifier.widthIn(max = properties.panelMaxWidth).fillMaxWidth().alpha(properties.alpha)
+                modifier.widthIn(max = panelMaxWidth ?: properties.panelMaxWidth).fillMaxWidth()
+                    .alpha(alpha ?: properties.alpha)
                     .millenniumSurface(
-                        background = panelBackground,
-                        shape = properties.shape,
-                        borderColor = panelBorderColor,
-                        borderWidth = properties.panelBorderWidth,
-                        shadowElevation = properties.panelShadowElevation,
-                        innerGlowColor = panelGlowColor,
+                        background = resolvedPanelBackground,
+                        shape = shape ?: properties.shape,
+                        borderColor = resolvedPanelBorderColor,
+                        borderWidth = panelBorderWidth ?: properties.panelBorderWidth,
+                        shadowElevation = panelShadowElevation ?: properties.panelShadowElevation,
+                        innerGlowColor = resolvedPanelGlowColor,
                     ),
                 paneTitle = title,
-                enter = fadeIn(animationSpec = tween(properties.animationMillis)) +
-                    scaleIn(initialScale = properties.enterScale, animationSpec = tween(properties.animationMillis)),
-                exit = fadeOut(animationSpec = tween(properties.animationMillis)),
+                enter = fadeIn(animationSpec = tween(resolvedAnimationMillis)) +
+                    scaleIn(
+                        initialScale = enterScale ?: properties.enterScale,
+                        animationSpec = tween(resolvedAnimationMillis),
+                    ),
+                exit = fadeOut(animationSpec = tween(resolvedAnimationMillis)),
             ) {
                 MillenniumStyledContent(
-                    TextStyle(color = foreground),
-                    foreground,
+                    TextStyle(color = resolvedForeground),
+                    resolvedForeground,
                 ) {
                     Column {
-                        val titleBarBackground = properties.titleBarBackground
-                        val titleBarForeground = properties.titleBarForeground ?: foreground
+                        val resolvedTitleBarBackground = titleBarBackground ?: properties.titleBarBackground
+                        val resolvedTitleBarForeground = titleBarForeground
+                            ?: properties.titleBarForeground ?: resolvedForeground
                         Row(
                             Modifier.fillMaxWidth()
-                                .heightIn(min = properties.titleBarHeight)
+                                .heightIn(min = titleBarHeight ?: properties.titleBarHeight)
                                 .then(
-                                    if (titleBarBackground != null) Modifier.background(titleBarBackground)
+                                    if (resolvedTitleBarBackground != null) Modifier.background(resolvedTitleBarBackground)
                                     else Modifier
                                 )
-                                .padding(properties.titleBarPadding),
+                                .padding(titleBarPadding ?: properties.titleBarPadding),
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            MillenniumStyledContent(properties.titleStyle, titleBarForeground) { Text(title) }
+                            MillenniumStyledContent(titleStyle ?: properties.titleStyle, resolvedTitleBarForeground) {
+                                Text(title)
+                            }
                             Spacer(Modifier.weight(1f))
                             UnstyledButton(
                                 onClick = onDismissRequest,
@@ -199,11 +229,11 @@ fun MillenniumDialog(
                             }
                         }
                         Box(Modifier.fillMaxWidth().height(1.dp).background(
-                            properties.titleBarBorderColor ?: colors.border,
+                            titleBarBorderColor ?: properties.titleBarBorderColor ?: colors.border,
                         ))
                         Column(
-                            Modifier.padding(properties.contentPadding),
-                            verticalArrangement = Arrangement.spacedBy(properties.contentSpacing),
+                            Modifier.padding(contentPadding ?: properties.contentPadding),
+                            verticalArrangement = Arrangement.spacedBy(contentSpacing ?: properties.contentSpacing),
                         ) {
                             content()
                         }

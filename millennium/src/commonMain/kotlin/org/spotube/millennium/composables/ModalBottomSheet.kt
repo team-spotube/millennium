@@ -98,46 +98,64 @@ fun MillenniumModalBottomSheet(
     state: ModalBottomSheetState,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues? = null,
+    background: Brush? = null,
+    foreground: Color? = null,
+    shape: Shape? = null,
+    maximumWidth: Dp? = null,
+    contentSpacing: Dp? = null,
+    handleSize: DpSize? = null,
+    handleColor: Color? = null,
+    borderColor: Color? = null,
+    borderWidth: Dp? = null,
+    shadowElevation: Dp? = null,
+    innerGlowColor: Color? = null,
+    scrimColor: Color? = null,
+    animationMillis: Int? = null,
+    alpha: Float? = null,
+    theme: MillenniumModalBottomSheetTheme = MillenniumTheme.modalBottomSheetTheme,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = MillenniumTheme.colors
-    val properties = MillenniumTheme.modalBottomSheetTheme.states.resolve(MillenniumControlState.Default)
-    val background = properties.background ?: millenniumPanelBrush(colors)
-    val foreground = properties.foreground ?: colors.text
-    val handleColor = properties.handleColor ?: colors.muted
-    val borderColor = properties.borderColor ?: colors.border
-    val glowColor = properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f)
-    val scrimColor = properties.scrimColor ?: colors.scrim
+    val properties = theme.states.resolve(MillenniumControlState.Default)
+    val resolvedBackground = background ?: properties.background ?: millenniumPanelBrush(colors)
+    val resolvedForeground = foreground ?: properties.foreground ?: colors.text
+    val resolvedHandleColor = handleColor ?: properties.handleColor ?: colors.muted
+    val resolvedBorderColor = borderColor ?: properties.borderColor ?: colors.border
+    val resolvedGlowColor = innerGlowColor ?: properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f)
+    val resolvedScrimColor = scrimColor ?: properties.scrimColor ?: colors.scrim
+    val resolvedAnimationMillis = animationMillis ?: properties.animationMillis
     UnstyledModalBottomSheet(
         state = state,
         overlay = {
             Scrim(
-                scrimColor = scrimColor,
-                enter = fadeIn(animationSpec = tween(properties.animationMillis)),
-                exit = fadeOut(animationSpec = tween(properties.animationMillis)),
+                scrimColor = resolvedScrimColor,
+                enter = fadeIn(animationSpec = tween(resolvedAnimationMillis)),
+                exit = fadeOut(animationSpec = tween(resolvedAnimationMillis)),
             )
         },
     ) {
         Box(Modifier.fillMaxWidth(), contentAlignment = androidx.compose.ui.Alignment.TopCenter) {
             Sheet(
-                Modifier.widthIn(max = properties.maximumWidth).fillMaxWidth().millenniumSurface(
-                    background = background,
-                    shape = properties.shape,
-                    borderColor = borderColor,
-                    borderWidth = properties.borderWidth,
-                    shadowElevation = properties.shadowElevation,
-                    innerGlowColor = glowColor,
-                ).alpha(properties.alpha),
+                Modifier.widthIn(max = maximumWidth ?: properties.maximumWidth).fillMaxWidth().millenniumSurface(
+                    background = resolvedBackground,
+                    shape = shape ?: properties.shape,
+                    borderColor = resolvedBorderColor,
+                    borderWidth = borderWidth ?: properties.borderWidth,
+                    shadowElevation = shadowElevation ?: properties.shadowElevation,
+                    innerGlowColor = resolvedGlowColor,
+                ).alpha(alpha ?: properties.alpha),
             ) {
                 Column(
                     Modifier.padding(contentPadding ?: properties.contentPadding).navigationBarsPadding(),
-                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(properties.contentSpacing),
+                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(
+                        contentSpacing ?: properties.contentSpacing,
+                    ),
                     horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
                 ) {
                     DragIndication(
-                        Modifier.size(properties.handleSize).background(handleColor, CircleShape),
+                        Modifier.size(handleSize ?: properties.handleSize).background(resolvedHandleColor, CircleShape),
                     )
-                    MillenniumStyledContent(TextStyle(color = foreground), foreground) {
+                    MillenniumStyledContent(TextStyle(color = resolvedForeground), resolvedForeground) {
                         content()
                     }
                 }

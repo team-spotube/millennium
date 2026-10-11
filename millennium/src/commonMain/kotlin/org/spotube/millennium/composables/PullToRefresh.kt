@@ -79,19 +79,34 @@ fun MillenniumPullToRefreshBox(
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    threshold: Dp? = null,
+    maxPull: Dp? = null,
+    pullResistance: Float? = null,
+    indicatorShape: Shape? = null,
+    indicatorBackground: Brush? = null,
+    indicatorBorderColor: Color? = null,
+    indicatorBorderWidth: Dp? = null,
+    indicatorShadowElevation: Dp? = null,
+    indicatorInnerGlowColor: Color? = null,
+    indicatorPadding: PaddingValues? = null,
+    indicatorWidth: Dp? = null,
+    indicatorTopPadding: Dp? = null,
+    theme: MillenniumPullToRefreshTheme = MillenniumTheme.pullToRefreshTheme,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val colors = MillenniumTheme.colors
-    val properties = MillenniumTheme.pullToRefreshTheme.properties
+    val properties = theme.properties
     val density = LocalDensity.current
-    val threshold = with(density) { properties.threshold.toPx() }
-    val maxPull = with(density) { properties.maxPull.toPx() }
+    val thresholdPx = with(density) { (threshold ?: properties.threshold).toPx() }
+    val maxPullPx = with(density) { (maxPull ?: properties.maxPull).toPx() }
+    val resolvedResistance = pullResistance ?: properties.pullResistance
+    val resolvedTopPadding = indicatorTopPadding ?: properties.indicatorTopPadding
     val pullOffset = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val currentOnRefresh by rememberUpdatedState(onRefresh)
     val currentRefreshing by rememberUpdatedState(isRefreshing)
 
-    val connection = remember(enabled, threshold, maxPull, properties.pullResistance) {
+    val connection = remember(enabled, thresholdPx, maxPullPx, resolvedResistance) {
         object : NestedScrollConnection {
             override fun onPostScroll(
                 consumed: Offset,
@@ -100,7 +115,7 @@ fun MillenniumPullToRefreshBox(
             ): Offset {
                 if (!enabled || currentRefreshing) return Offset.Zero
                 if (source == NestedScrollSource.UserInput && available.y > 0f) {
-                    val next = (pullOffset.value + available.y * properties.pullResistance).coerceAtMost(maxPull)
+                    val next = (pullOffset.value + available.y * resolvedResistance).coerceAtMost(maxPullPx)
                     scope.launch { pullOffset.snapTo(next) }
                     return Offset(0f, available.y)
                 }
@@ -108,7 +123,7 @@ fun MillenniumPullToRefreshBox(
             }
 
             override suspend fun onPreFling(available: Velocity): Velocity {
-                if (pullOffset.value >= threshold) currentOnRefresh()
+                if (pullOffset.value >= thresholdPx) currentOnRefresh()
                 scope.launch { pullOffset.animateTo(0f) }
                 return Velocity.Zero
             }
@@ -122,19 +137,20 @@ fun MillenniumPullToRefreshBox(
             Box(
                 Modifier
                     .align(Alignment.TopCenter)
-                    .offset(y = with(density) { pullOffset.value.toDp() } + if (isRefreshing) properties.indicatorTopPadding else 0.dp)
-                    .padding(top = properties.indicatorTopPadding)
+                    .offset(y = with(density) { pullOffset.value.toDp() } + if (isRefreshing) resolvedTopPadding else 0.dp)
+                    .padding(top = resolvedTopPadding)
                     .millenniumSurface(
-                        background = properties.indicatorBackground ?: millenniumPanelBrush(colors),
-                        shape = properties.indicatorShape,
-                        borderColor = properties.indicatorBorderColor ?: colors.border,
-                        borderWidth = properties.indicatorBorderWidth,
-                        shadowElevation = properties.indicatorShadowElevation,
-                        innerGlowColor = properties.indicatorInnerGlowColor ?: colors.highlight.copy(alpha = 0.4f),
+                        background = indicatorBackground ?: properties.indicatorBackground ?: millenniumPanelBrush(colors),
+                        shape = indicatorShape ?: properties.indicatorShape,
+                        borderColor = indicatorBorderColor ?: properties.indicatorBorderColor ?: colors.border,
+                        borderWidth = indicatorBorderWidth ?: properties.indicatorBorderWidth,
+                        shadowElevation = indicatorShadowElevation ?: properties.indicatorShadowElevation,
+                        innerGlowColor = indicatorInnerGlowColor ?: properties.indicatorInnerGlowColor
+                            ?: colors.highlight.copy(alpha = 0.4f),
                     )
-                    .padding(properties.indicatorPadding),
+                    .padding(indicatorPadding ?: properties.indicatorPadding),
             ) {
-                MillenniumIndeterminateProgress(Modifier.width(properties.indicatorWidth))
+                MillenniumIndeterminateProgress(Modifier.width(indicatorWidth ?: properties.indicatorWidth))
             }
         }
     }

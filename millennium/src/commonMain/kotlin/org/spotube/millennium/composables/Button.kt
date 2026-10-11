@@ -138,6 +138,26 @@ fun MillenniumButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     style: MillenniumButtonStyle = MillenniumButtonStyle.Primary,
+    background: Brush? = null,
+    foreground: Color? = null,
+    textStyle: TextStyle? = null,
+    shape: Shape? = null,
+    padding: PaddingValues? = null,
+    contentSpacing: Dp? = null,
+    minSize: DpSize? = null,
+    borderWidth: Dp? = null,
+    borderColor: Color? = null,
+    shadowColors: List<Color>? = null,
+    shadowElevation: Dp? = null,
+    innerGlowColor: Color? = null,
+    innerGlowWidth: Dp? = null,
+    innerGlowInset: Dp? = null,
+    innerGlowTop: Dp? = null,
+    innerGlowFollowsShape: Boolean? = null,
+    bottomRimColor: Color? = null,
+    alpha: Float? = null,
+    motion: MillenniumButtonMotion? = null,
+    theme: MillenniumButtonTheme = MillenniumTheme.buttonTheme,
     content: @Composable () -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -151,16 +171,19 @@ fun MillenniumButton(
         hovered -> MillenniumControlState.Hovered
         else -> MillenniumControlState.Default
     }
-    val properties = MillenniumTheme.buttonTheme.forStyle(style).resolve(state)
+    val properties = theme.forStyle(style).resolve(state)
     val colors = MillenniumTheme.colors
-    val foreground = properties.foreground
-        ?: properties.textStyle.color.takeUnless { it == Color.Unspecified }
+    val resolvedMotion = motion ?: properties.motion
+    val resolvedTextStyle = textStyle ?: properties.textStyle
+    val resolvedForeground = foreground
+        ?: properties.foreground
+        ?: resolvedTextStyle.color.takeUnless { it == Color.Unspecified }
         ?: when (style) {
             MillenniumButtonStyle.Primary -> colors.onAccent
             MillenniumButtonStyle.Danger -> colors.surface
             else -> colors.text
         }
-    val background = properties.background ?: when (style) {
+    val resolvedBackground = background ?: properties.background ?: when (style) {
         MillenniumButtonStyle.Primary -> gelBrush(colors.accentTop, colors.accentBottom)
         MillenniumButtonStyle.Secondary -> millenniumBevelBrush(colors)
         MillenniumButtonStyle.Quiet -> Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
@@ -169,7 +192,7 @@ fun MillenniumButton(
             lerp(colors.danger, if (colors.surface.luminance() > colors.danger.luminance()) Color.Black else Color.White, 0.20f),
         )
     }
-    val borderColor = properties.borderColor ?: when (state) {
+    val resolvedBorderColor = borderColor ?: properties.borderColor ?: when (state) {
         MillenniumControlState.Focused, MillenniumControlState.Selected -> colors.accent
         MillenniumControlState.Error -> colors.danger
         else -> when (style) {
@@ -179,26 +202,27 @@ fun MillenniumButton(
             MillenniumButtonStyle.Danger -> colors.danger
         }
     }
-    val innerGlowColor = properties.innerGlowColor ?: when (state) {
+    val resolvedInnerGlowColor = innerGlowColor ?: properties.innerGlowColor ?: when (state) {
         MillenniumControlState.Hovered, MillenniumControlState.Focused -> colors.highlight.copy(alpha = 0.60f)
         MillenniumControlState.Pressed -> colors.inset.copy(alpha = 0.32f)
         else -> colors.highlight.copy(alpha = 0.70f)
     }
-    val shadowColors = properties.shadows ?: listOf(Color.Black.copy(alpha = 0.16f))
+    val resolvedShadowColors = shadowColors ?: properties.shadows ?: listOf(Color.Black.copy(alpha = 0.16f))
     val targetScale = when {
         !enabled -> 1f
-        pressed -> properties.motion.pressedScale
-        hovered -> properties.motion.hoverScale
+        pressed -> resolvedMotion.pressedScale
+        hovered -> resolvedMotion.hoverScale
         else -> 1f
     }
     val scale by animateFloatAsState(
         targetValue = targetScale,
-        animationSpec = tween(properties.motion.stateChangeMillis),
+        animationSpec = tween(resolvedMotion.stateChangeMillis),
     )
     val elevation by animateDpAsState(
-        targetValue = properties.shadowElevation,
-        animationSpec = tween(properties.motion.stateChangeMillis),
+        targetValue = shadowElevation ?: properties.shadowElevation,
+        animationSpec = tween(resolvedMotion.stateChangeMillis),
     )
+    val resolvedMinSize = minSize ?: properties.minSize
     UnstyledButton(
         onClick = onClick,
         enabled = enabled,
@@ -206,31 +230,32 @@ fun MillenniumButton(
         indication = LocalIndication.current,
         modifier = modifier
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .defaultMinSize(minWidth = properties.minSize.width, minHeight = properties.minSize.height)
-            .alpha(properties.alpha)
+            .defaultMinSize(minWidth = resolvedMinSize.width, minHeight = resolvedMinSize.height)
+            .alpha(alpha ?: properties.alpha)
             .millenniumSurface(
-                background = background,
-                shape = properties.shape,
-                borderColor = borderColor,
-                borderWidth = properties.borderWidth,
+                background = resolvedBackground,
+                shape = shape ?: properties.shape,
+                borderColor = resolvedBorderColor,
+                borderWidth = borderWidth ?: properties.borderWidth,
                 shadowElevation = elevation,
-                shadowColors = shadowColors,
-                innerGlowColor = innerGlowColor,
-                innerGlowWidth = properties.innerGlowWidth,
-                innerGlowInset = properties.innerGlowInset,
-                innerGlowTop = properties.innerGlowTop,
-                innerGlowFollowsShape = properties.innerGlowFollowsShape,
-                bottomRimColor = properties.bottomRimColor ?: if (style != MillenniumButtonStyle.Quiet) colors.highlight.copy(alpha = 0.28f) else null,
+                shadowColors = resolvedShadowColors,
+                innerGlowColor = resolvedInnerGlowColor,
+                innerGlowWidth = innerGlowWidth ?: properties.innerGlowWidth,
+                innerGlowInset = innerGlowInset ?: properties.innerGlowInset,
+                innerGlowTop = innerGlowTop ?: properties.innerGlowTop,
+                innerGlowFollowsShape = innerGlowFollowsShape ?: properties.innerGlowFollowsShape,
+                bottomRimColor = bottomRimColor ?: properties.bottomRimColor
+                    ?: if (style != MillenniumButtonStyle.Quiet) colors.highlight.copy(alpha = 0.28f) else null,
             ),
-        contentPadding = properties.padding,
+        contentPadding = padding ?: properties.padding,
     ) {
-        val labelStyle = if (style == MillenniumButtonStyle.Primary && properties.textStyle.shadow == null) {
-            properties.textStyle.copy(shadow = Shadow(colors.accentBottom, Offset(0f, 1f), 1f))
-        } else properties.textStyle
-        MillenniumStyledContent(labelStyle, foreground) {
+        val labelStyle = if (style == MillenniumButtonStyle.Primary && resolvedTextStyle.shadow == null) {
+            resolvedTextStyle.copy(shadow = Shadow(colors.accentBottom, Offset(0f, 1f), 1f))
+        } else resolvedTextStyle
+        MillenniumStyledContent(labelStyle, resolvedForeground) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(properties.contentSpacing),
+                horizontalArrangement = Arrangement.spacedBy(contentSpacing ?: properties.contentSpacing),
             ) { content() }
         }
     }

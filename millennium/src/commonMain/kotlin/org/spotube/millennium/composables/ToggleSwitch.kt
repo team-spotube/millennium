@@ -108,6 +108,29 @@ fun MillenniumSwitch(
     label: String,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    trackBackground: Brush? = null,
+    selectedTrackBackground: Brush? = null,
+    trackShape: Shape? = null,
+    trackSize: DpSize? = null,
+    trackBorderColor: Color? = null,
+    trackBorderWidth: Dp? = null,
+    trackGlowColor: Color? = null,
+    thumbBackground: Brush? = null,
+    thumbShape: Shape? = null,
+    thumbSize: Dp? = null,
+    thumbInset: Dp? = null,
+    thumbElevation: Dp? = null,
+    thumbBorderColor: Color? = null,
+    thumbBorderWidth: Dp? = null,
+    thumbGlowColor: Color? = null,
+    minimumTouchHeight: Dp? = null,
+    labelForeground: Color? = null,
+    labelStyle: TextStyle? = null,
+    contentPadding: PaddingValues? = null,
+    contentSpacing: Dp? = null,
+    thumbAnimationMillis: Int? = null,
+    alpha: Float? = null,
+    theme: MillenniumToggleSwitchTheme = MillenniumTheme.toggleSwitchTheme,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
@@ -121,23 +144,27 @@ fun MillenniumSwitch(
         checked -> MillenniumControlState.Selected
         else -> MillenniumControlState.Default
     }
-    val properties = MillenniumTheme.toggleSwitchTheme.states.resolve(state)
+    val properties = theme.states.resolve(state)
     val colors = MillenniumTheme.colors
-    val trackBackground = properties.trackBackground ?: millenniumBevelBrush(colors, sunken = true)
-    val selectedTrackBackground = properties.selectedTrackBackground ?: gelBrush(colors.accentTop, colors.accentBottom)
-    val trackBorderColor = properties.trackBorderColor ?: when (state) {
+    val resolvedTrackBackground = trackBackground ?: properties.trackBackground ?: millenniumBevelBrush(colors, sunken = true)
+    val resolvedSelectedTrackBackground = selectedTrackBackground
+        ?: properties.selectedTrackBackground ?: gelBrush(colors.accentTop, colors.accentBottom)
+    val resolvedTrackBorderColor = trackBorderColor ?: properties.trackBorderColor ?: when (state) {
         MillenniumControlState.Focused, MillenniumControlState.Selected -> colors.accent
         MillenniumControlState.Hovered -> colors.border
         MillenniumControlState.Error -> colors.danger
         else -> colors.border
     }
-    val trackGlowColor = properties.trackGlowColor ?: if (checked) colors.highlight.copy(alpha = 0.35f) else null
-    val thumbBackground = properties.thumbBackground ?: gelBrush(colors.raised, colors.inset)
-    val labelForeground = properties.labelForeground ?: if (state == MillenniumControlState.Disabled) colors.muted else colors.text
+    val resolvedTrackGlowColor = trackGlowColor ?: properties.trackGlowColor
+        ?: if (checked) colors.highlight.copy(alpha = 0.35f) else null
+    val resolvedThumbBackground = thumbBackground ?: properties.thumbBackground ?: gelBrush(colors.raised, colors.inset)
+    val resolvedLabelForeground = labelForeground ?: properties.labelForeground
+        ?: if (state == MillenniumControlState.Disabled) colors.muted else colors.text
     UnstyledSwitch(
         checked = checked,
         onCheckedChange = onCheckedChange,
-        modifier = modifier.heightIn(min = properties.minimumTouchHeight).alpha(properties.alpha),
+        modifier = modifier.heightIn(min = minimumTouchHeight ?: properties.minimumTouchHeight)
+            .alpha(alpha ?: properties.alpha),
         enabled = enabled,
         accessibilityLabel = label,
         // State feedback is drawn on the track and thumb; don't wash the whole
@@ -146,39 +173,40 @@ fun MillenniumSwitch(
         interactionSource = interaction,
     ) {
         Row(
-            modifier = androidx.compose.ui.Modifier.padding(properties.contentPadding),
+            modifier = androidx.compose.ui.Modifier.padding(contentPadding ?: properties.contentPadding),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(properties.contentSpacing),
+            horizontalArrangement = Arrangement.spacedBy(contentSpacing ?: properties.contentSpacing),
         ) {
             Track(
                 Modifier
-                    .size(properties.trackSize)
+                    .size(trackSize ?: properties.trackSize)
                     .millenniumSurface(
-                        background = if (checked) selectedTrackBackground else trackBackground,
-                        shape = properties.trackShape,
-                        borderColor = trackBorderColor,
-                        borderWidth = properties.trackBorderWidth,
-                        innerGlowColor = trackGlowColor,
+                        background = if (checked) resolvedSelectedTrackBackground else resolvedTrackBackground,
+                        shape = trackShape ?: properties.trackShape,
+                        borderColor = resolvedTrackBorderColor,
+                        borderWidth = trackBorderWidth ?: properties.trackBorderWidth,
+                        innerGlowColor = resolvedTrackGlowColor,
                     ),
             ) {
                 Thumb(
-                    animationSpec = tween(properties.thumbAnimationMillis),
+                    animationSpec = tween(thumbAnimationMillis ?: properties.thumbAnimationMillis),
                     modifier = Modifier
-                        .padding(properties.thumbInset)
-                        .size(properties.thumbSize)
+                        .padding(thumbInset ?: properties.thumbInset)
+                        .size(thumbSize ?: properties.thumbSize)
                         .millenniumSurface(
-                            background = thumbBackground,
-                            shape = properties.thumbShape,
-                            shadowElevation = properties.thumbElevation,
-                            borderColor = properties.thumbBorderColor ?: colors.border,
-                            borderWidth = properties.thumbBorderWidth,
-                            innerGlowColor = properties.thumbGlowColor ?: colors.highlight.copy(alpha = 0.36f),
+                            background = resolvedThumbBackground,
+                            shape = thumbShape ?: properties.thumbShape,
+                            shadowElevation = thumbElevation ?: properties.thumbElevation,
+                            borderColor = thumbBorderColor ?: properties.thumbBorderColor ?: colors.border,
+                            borderWidth = thumbBorderWidth ?: properties.thumbBorderWidth,
+                            innerGlowColor = thumbGlowColor ?: properties.thumbGlowColor
+                                ?: colors.highlight.copy(alpha = 0.36f),
                         ),
                 )
             }
             CompositionLocalProvider(
-                LocalTextStyle provides LocalTextStyle.current.merge(properties.labelStyle)
-                    .copy(color = labelForeground),
+                LocalTextStyle provides LocalTextStyle.current.merge(labelStyle ?: properties.labelStyle)
+                    .copy(color = resolvedLabelForeground),
             ) { Text(label) }
         }
     }

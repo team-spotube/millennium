@@ -111,32 +111,55 @@ fun MillenniumDropdownMenu(
     onItemClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     side: AnchorSide = AnchorSide.Bottom,
+    panelBackground: Brush? = null,
+    panelShape: Shape? = null,
+    panelBorderColor: Color? = null,
+    panelBorderWidth: Dp? = null,
+    panelShadowElevation: Dp? = null,
+    panelGlowColor: Color? = null,
+    minimumWidth: Dp? = null,
+    sideOffset: Dp? = null,
+    panelPadding: PaddingValues? = null,
+    itemBackground: Brush? = null,
+    itemShape: Shape? = null,
+    itemForeground: Color? = null,
+    itemTextStyle: TextStyle? = null,
+    itemMinimumHeight: Dp? = null,
+    itemPadding: PaddingValues? = null,
+    itemSpacing: Dp? = null,
+    itemBorderColor: Color? = null,
+    itemBorderWidth: Dp? = null,
+    itemGlowColor: Color? = null,
+    itemWidth: Dp? = null,
+    stateAnimationMillis: Int? = null,
+    alpha: Float? = null,
+    theme: MillenniumDropdownMenuTheme = MillenniumTheme.dropdownMenuTheme,
     anchor: @Composable () -> Unit,
 ) {
     val colors = MillenniumTheme.colors
-    val panelProperties = MillenniumTheme.dropdownMenuTheme.states.default
-    val panelBackground = panelProperties.panelBackground ?: millenniumPanelBrush(colors)
-    val panelBorderColor = panelProperties.panelBorderColor ?: colors.border
-    val panelGlowColor = panelProperties.panelGlowColor ?: colors.highlight.copy(alpha = 0.5f)
+    val panelProperties = theme.states.default
+    val resolvedPanelBackground = panelBackground ?: panelProperties.panelBackground ?: millenniumPanelBrush(colors)
+    val resolvedPanelBorderColor = panelBorderColor ?: panelProperties.panelBorderColor ?: colors.border
+    val resolvedPanelGlowColor = panelGlowColor ?: panelProperties.panelGlowColor ?: colors.highlight.copy(alpha = 0.5f)
     UnstyledDropdownMenu(
         expanded = expanded,
         onExpandedChange = onExpandedChange,
         modifier = modifier,
         side = side,
-        sideOffset = panelProperties.sideOffset,
+        sideOffset = sideOffset ?: panelProperties.sideOffset,
         anchor = anchor,
         panel = {
             DropdownMenuPanel(
-                Modifier.widthIn(min = panelProperties.minimumWidth).millenniumSurface(
-                    background = panelBackground,
-                    shape = panelProperties.panelShape,
-                    borderColor = panelBorderColor,
-                    borderWidth = panelProperties.panelBorderWidth,
-                    shadowElevation = panelProperties.panelShadowElevation,
-                    innerGlowColor = panelGlowColor,
-                ).padding(panelProperties.panelPadding).alpha(panelProperties.alpha),
+                Modifier.widthIn(min = minimumWidth ?: panelProperties.minimumWidth).millenniumSurface(
+                    background = resolvedPanelBackground,
+                    shape = panelShape ?: panelProperties.panelShape,
+                    borderColor = resolvedPanelBorderColor,
+                    borderWidth = panelBorderWidth ?: panelProperties.panelBorderWidth,
+                    shadowElevation = panelShadowElevation ?: panelProperties.panelShadowElevation,
+                    innerGlowColor = resolvedPanelGlowColor,
+                ).padding(panelPadding ?: panelProperties.panelPadding).alpha(alpha ?: panelProperties.alpha),
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(panelProperties.itemSpacing)) {
+                Column(verticalArrangement = Arrangement.spacedBy(itemSpacing ?: panelProperties.itemSpacing)) {
                     items.forEach { item ->
                         val interaction = remember(item) { MutableInteractionSource() }
                         val pressed by interaction.collectIsPressedAsState()
@@ -148,41 +171,44 @@ fun MillenniumDropdownMenu(
                             hovered -> MillenniumControlState.Hovered
                             else -> MillenniumControlState.Default
                         }
-                        val properties = MillenniumTheme.dropdownMenuTheme.states.resolve(state)
-                        val itemBackground = properties.itemBackground ?: when (state) {
+                        val properties = theme.states.resolve(state)
+                        val resolvedItemBackground = itemBackground ?: properties.itemBackground ?: when (state) {
                             MillenniumControlState.Hovered, MillenniumControlState.Focused,
                             MillenniumControlState.Pressed -> millenniumBevelBrush(colors, accent = true)
                             MillenniumControlState.Selected -> millenniumBevelBrush(colors, accent = true)
                             else -> Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
                         }
-                        val itemForeground = properties.itemForeground ?: when (state) {
+                        val resolvedItemForeground = itemForeground ?: properties.itemForeground ?: when (state) {
                             MillenniumControlState.Disabled -> colors.muted
                             MillenniumControlState.Selected, MillenniumControlState.Hovered,
                             MillenniumControlState.Focused, MillenniumControlState.Pressed -> colors.onAccent
                             else -> colors.text
                         }
                         val animatedAlpha = animateFloatAsState(
-                            targetValue = properties.alpha,
-                            animationSpec = tween(properties.stateAnimationMillis),
+                            targetValue = alpha ?: properties.alpha,
+                            animationSpec = tween(stateAnimationMillis ?: properties.stateAnimationMillis),
                         ).value
                         UnstyledDropdownMenuItem(
                             onClick = { onItemClick(item) },
                             indication = LocalIndication.current,
                             interactionSource = interaction,
-                            modifier = Modifier.width(properties.itemWidth).heightIn(min = properties.itemMinimumHeight)
+                            modifier = Modifier.width(itemWidth ?: properties.itemWidth)
+                                .heightIn(min = itemMinimumHeight ?: properties.itemMinimumHeight)
                                 .alpha(animatedAlpha)
                                 .millenniumSurface(
-                                    itemBackground, properties.itemShape,
-                                    borderColor = properties.itemBorderColor ?: if (hovered || focused || pressed) colors.accentBottom else null,
-                                    borderWidth = properties.itemBorderWidth,
-                                    innerGlowColor = properties.itemGlowColor ?: if (hovered || focused || pressed) colors.highlight.copy(alpha = 0.35f) else null,
+                                    resolvedItemBackground, itemShape ?: properties.itemShape,
+                                    borderColor = itemBorderColor ?: properties.itemBorderColor
+                                        ?: if (hovered || focused || pressed) colors.accentBottom else null,
+                                    borderWidth = itemBorderWidth ?: properties.itemBorderWidth,
+                                    innerGlowColor = itemGlowColor ?: properties.itemGlowColor
+                                        ?: if (hovered || focused || pressed) colors.highlight.copy(alpha = 0.35f) else null,
                                 ),
                         ) {
                             Text(
                                 item,
-                                modifier = Modifier.fillMaxWidth().padding(properties.itemPadding),
-                                style = properties.itemTextStyle,
-                                color = itemForeground,
+                                modifier = Modifier.fillMaxWidth().padding(itemPadding ?: properties.itemPadding),
+                                style = itemTextStyle ?: properties.itemTextStyle,
+                                color = resolvedItemForeground,
                             )
                         }
                     }

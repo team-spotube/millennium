@@ -354,6 +354,53 @@ component (and the state/variant you want to change) to leave neighboring compon
 and the other appearance untouched. `Theme.kt` assembles the light/dark defaults;
 component properties and variants live next to their composables.
 
+#### Per-instance overrides
+
+Everything a theme controls is also overridable at a single call site. Every
+composable accepts a `theme` parameter that defaults to the active
+`MillenniumTheme.<component>Theme`, so one instance can use a fully custom theme
+without touching the app theme:
+
+```kotlin
+MillenniumButton(
+    onClick = { /* … */ },
+    theme = MillenniumTheme.buttonTheme.copy(
+        primary = MillenniumTheme.buttonTheme.primary.copy(
+            default = MillenniumTheme.buttonTheme.primary.default.copy(
+                shape = RoundedCornerShape(4.dp),
+            ),
+        ),
+    ),
+) { Text("Fine print") }
+```
+
+For the common knobs — backgrounds, colors, shapes, borders, elevation, padding,
+spacing, typography, sizes and animation durations — composables also take
+optional named parameters. Passing one overrides that value for the single call;
+leaving it `null` (the default) keeps the theme value, so existing call sites are
+unchanged:
+
+```kotlin
+MillenniumCard(
+    shape = RoundedCornerShape(4.dp),
+    background = gelBrush(Color(0xFFE570A0), Color(0xFFCC2255)),
+    contentSpacing = 8.dp,
+) { /* … */ }
+
+MillenniumSwitch(
+    checked = true,
+    onCheckedChange = {},
+    label = "Live",
+    selectedTrackBackground = gelBrush(Color(0xFF34D399), Color(0xFF059669)),
+    thumbElevation = 1.dp,
+)
+```
+
+`MillenniumAutocomplete` additionally takes its own `textFieldTheme`, and the
+Sidebar bricks (`MillenniumSidebarHeader`, `...Content`, `...Footer`,
+`...GroupLabel`, `...GroupContent`, `...Menu`, `...Item`, `...Badge`,
+`...Trigger`) each take a `theme` plus their section's parameters.
+
 Bottom sheets use Compose Unstyled's `rememberBottomSheetState` and
 `rememberModalBottomSheetState`; drawers use `rememberMillenniumDrawerState`.
 The shared gallery demonstrates every component, both themes, parent/child

@@ -81,28 +81,45 @@ fun MillenniumTooltipHost(modifier: Modifier = Modifier, content: @Composable ()
     TooltipHost(modifier, content)
 
 @Composable
-fun MillenniumTooltip(text: String, anchor: @Composable () -> Unit) {
-    val properties = MillenniumTheme.tooltipTheme.states.default
+fun MillenniumTooltip(
+    text: String,
+    background: Brush? = null,
+    shape: Shape? = null,
+    foreground: Color? = null,
+    textStyle: TextStyle? = null,
+    maxWidth: Dp? = null,
+    padding: PaddingValues? = null,
+    borderColor: Color? = null,
+    borderWidth: Dp? = null,
+    shadowElevation: Dp? = null,
+    innerGlowColor: Color? = null,
+    hoverDelayMillis: Long? = null,
+    sideOffset: Dp? = null,
+    alpha: Float? = null,
+    theme: MillenniumTooltipTheme = MillenniumTheme.tooltipTheme,
+    anchor: @Composable () -> Unit,
+) {
+    val properties = theme.states.default
     val colors = MillenniumTheme.colors
-    val background = properties.background ?: millenniumPanelBrush(colors)
-    val borderColor = properties.borderColor ?: colors.border
-    val glowColor = properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.5f)
-    val foreground = properties.foreground ?: colors.text
+    val resolvedBackground = background ?: properties.background ?: millenniumPanelBrush(colors)
+    val resolvedBorderColor = borderColor ?: properties.borderColor ?: colors.border
+    val resolvedGlowColor = innerGlowColor ?: properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.5f)
+    val resolvedForeground = foreground ?: properties.foreground ?: colors.text
     UnstyledTooltip(
-        hoverDelayMillis = properties.hoverDelayMillis,
-        sideOffset = properties.sideOffset,
+        hoverDelayMillis = hoverDelayMillis ?: properties.hoverDelayMillis,
+        sideOffset = sideOffset ?: properties.sideOffset,
         panel = {
             TooltipPanel(
-                Modifier.widthIn(max = properties.maxWidth).millenniumSurface(
-                    background = background,
-                    shape = properties.shape,
-                    borderColor = borderColor,
-                    borderWidth = properties.borderWidth,
-                    shadowElevation = properties.shadowElevation,
-                    innerGlowColor = glowColor,
-                ).padding(properties.padding).alpha(properties.alpha),
+                Modifier.widthIn(max = maxWidth ?: properties.maxWidth).millenniumSurface(
+                    background = resolvedBackground,
+                    shape = shape ?: properties.shape,
+                    borderColor = resolvedBorderColor,
+                    borderWidth = borderWidth ?: properties.borderWidth,
+                    shadowElevation = shadowElevation ?: properties.shadowElevation,
+                    innerGlowColor = resolvedGlowColor,
+                ).padding(padding ?: properties.padding).alpha(alpha ?: properties.alpha),
             ) {
-                Text(text, style = properties.textStyle, color = foreground)
+                Text(text, style = textStyle ?: properties.textStyle, color = resolvedForeground)
             }
         },
         anchor = anchor,

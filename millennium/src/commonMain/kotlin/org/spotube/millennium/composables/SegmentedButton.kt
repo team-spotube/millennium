@@ -117,6 +117,17 @@ fun RowScope.MillenniumSegmentedButton(
     shape: Shape,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    background: Brush? = null,
+    foreground: Color? = null,
+    textStyle: TextStyle? = null,
+    contentPadding: PaddingValues? = null,
+    minimumHeight: Dp? = null,
+    borderWidth: Dp? = null,
+    borderColor: Color? = null,
+    innerGlowColor: Color? = null,
+    alpha: Float? = null,
+    motion: MillenniumButtonMotion? = null,
+    theme: MillenniumSegmentedButtonTheme = MillenniumTheme.segmentedButtonTheme,
     content: @Composable () -> Unit,
 ) {
     val colors = MillenniumTheme.colors
@@ -132,21 +143,22 @@ fun RowScope.MillenniumSegmentedButton(
         selected -> MillenniumControlState.Selected
         else -> MillenniumControlState.Default
     }
-    val properties = MillenniumTheme.segmentedButtonTheme.states.resolve(state)
-    val background = properties.background ?: when {
+    val properties = theme.states.resolve(state)
+    val resolvedMotion = motion ?: properties.motion
+    val resolvedBackground = background ?: properties.background ?: when {
         selected -> gelBrush(colors.accentTop, colors.accentBottom)
         !enabled || pressed -> millenniumBevelBrush(colors, sunken = true)
         else -> millenniumBevelBrush(colors)
     }
-    val foreground = properties.foreground ?: if (selected) colors.onAccent else colors.text
-    val borderColor = properties.borderColor ?: when {
+    val resolvedForeground = foreground ?: properties.foreground ?: if (selected) colors.onAccent else colors.text
+    val resolvedBorderColor = borderColor ?: properties.borderColor ?: when {
         focused -> colors.accent
         selected -> colors.accentBottom
         else -> colors.border
     }
     val scale by animateFloatAsState(
-        targetValue = if (enabled && pressed) properties.motion.pressedScale else 1f,
-        animationSpec = tween(properties.motion.stateChangeMillis),
+        targetValue = if (enabled && pressed) resolvedMotion.pressedScale else 1f,
+        animationSpec = tween(resolvedMotion.stateChangeMillis),
     )
     UnstyledButton(
         onClick = onClick,
@@ -155,24 +167,24 @@ fun RowScope.MillenniumSegmentedButton(
         contentPadding = PaddingValues(0.dp),
         modifier = modifier
             .weight(1f)
-            .defaultMinSize(minHeight = properties.minimumHeight)
+            .defaultMinSize(minHeight = minimumHeight ?: properties.minimumHeight)
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .alpha(properties.alpha)
+            .alpha(alpha ?: properties.alpha)
             .millenniumSurface(
-                background = background,
+                background = resolvedBackground,
                 shape = shape,
-                borderColor = borderColor,
-                borderWidth = properties.borderWidth,
-                innerGlowColor = properties.innerGlowColor
+                borderColor = resolvedBorderColor,
+                borderWidth = borderWidth ?: properties.borderWidth,
+                innerGlowColor = innerGlowColor ?: properties.innerGlowColor
                     ?: colors.highlight.copy(alpha = if (selected) 0.5f else 0.3f),
             ),
     ) {
         Row(
-            Modifier.padding(properties.contentPadding),
+            Modifier.padding(contentPadding ?: properties.contentPadding),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
         ) {
-            MillenniumStyledContent(properties.textStyle, foreground, content)
+            MillenniumStyledContent(textStyle ?: properties.textStyle, resolvedForeground, content)
         }
     }
 }

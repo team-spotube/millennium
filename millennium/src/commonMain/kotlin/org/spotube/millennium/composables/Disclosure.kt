@@ -105,6 +105,22 @@ fun MillenniumDisclosure(
     onExpandedChange: (Boolean) -> Unit,
     title: String,
     modifier: Modifier = Modifier,
+    background: Brush? = null,
+    foreground: Color? = null,
+    shape: Shape? = null,
+    borderColor: Color? = null,
+    borderWidth: Dp? = null,
+    shadowElevation: Dp? = null,
+    innerGlowColor: Color? = null,
+    titleStyle: TextStyle? = null,
+    contentStyle: TextStyle? = null,
+    minimumHeaderHeight: Dp? = null,
+    headerPadding: PaddingValues? = null,
+    contentPadding: PaddingValues? = null,
+    contentSpacing: Dp? = null,
+    animationMillis: Int? = null,
+    alpha: Float? = null,
+    theme: MillenniumDisclosureTheme = MillenniumTheme.disclosureTheme,
     content: @Composable () -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -118,58 +134,60 @@ fun MillenniumDisclosure(
         expanded -> MillenniumControlState.Selected
         else -> MillenniumControlState.Default
     }
-    val properties = MillenniumTheme.disclosureTheme.states.resolve(state)
+    val properties = theme.states.resolve(state)
     val colors = MillenniumTheme.colors
-    val foreground = properties.foreground ?: colors.text
-    val borderColor = properties.borderColor ?: when (state) {
+    val resolvedForeground = foreground ?: properties.foreground ?: colors.text
+    val resolvedBorderColor = borderColor ?: properties.borderColor ?: when (state) {
         MillenniumControlState.Hovered, MillenniumControlState.Focused, MillenniumControlState.Selected -> colors.accent
         MillenniumControlState.Error -> colors.danger
         else -> colors.border
     }
+    val resolvedAnimationMillis = animationMillis ?: properties.animationMillis
     val arrowRotation by animateFloatAsState(
         targetValue = if (expanded) 180f else 0f,
-        animationSpec = tween(properties.animationMillis),
+        animationSpec = tween(resolvedAnimationMillis),
     )
     UnstyledDisclosure(
         expanded = expanded,
         onExpandedChange = onExpandedChange,
         modifier = modifier.millenniumSurface(
-            background = properties.background ?: millenniumBevelBrush(colors),
-            shape = properties.shape,
-            borderColor = borderColor,
-            borderWidth = properties.borderWidth,
-            shadowElevation = properties.shadowElevation,
-            innerGlowColor = properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.5f),
-        ).alpha(properties.alpha),
+            background = background ?: properties.background ?: millenniumBevelBrush(colors),
+            shape = shape ?: properties.shape,
+            borderColor = resolvedBorderColor,
+            borderWidth = borderWidth ?: properties.borderWidth,
+            shadowElevation = shadowElevation ?: properties.shadowElevation,
+            innerGlowColor = innerGlowColor ?: properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.5f),
+        ).alpha(alpha ?: properties.alpha),
     ) {
         Column {
             DisclosureButton(
-                modifier = Modifier.fillMaxWidth().heightIn(min = properties.minimumHeaderHeight)
-                    .padding(properties.headerPadding),
+                modifier = Modifier.fillMaxWidth()
+                    .heightIn(min = minimumHeaderHeight ?: properties.minimumHeaderHeight)
+                    .padding(headerPadding ?: properties.headerPadding),
                 contentPadding = PaddingValues(0.dp),
                 indication = LocalIndication.current,
                 interactionSource = interaction,
             ) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(title, modifier = Modifier.weight(1f), style = properties.titleStyle, color = foreground)
+                    Text(title, modifier = Modifier.weight(1f), style = titleStyle ?: properties.titleStyle, color = resolvedForeground)
                     MillenniumIcon(
                         MillenniumIcons.Chevron,
                         modifier = Modifier.rotate(arrowRotation),
-                        tint = foreground,
+                        tint = resolvedForeground,
                     )
                 }
             }
             DisclosedContent(
-                enter = expandVertically(animationSpec = tween(properties.animationMillis)) +
-                    fadeIn(animationSpec = tween(properties.animationMillis)),
-                exit = shrinkVertically(animationSpec = tween(properties.animationMillis)) +
-                    fadeOut(animationSpec = tween(properties.animationMillis)),
+                enter = expandVertically(animationSpec = tween(resolvedAnimationMillis)) +
+                    fadeIn(animationSpec = tween(resolvedAnimationMillis)),
+                exit = shrinkVertically(animationSpec = tween(resolvedAnimationMillis)) +
+                    fadeOut(animationSpec = tween(resolvedAnimationMillis)),
             ) {
                 Column(
-                    Modifier.padding(properties.contentPadding),
-                    verticalArrangement = Arrangement.spacedBy(properties.contentSpacing),
+                    Modifier.padding(contentPadding ?: properties.contentPadding),
+                    verticalArrangement = Arrangement.spacedBy(contentSpacing ?: properties.contentSpacing),
                 ) {
-                    MillenniumStyledContent(properties.contentStyle, foreground, content)
+                    MillenniumStyledContent(contentStyle ?: properties.contentStyle, resolvedForeground, content)
                 }
             }
         }

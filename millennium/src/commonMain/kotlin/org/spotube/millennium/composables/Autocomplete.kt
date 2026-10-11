@@ -190,6 +190,32 @@ fun <T> MillenniumAutocomplete(
     menuFooter: (@Composable ColumnScope.() -> Unit)? = null,
     emptyContent: (@Composable ColumnScope.() -> Unit)? = null,
     suggestionContent: (@Composable RowScope.(T, MillenniumAutocompleteItemVisuals) -> Unit)? = null,
+    panelBackground: Brush? = null,
+    panelShape: Shape? = null,
+    panelBorderColor: Color? = null,
+    panelBorderWidth: Dp? = null,
+    panelShadowElevation: Dp? = null,
+    panelGlowColor: Color? = null,
+    minimumMenuWidth: Dp? = null,
+    menuMaxHeight: Dp? = null,
+    menuPadding: PaddingValues? = null,
+    menuSectionPadding: PaddingValues? = null,
+    dividerColor: Color? = null,
+    itemBackground: Brush? = null,
+    highlightedItemBackground: Brush? = null,
+    itemForeground: Color? = null,
+    highlightedItemForeground: Color? = null,
+    itemShape: Shape? = null,
+    itemPadding: PaddingValues? = null,
+    itemMinimumHeight: Dp? = null,
+    itemSpacing: Dp? = null,
+    itemTextStyle: TextStyle? = null,
+    openAnimationMillis: Int? = null,
+    closeAnimationMillis: Int? = null,
+    itemStateAnimationMillis: Int? = null,
+    alpha: Float? = null,
+    theme: MillenniumAutocompleteTheme = MillenniumTheme.autocompleteTheme,
+    textFieldTheme: MillenniumTextFieldTheme = MillenniumTheme.textFieldTheme,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -209,7 +235,7 @@ fun <T> MillenniumAutocomplete(
         hovered -> MillenniumControlState.Hovered
         else -> MillenniumControlState.Default
     }
-    val field = MillenniumTheme.textFieldTheme.states.resolve(controlState)
+    val field = textFieldTheme.states.resolve(controlState)
     val colors = MillenniumTheme.colors
     val foreground = field.foreground
         ?: field.textStyle.color.takeUnless { it == Color.Unspecified }
@@ -223,8 +249,25 @@ fun <T> MillenniumAutocomplete(
         else -> colors.border
     }
     val animatedBorder by animateColorAsState(borderColor, tween(field.stateAnimationMillis))
-    val menu = MillenniumTheme.autocompleteTheme.states.resolve(
+    val menu = theme.states.resolve(
         if (menuOpen) MillenniumControlState.Selected else MillenniumControlState.Default,
+    )
+    val resolvedMenu = menu.copy(
+        panelBackground = panelBackground ?: menu.panelBackground,
+        panelShape = panelShape ?: menu.panelShape,
+        panelBorderColor = panelBorderColor ?: menu.panelBorderColor,
+        panelBorderWidth = panelBorderWidth ?: menu.panelBorderWidth,
+        panelShadowElevation = panelShadowElevation ?: menu.panelShadowElevation,
+        panelGlowColor = panelGlowColor ?: menu.panelGlowColor,
+        minimumMenuWidth = minimumMenuWidth ?: menu.minimumMenuWidth,
+        menuMaxHeight = menuMaxHeight ?: menu.menuMaxHeight,
+        menuPadding = menuPadding ?: menu.menuPadding,
+        menuSectionPadding = menuSectionPadding ?: menu.menuSectionPadding,
+        dividerColor = dividerColor ?: menu.dividerColor,
+        itemSpacing = itemSpacing ?: menu.itemSpacing,
+        openAnimationMillis = openAnimationMillis ?: menu.openAnimationMillis,
+        closeAnimationMillis = closeAnimationMillis ?: menu.closeAnimationMillis,
+        alpha = alpha ?: menu.alpha,
     )
     val menuVisibility = remember { MutableTransitionState(false) }
     LaunchedEffect(menuOpen) { menuVisibility.targetState = menuOpen }
@@ -349,8 +392,18 @@ fun <T> MillenniumAutocomplete(
                             header = menuHeader,
                             footer = menuFooter,
                             emptyContent = emptyContent,
-                            width = maxOf(anchorWidth, menu.minimumMenuWidth),
-                            properties = menu,
+                            width = maxOf(anchorWidth, resolvedMenu.minimumMenuWidth),
+                            properties = resolvedMenu,
+                            theme = theme,
+                            itemShape = itemShape,
+                            itemPadding = itemPadding,
+                            itemMinimumHeight = itemMinimumHeight,
+                            itemTextStyle = itemTextStyle,
+                            itemForeground = itemForeground,
+                            highlightedItemForeground = highlightedItemForeground,
+                            itemBackground = itemBackground,
+                            highlightedItemBackground = highlightedItemBackground,
+                            itemStateAnimationMillis = itemStateAnimationMillis,
                         )
                     }
                 }
@@ -395,6 +448,16 @@ private fun <T> AutocompleteAnimatedMenu(
     emptyContent: (@Composable ColumnScope.() -> Unit)?,
     width: Dp,
     properties: MillenniumAutocompleteThemeProperties,
+    theme: MillenniumAutocompleteTheme,
+    itemShape: Shape?,
+    itemPadding: PaddingValues?,
+    itemMinimumHeight: Dp?,
+    itemTextStyle: TextStyle?,
+    itemForeground: Color?,
+    highlightedItemForeground: Color?,
+    itemBackground: Brush?,
+    highlightedItemBackground: Brush?,
+    itemStateAnimationMillis: Int?,
 ) {
     AnimatedVisibility(
         visibleState = visibleState,
@@ -431,6 +494,16 @@ private fun <T> AutocompleteAnimatedMenu(
             emptyContent = emptyContent,
             width = width,
             properties = properties,
+            theme = theme,
+            itemShape = itemShape,
+            itemPadding = itemPadding,
+            itemMinimumHeight = itemMinimumHeight,
+            itemTextStyle = itemTextStyle,
+            itemForeground = itemForeground,
+            highlightedItemForeground = highlightedItemForeground,
+            itemBackground = itemBackground,
+            highlightedItemBackground = highlightedItemBackground,
+            itemStateAnimationMillis = itemStateAnimationMillis,
         )
     }
 }
@@ -450,6 +523,16 @@ private fun <T> AutocompleteMenu(
     emptyContent: (@Composable ColumnScope.() -> Unit)?,
     width: Dp,
     properties: MillenniumAutocompleteThemeProperties,
+    theme: MillenniumAutocompleteTheme,
+    itemShape: Shape?,
+    itemPadding: PaddingValues?,
+    itemMinimumHeight: Dp?,
+    itemTextStyle: TextStyle?,
+    itemForeground: Color?,
+    highlightedItemForeground: Color?,
+    itemBackground: Brush?,
+    highlightedItemBackground: Brush?,
+    itemStateAnimationMillis: Int?,
 ) {
     val colors = MillenniumTheme.colors
     val scroll = rememberScrollState()
@@ -484,7 +567,7 @@ private fun <T> AutocompleteMenu(
                     val hovered by interaction.collectIsHoveredAsState()
                     val pressed by interaction.collectIsPressedAsState()
                     LaunchedEffect(hovered) { if (hovered) onHighlight(index) }
-                    val itemTheme = MillenniumTheme.autocompleteTheme.states.resolve(
+                    val itemTheme = theme.states.resolve(
                         when {
                             pressed -> MillenniumControlState.Pressed
                             highlighted -> MillenniumControlState.Selected
@@ -492,11 +575,16 @@ private fun <T> AutocompleteMenu(
                             else -> MillenniumControlState.Default
                         },
                     )
-                    val foreground = itemTheme.itemForeground
-                        ?: if (highlighted) itemTheme.highlightedItemForeground ?: colors.onAccent else colors.text
+                    val resolvedItemAnimationMillis = itemStateAnimationMillis ?: itemTheme.itemStateAnimationMillis
+                    val foreground = itemForeground ?: itemTheme.itemForeground
+                        ?: if (highlighted) {
+                            highlightedItemForeground ?: itemTheme.highlightedItemForeground ?: colors.onAccent
+                        } else colors.text
                     val background = if (highlighted) {
-                        itemTheme.highlightedItemBackground ?: gelBrush(colors.accentTop, colors.accentBottom)
-                    } else itemTheme.itemBackground ?: Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
+                        highlightedItemBackground ?: itemTheme.highlightedItemBackground
+                            ?: gelBrush(colors.accentTop, colors.accentBottom)
+                    } else itemBackground ?: itemTheme.itemBackground
+                        ?: Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
                     val targetBorder = when {
                         highlighted -> colors.accentBottom
                         hovered -> colors.border
@@ -504,7 +592,7 @@ private fun <T> AutocompleteMenu(
                     }
                     val border by animateColorAsState(
                         targetBorder,
-                        tween(itemTheme.itemStateAnimationMillis),
+                        tween(resolvedItemAnimationMillis),
                     )
                     val elevation by animateDpAsState(
                         when {
@@ -512,18 +600,19 @@ private fun <T> AutocompleteMenu(
                             hovered -> 1.dp
                             else -> 0.dp
                         },
-                        tween(itemTheme.itemStateAnimationMillis),
+                        tween(resolvedItemAnimationMillis),
                     )
                     val rowScale by animateFloatAsState(
                         if (hovered && !highlighted) 1.008f else 1f,
-                        tween(itemTheme.itemStateAnimationMillis),
+                        tween(resolvedItemAnimationMillis),
                     )
                     UnstyledButton(
                         onClick = { onSelect(index) },
                         interactionSource = interaction,
                         indication = LocalIndication.current,
                         contentPadding = PaddingValues(0.dp),
-                        modifier = Modifier.fillMaxWidth().heightIn(min = itemTheme.itemMinimumHeight)
+                        modifier = Modifier.fillMaxWidth()
+                            .heightIn(min = itemMinimumHeight ?: itemTheme.itemMinimumHeight)
                             .semantics {
                                 selected = highlighted
                                 contentDescription = suggestionLabel(item)
@@ -531,16 +620,16 @@ private fun <T> AutocompleteMenu(
                             .graphicsLayer { scaleX = rowScale; scaleY = rowScale }
                             .millenniumSurface(
                                 background = background,
-                                shape = itemTheme.itemShape,
+                                shape = itemShape ?: itemTheme.itemShape,
                                 borderColor = border,
                                 borderWidth = if (highlighted || hovered) 1.dp else 0.dp,
                                 shadowElevation = elevation,
                                 innerGlowColor = if (highlighted || hovered) colors.highlight.copy(alpha = 0.25f) else null,
                             ),
                     ) {
-                        MillenniumStyledContent(itemTheme.itemTextStyle, foreground) {
+                        MillenniumStyledContent(itemTextStyle ?: itemTheme.itemTextStyle, foreground) {
                             Row(
-                                Modifier.fillMaxWidth().padding(itemTheme.itemPadding),
+                                Modifier.fillMaxWidth().padding(itemPadding ?: itemTheme.itemPadding),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                             ) {

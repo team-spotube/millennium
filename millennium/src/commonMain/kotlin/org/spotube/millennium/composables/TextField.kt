@@ -108,6 +108,28 @@ fun MillenniumTextField(
     placeholder: String = "",
     enabled: Boolean = true,
     error: String? = null,
+    background: Brush? = null,
+    shape: Shape? = null,
+    textStyle: TextStyle? = null,
+    labelStyle: TextStyle? = null,
+    placeholderStyle: TextStyle? = null,
+    errorStyle: TextStyle? = null,
+    foreground: Color? = null,
+    placeholderColor: Color? = null,
+    cursorColor: Color? = null,
+    selectionColor: Color? = null,
+    errorColor: Color? = null,
+    borderColor: Color? = null,
+    borderWidth: Dp? = null,
+    minimumHeight: Dp? = null,
+    contentPadding: PaddingValues? = null,
+    contentSpacing: Dp? = null,
+    stateAnimationMillis: Int? = null,
+    insetShadeColor: Color? = null,
+    innerGlowColor: Color? = null,
+    bottomRimColor: Color? = null,
+    alpha: Float? = null,
+    theme: MillenniumTextFieldTheme = MillenniumTheme.textFieldTheme,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsKeyboardFocusedAsState()
@@ -121,67 +143,75 @@ fun MillenniumTextField(
         hovered -> MillenniumControlState.Hovered
         else -> MillenniumControlState.Default
     }
-    val properties = MillenniumTheme.textFieldTheme.states.resolve(controlState)
+    val properties = theme.states.resolve(controlState)
     val colors = MillenniumTheme.colors
-    val foreground = properties.foreground
-        ?: properties.textStyle.color.takeUnless { it == Color.Unspecified }
+    val resolvedTextStyle = textStyle ?: properties.textStyle
+    val resolvedForeground = foreground
+        ?: properties.foreground
+        ?: resolvedTextStyle.color.takeUnless { it == Color.Unspecified }
         ?: if (controlState == MillenniumControlState.Disabled) colors.muted else colors.text
-    val placeholderColor = properties.placeholderColor
-        ?: properties.placeholderStyle.color.takeUnless { it == Color.Unspecified }
+    val resolvedPlaceholderStyle = placeholderStyle ?: properties.placeholderStyle
+    val resolvedPlaceholderColor = placeholderColor
+        ?: properties.placeholderColor
+        ?: resolvedPlaceholderStyle.color.takeUnless { it == Color.Unspecified }
         ?: colors.muted
-    val cursorColor = properties.cursorColor ?: colors.accent
-    val selectionColor = properties.selectionColor ?: colors.accent.copy(alpha = 0.25f)
-    val errorColor = properties.errorColor ?: colors.danger
-    val borderColor = properties.borderColor ?: when (controlState) {
+    val resolvedCursorColor = cursorColor ?: properties.cursorColor ?: colors.accent
+    val resolvedSelectionColor = selectionColor ?: properties.selectionColor ?: colors.accent.copy(alpha = 0.25f)
+    val resolvedErrorColor = errorColor ?: properties.errorColor ?: colors.danger
+    val resolvedBorderColor = borderColor ?: properties.borderColor ?: when (controlState) {
         MillenniumControlState.Focused, MillenniumControlState.Hovered, MillenniumControlState.Pressed -> colors.accent
         MillenniumControlState.Error -> colors.danger
         else -> colors.border
     }
     val animatedBorder by animateColorAsState(
-        targetValue = borderColor,
-        animationSpec = tween(properties.stateAnimationMillis),
+        targetValue = resolvedBorderColor,
+        animationSpec = tween(stateAnimationMillis ?: properties.stateAnimationMillis),
     )
     UnstyledTextField(
         state = state,
-        modifier = modifier.alpha(properties.alpha),
+        modifier = modifier.alpha(alpha ?: properties.alpha),
         enabled = enabled,
         accessibilityLabel = label,
         interactionSource = interaction,
         lineLimits = TextFieldLineLimits.SingleLine,
-        textStyle = properties.textStyle.copy(color = foreground),
-        cursorBrush = SolidColor(cursorColor),
-        selectionColors = TextSelectionColors(cursorColor, selectionColor),
+        textStyle = resolvedTextStyle.copy(color = resolvedForeground),
+        cursorBrush = SolidColor(resolvedCursorColor),
+        selectionColors = TextSelectionColors(resolvedCursorColor, resolvedSelectionColor),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(properties.contentSpacing)) {
-            Text(label, style = properties.labelStyle.copy(color = foreground))
+        Column(verticalArrangement = Arrangement.spacedBy(contentSpacing ?: properties.contentSpacing)) {
+            Text(label, style = (labelStyle ?: properties.labelStyle).copy(color = resolvedForeground))
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .heightIn(min = properties.minimumHeight)
+                    .heightIn(min = minimumHeight ?: properties.minimumHeight)
                     .millenniumSurface(
-                        background = properties.background ?: millenniumBevelBrush(colors, sunken = true),
-                        shape = properties.shape,
+                        background = background ?: properties.background ?: millenniumBevelBrush(colors, sunken = true),
+                        shape = shape ?: properties.shape,
                         borderColor = animatedBorder,
-                        borderWidth = properties.borderWidth,
-                        insetShadeColor = properties.insetShadeColor ?: colors.text.copy(alpha = 0.09f),
-                        innerGlowColor = properties.innerGlowColor ?: colors.border.copy(alpha = 0.4f),
-                        bottomRimColor = properties.bottomRimColor ?: colors.highlight.copy(alpha = 0.8f),
+                        borderWidth = borderWidth ?: properties.borderWidth,
+                        insetShadeColor = insetShadeColor ?: properties.insetShadeColor ?: colors.text.copy(alpha = 0.09f),
+                        innerGlowColor = innerGlowColor ?: properties.innerGlowColor ?: colors.border.copy(alpha = 0.4f),
+                        bottomRimColor = bottomRimColor ?: properties.bottomRimColor ?: colors.highlight.copy(alpha = 0.8f),
                     ),
                 contentAlignment = Alignment.CenterStart,
             ) {
                 TextInput(
-                    Modifier.fillMaxWidth().padding(properties.contentPadding),
+                    Modifier.fillMaxWidth().padding(contentPadding ?: properties.contentPadding),
                     placeholder = {
                         Text(
                             placeholder,
-                            style = properties.placeholderStyle.copy(color = placeholderColor),
-                            color = placeholderColor,
+                            style = resolvedPlaceholderStyle.copy(color = resolvedPlaceholderColor),
+                            color = resolvedPlaceholderColor,
                         )
                     },
                 )
             }
             if (error != null) {
-                Text(error, style = properties.errorStyle.copy(color = errorColor), color = errorColor)
+                Text(
+                    error,
+                    style = (errorStyle ?: properties.errorStyle).copy(color = resolvedErrorColor),
+                    color = resolvedErrorColor,
+                )
             }
         }
     }

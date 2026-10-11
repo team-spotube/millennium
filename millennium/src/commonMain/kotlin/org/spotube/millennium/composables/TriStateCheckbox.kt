@@ -99,6 +99,25 @@ fun MillenniumTriStateCheckbox(
     label: String,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    faceBackground: Brush? = null,
+    selectedFaceBackground: Brush? = null,
+    selectedFaceForeground: Color? = null,
+    faceShape: Shape? = null,
+    faceSize: DpSize? = null,
+    markSize: Dp? = null,
+    dashSize: DpSize? = null,
+    faceBorderColor: Color? = null,
+    faceBorderWidth: Dp? = null,
+    faceGlowColor: Color? = null,
+    faceElevation: Dp? = null,
+    faceAlpha: Float? = null,
+    stateChangeMillis: Int? = null,
+    labelForeground: Color? = null,
+    labelStyle: TextStyle? = null,
+    minimumTouchHeight: Dp? = null,
+    contentPadding: PaddingValues? = null,
+    contentSpacing: Dp? = null,
+    theme: MillenniumTriStateCheckboxTheme = MillenniumTheme.triStateCheckboxTheme,
 ) {
     val source = remember { MutableInteractionSource() }
     val pressed by source.collectIsPressedAsState()
@@ -112,28 +131,43 @@ fun MillenniumTriStateCheckbox(
         value != ToggleableState.Off -> MillenniumControlState.Selected
         else -> MillenniumControlState.Default
     }
-    val properties = MillenniumTheme.triStateCheckboxTheme.states.resolve(state)
-    val labelColor = properties.labelForeground ?: when (state) {
+    val properties = theme.states.resolve(state)
+    val faceProperties = properties.copy(
+        faceBackground = faceBackground ?: properties.faceBackground,
+        selectedFaceBackground = selectedFaceBackground ?: properties.selectedFaceBackground,
+        selectedFaceForeground = selectedFaceForeground ?: properties.selectedFaceForeground,
+        faceShape = faceShape ?: properties.faceShape,
+        faceSize = faceSize ?: properties.faceSize,
+        markSize = markSize ?: properties.markSize,
+        dashSize = dashSize ?: properties.dashSize,
+        faceBorderColor = faceBorderColor ?: properties.faceBorderColor,
+        faceBorderWidth = faceBorderWidth ?: properties.faceBorderWidth,
+        faceGlowColor = faceGlowColor ?: properties.faceGlowColor,
+        faceElevation = faceElevation ?: properties.faceElevation,
+        faceAlpha = faceAlpha ?: properties.faceAlpha,
+        stateChangeMillis = stateChangeMillis ?: properties.stateChangeMillis,
+    )
+    val labelColor = labelForeground ?: properties.labelForeground ?: when (state) {
         MillenniumControlState.Disabled -> MillenniumTheme.colors.muted
         else -> MillenniumTheme.colors.text
     }
     UnstyledTriStateCheckbox(
         value = value,
         onClick = onClick,
-        modifier = modifier.heightIn(min = properties.minimumTouchHeight),
+        modifier = modifier.heightIn(min = minimumTouchHeight ?: properties.minimumTouchHeight),
         enabled = enabled,
         accessibilityLabel = label,
         indication = null,
         interactionSource = source,
     ) {
         Row(
-            modifier = Modifier.padding(properties.contentPadding),
+            modifier = Modifier.padding(contentPadding ?: properties.contentPadding),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(properties.contentSpacing),
+            horizontalArrangement = Arrangement.spacedBy(contentSpacing ?: properties.contentSpacing),
         ) {
-            MillenniumCheckFace(value, properties, state)
+            MillenniumCheckFace(value, faceProperties, state)
             CompositionLocalProvider(
-                LocalTextStyle provides LocalTextStyle.current.merge(properties.labelStyle)
+                LocalTextStyle provides LocalTextStyle.current.merge(labelStyle ?: properties.labelStyle)
                     .copy(color = labelColor),
             ) { Text(label) }
         }

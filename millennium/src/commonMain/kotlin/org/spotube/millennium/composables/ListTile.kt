@@ -175,6 +175,27 @@ fun MillenniumListTile(
     enabled: Boolean = true,
     onClick: (() -> Unit)? = null,
     onRightClick: ((Offset) -> Unit)? = null,
+    titleStyle: TextStyle? = null,
+    subtitleStyle: TextStyle? = null,
+    titleForeground: Color? = null,
+    subtitleForeground: Color? = null,
+    selectedTitleForeground: Color? = null,
+    selectedSubtitleForeground: Color? = null,
+    background: Brush? = null,
+    selectedBackground: Brush? = null,
+    selectedGelStrength: Float? = null,
+    shape: Shape? = null,
+    contentPadding: PaddingValues? = null,
+    minimumHeight: Dp? = null,
+    leadingSpacing: Dp? = null,
+    trailingSpacing: Dp? = null,
+    titleSpacing: Dp? = null,
+    borderWidth: Dp? = null,
+    borderColor: Color? = null,
+    innerGlowColor: Color? = null,
+    alpha: Float? = null,
+    stateAnimationMillis: Int? = null,
+    theme: MillenniumListTileTheme = MillenniumTheme.listTileTheme,
 ) {
     val colors = MillenniumTheme.colors
     val interaction = remember { MutableInteractionSource() }
@@ -191,37 +212,58 @@ fun MillenniumListTile(
         hovered = hovered,
         selected = selected,
     )
-    val properties = MillenniumTheme.listTileTheme.states.resolve(state)
-    val background = properties.background
-        ?: properties.selectedBackground.takeIf { selected }
-        ?: listTileBackground(colors, selected, state, properties.selectedGelStrength)
-    val titleForeground = if (selected) {
-        properties.selectedTitleForeground ?: properties.titleForeground ?: colors.text
+    val properties = theme.states.resolve(state)
+    val resolvedProperties = properties.copy(
+        titleStyle = titleStyle ?: properties.titleStyle,
+        subtitleStyle = subtitleStyle ?: properties.subtitleStyle,
+        shape = shape ?: properties.shape,
+        contentPadding = contentPadding ?: properties.contentPadding,
+        minimumHeight = minimumHeight ?: properties.minimumHeight,
+        leadingSpacing = leadingSpacing ?: properties.leadingSpacing,
+        trailingSpacing = trailingSpacing ?: properties.trailingSpacing,
+        titleSpacing = titleSpacing ?: properties.titleSpacing,
+        borderWidth = borderWidth ?: properties.borderWidth,
+    )
+    val resolvedBackground = background
+        ?: (if (selected) selectedBackground ?: properties.selectedBackground else null)
+        ?: listTileBackground(
+            colors,
+            selected,
+            state,
+            selectedGelStrength ?: properties.selectedGelStrength,
+        )
+    val resolvedTitleForeground = if (selected) {
+        selectedTitleForeground ?: properties.selectedTitleForeground
+            ?: titleForeground ?: properties.titleForeground ?: colors.text
     } else {
-        properties.titleForeground ?: if (enabled) colors.text else colors.muted
+        titleForeground ?: properties.titleForeground ?: if (enabled) colors.text else colors.muted
     }
-    val subtitleForeground = if (selected) {
-        properties.selectedSubtitleForeground ?: colors.text.copy(alpha = 0.82f)
+    val resolvedSubtitleForeground = if (selected) {
+        selectedSubtitleForeground ?: properties.selectedSubtitleForeground
+            ?: subtitleForeground ?: properties.subtitleForeground ?: colors.text.copy(alpha = 0.82f)
     } else {
-        properties.subtitleForeground ?: colors.muted
+        subtitleForeground ?: properties.subtitleForeground ?: colors.muted
     }
-    val borderColor = properties.borderColor ?: when {
+    val resolvedBorderColor = borderColor ?: properties.borderColor ?: when {
         state == MillenniumControlState.Error -> colors.danger
         state == MillenniumControlState.Focused -> colors.accent
         selected -> colors.accent.copy(alpha = 0.45f)
         state == MillenniumControlState.Hovered || state == MillenniumControlState.Pressed -> colors.border
         else -> null
     }
-    val animatedAlpha by animateFloatAsState(properties.alpha, tween(properties.stateAnimationMillis))
+    val animatedAlpha by animateFloatAsState(
+        alpha ?: properties.alpha,
+        tween(stateAnimationMillis ?: properties.stateAnimationMillis),
+    )
     val surfaceModifier = modifier
         .fillMaxWidth()
         .alpha(animatedAlpha)
         .millenniumSurface(
-            background = background,
-            shape = properties.shape,
-            borderColor = borderColor,
-            borderWidth = properties.borderWidth,
-            innerGlowColor = properties.innerGlowColor
+            background = resolvedBackground,
+            shape = resolvedProperties.shape,
+            borderColor = resolvedBorderColor,
+            borderWidth = resolvedProperties.borderWidth,
+            innerGlowColor = innerGlowColor ?: resolvedProperties.innerGlowColor
                 ?: if (selected || state == MillenniumControlState.Hovered || state == MillenniumControlState.Focused) {
                     colors.highlight.copy(alpha = 0.25f)
                 } else {
@@ -231,9 +273,9 @@ fun MillenniumListTile(
         .then(secondaryClickModifier(onRightClick))
     val row: @Composable () -> Unit = {
         ListTileRow(
-            properties = properties,
-            titleForeground = titleForeground,
-            subtitleForeground = subtitleForeground,
+            properties = resolvedProperties,
+            titleForeground = resolvedTitleForeground,
+            subtitleForeground = resolvedSubtitleForeground,
             leading = leading,
             title = title,
             subtitle = subtitle,

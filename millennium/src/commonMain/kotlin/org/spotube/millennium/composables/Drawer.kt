@@ -104,38 +104,56 @@ fun MillenniumDrawer(
     state: UnstyledDrawerState<MillenniumDrawerValue>,
     placement: DrawerPlacement = DrawerPlacement.Start,
     contentPadding: PaddingValues? = null,
+    background: Brush? = null,
+    foreground: Color? = null,
+    shape: Shape? = null,
+    maximumWidth: Dp? = null,
+    contentSpacing: Dp? = null,
+    borderColor: Color? = null,
+    borderWidth: Dp? = null,
+    shadowElevation: Dp? = null,
+    innerGlowColor: Color? = null,
+    scrimColor: Color? = null,
+    alpha: Float? = null,
+    theme: MillenniumDrawerTheme = MillenniumTheme.drawerTheme,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = MillenniumTheme.colors
-    val properties = MillenniumTheme.drawerTheme.states.resolve(MillenniumControlState.Default)
-    val background = properties.background ?: millenniumPanelBrush(colors)
-    val foreground = properties.foreground ?: colors.text
-    val borderColor = properties.borderColor ?: colors.border
-    val glowColor = properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f)
-    val scrimColor = properties.scrimColor ?: colors.scrim
+    val properties = theme.states.resolve(MillenniumControlState.Default)
+    val resolvedBackground = background ?: properties.background ?: millenniumPanelBrush(colors)
+    val resolvedForeground = foreground ?: properties.foreground ?: colors.text
+    val resolvedBorderColor = borderColor ?: properties.borderColor ?: colors.border
+    val resolvedGlowColor = innerGlowColor ?: properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f)
+    val resolvedScrimColor = scrimColor ?: properties.scrimColor ?: colors.scrim
     UnstyledDrawer(
         state = state,
         placement = placement,
         presentation = com.composeunstyled.DrawerPresentation.Modal,
-        overlay = { Overlay { androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(scrimColor)) } },
+        overlay = {
+            Overlay {
+                androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(resolvedScrimColor))
+            }
+        },
     ) {
         Viewport(Modifier.fillMaxSize()) {
             Panel(
-                Modifier.widthIn(max = properties.maximumWidth).fillMaxWidth().fillMaxHeight()
+                Modifier.widthIn(max = maximumWidth ?: properties.maximumWidth).fillMaxWidth().fillMaxHeight()
                     .millenniumSurface(
-                        background = background,
-                        shape = properties.shape,
-                        borderColor = borderColor,
-                        borderWidth = properties.borderWidth,
-                        shadowElevation = properties.shadowElevation,
-                        innerGlowColor = glowColor,
-                    ).alpha(properties.alpha),
+                        background = resolvedBackground,
+                        shape = shape ?: properties.shape,
+                        borderColor = resolvedBorderColor,
+                        borderWidth = borderWidth ?: properties.borderWidth,
+                        shadowElevation = shadowElevation ?: properties.shadowElevation,
+                        innerGlowColor = resolvedGlowColor,
+                    ).alpha(alpha ?: properties.alpha),
             ) {
                 Column(
                     Modifier.padding(contentPadding ?: properties.contentPadding).systemBarsPadding(),
-                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(properties.contentSpacing),
+                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(
+                        contentSpacing ?: properties.contentSpacing,
+                    ),
                 ) {
-                    MillenniumStyledContent(TextStyle(color = foreground), foreground) {
+                    MillenniumStyledContent(TextStyle(color = resolvedForeground), resolvedForeground) {
                         content()
                     }
                 }

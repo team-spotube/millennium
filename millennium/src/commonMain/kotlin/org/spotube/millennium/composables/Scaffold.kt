@@ -157,10 +157,27 @@ fun MillenniumScaffold(
     windowInsets: WindowInsets = MillenniumScaffoldDefaults.windowInsets,
     containerColor: Color = Color.Unspecified,
     state: MillenniumScaffoldState = rememberMillenniumScaffoldState(),
+    titleStyle: TextStyle? = null,
+    titleForeground: Color? = null,
+    topBarBackground: Brush? = null,
+    topBarPadding: PaddingValues? = null,
+    topBarMinimumHeight: Dp? = null,
+    leadingSpacing: Dp? = null,
+    actionsSpacing: Dp? = null,
+    theme: MillenniumScaffoldTheme = MillenniumTheme.scaffoldTheme,
     content: @Composable (PaddingValues) -> Unit,
 ) {
     val colors = MillenniumTheme.colors
-    val properties = MillenniumTheme.scaffoldTheme.properties
+    val base = theme.properties
+    val properties = base.copy(
+        titleStyle = titleStyle ?: base.titleStyle,
+        titleForeground = titleForeground ?: base.titleForeground,
+        topBarBackground = topBarBackground ?: base.topBarBackground,
+        topBarPadding = topBarPadding ?: base.topBarPadding,
+        topBarMinimumHeight = topBarMinimumHeight ?: base.topBarMinimumHeight,
+        leadingSpacing = leadingSpacing ?: base.leadingSpacing,
+        actionsSpacing = actionsSpacing ?: base.actionsSpacing,
+    )
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
     val insets = windowInsets.asPaddingValues()

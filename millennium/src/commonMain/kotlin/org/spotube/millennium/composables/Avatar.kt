@@ -77,31 +77,47 @@ fun MillenniumAvatar(
     modifier: Modifier = Modifier,
     painter: Painter? = null,
     size: Dp? = null,
+    shape: Shape? = null,
+    background: Brush? = null,
+    foreground: Color? = null,
+    borderColor: Color? = null,
+    borderWidth: Dp? = null,
+    shadowElevation: Dp? = null,
+    shadowColor: Color? = null,
+    innerGlowColor: Color? = null,
+    textStyle: TextStyle? = null,
+    sizeAnimationMillis: Int? = null,
+    alpha: Float? = null,
+    theme: MillenniumAvatarTheme = MillenniumTheme.avatarTheme,
 ) {
     val colors = MillenniumTheme.colors
-    val properties = MillenniumTheme.avatarTheme.states.resolve(MillenniumControlState.Default)
+    val properties = theme.states.resolve(MillenniumControlState.Default)
     val targetSize = size ?: properties.size
-    val animatedSize = animateDpAsState(targetSize, tween(properties.sizeAnimationMillis)).value
+    val animatedSize = animateDpAsState(
+        targetSize,
+        tween(sizeAnimationMillis ?: properties.sizeAnimationMillis),
+    ).value
+    val resolvedTextStyle = textStyle ?: properties.textStyle
     UnstyledAvatar(
         painter = painter,
         contentDescription = contentDescription,
         modifier = modifier.size(animatedSize).millenniumSurface(
-            background = properties.background ?: gelBrush(colors.accentTop, colors.accentBottom),
-            shape = properties.shape,
-            borderColor = properties.borderColor ?: colors.accentBottom,
-            borderWidth = properties.borderWidth,
-            shadowElevation = properties.shadowElevation,
-            shadowColor = properties.shadowColor ?: Color.Black.copy(alpha = 0.16f),
-                innerGlowColor = properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f),
+            background = background ?: properties.background ?: gelBrush(colors.accentTop, colors.accentBottom),
+            shape = shape ?: properties.shape,
+            borderColor = borderColor ?: properties.borderColor ?: colors.accentBottom,
+            borderWidth = borderWidth ?: properties.borderWidth,
+            shadowElevation = shadowElevation ?: properties.shadowElevation,
+            shadowColor = shadowColor ?: properties.shadowColor ?: Color.Black.copy(alpha = 0.16f),
+                innerGlowColor = innerGlowColor ?: properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f),
                 bottomRimColor = colors.highlight.copy(alpha = 0.4f),
-        ).alpha(properties.alpha),
+        ).alpha(alpha ?: properties.alpha),
         underlay = {
-            val fontSize = properties.textStyle.fontSize.takeUnless { it == androidx.compose.ui.unit.TextUnit.Unspecified }
+            val fontSize = resolvedTextStyle.fontSize.takeUnless { it == androidx.compose.ui.unit.TextUnit.Unspecified }
                 ?: (animatedSize.value * 0.3f).sp
             Text(
                 initials,
-                style = properties.textStyle,
-                color = properties.foreground ?: colors.onAccent,
+                style = resolvedTextStyle,
+                color = foreground ?: properties.foreground ?: colors.onAccent,
                 fontSize = fontSize,
             )
         },

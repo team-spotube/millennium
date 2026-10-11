@@ -138,13 +138,30 @@ class MillenniumSnackbarHostState {
 fun MillenniumSnackbarHost(
     hostState: MillenniumSnackbarHostState,
     modifier: Modifier = Modifier,
+    background: Brush? = null,
+    foreground: Color? = null,
+    actionForeground: Color? = null,
+    shape: Shape? = null,
+    margin: PaddingValues? = null,
+    contentPadding: PaddingValues? = null,
+    borderColor: Color? = null,
+    borderWidth: Dp? = null,
+    shadowElevation: Dp? = null,
+    innerGlowColor: Color? = null,
+    maxWidth: Dp? = null,
+    actionSpacing: Dp? = null,
+    animationMillis: Int? = null,
+    theme: MillenniumSnackbarTheme = MillenniumTheme.snackbarTheme,
 ) {
     val data = hostState.currentSnackbarData
     var lastData by remember { mutableStateOf<MillenniumSnackbarData?>(null) }
     if (data != null) lastData = data
     val visible = data != null
-    val properties = MillenniumTheme.snackbarTheme.properties
-    val alpha by animateFloatAsState(if (visible) 1f else 0f, tween(properties.animationMillis))
+    val properties = theme.properties
+    val alpha by animateFloatAsState(
+        if (visible) 1f else 0f,
+        tween(animationMillis ?: properties.animationMillis),
+    )
 
     val showing = lastData
     if (showing != null && (visible || alpha > 0.01f)) {
@@ -158,30 +175,33 @@ fun MillenniumSnackbarHost(
         Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             Row(
                 modifier = Modifier
-                    .widthIn(max = properties.maxWidth)
-                    .padding(properties.margin)
+                    .widthIn(max = maxWidth ?: properties.maxWidth)
+                    .padding(margin ?: properties.margin)
                     .alpha(alpha)
                     .millenniumSurface(
-                        background = properties.background ?: millenniumPanelBrush(colors),
-                        shape = properties.shape,
-                        borderColor = properties.borderColor ?: colors.border,
-                        borderWidth = properties.borderWidth,
-                        shadowElevation = properties.shadowElevation,
-                        innerGlowColor = properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.4f),
+                        background = background ?: properties.background ?: millenniumPanelBrush(colors),
+                        shape = shape ?: properties.shape,
+                        borderColor = borderColor ?: properties.borderColor ?: colors.border,
+                        borderWidth = borderWidth ?: properties.borderWidth,
+                        shadowElevation = shadowElevation ?: properties.shadowElevation,
+                        innerGlowColor = innerGlowColor ?: properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.4f),
                     )
-                    .padding(properties.contentPadding),
+                    .padding(contentPadding ?: properties.contentPadding),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(properties.actionSpacing),
+                horizontalArrangement = Arrangement.spacedBy(actionSpacing ?: properties.actionSpacing),
             ) {
                 Box(Modifier.weight(1f)) {
-                    MillenniumText(showing.message, color = properties.foreground ?: colors.text)
+                    MillenniumText(showing.message, color = foreground ?: properties.foreground ?: colors.text)
                 }
                 if (showing.actionLabel != null) {
                     MillenniumButton(
                         onClick = { showing.performAction() },
                         style = MillenniumButtonStyle.Quiet,
                     ) {
-                        MillenniumText(showing.actionLabel, color = properties.actionForeground ?: colors.accent)
+                        MillenniumText(
+                            showing.actionLabel,
+                            color = actionForeground ?: properties.actionForeground ?: colors.accent,
+                        )
                     }
                 }
             }

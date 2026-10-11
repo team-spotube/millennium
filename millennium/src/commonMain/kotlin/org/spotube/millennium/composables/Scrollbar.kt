@@ -83,6 +83,15 @@ fun MillenniumScrollbar(
     scrollState: ScrollState,
     modifier: Modifier = Modifier,
     horizontal: Boolean = false,
+    trackBackground: Brush? = null,
+    thumbBackground: Brush? = null,
+    shape: Shape? = null,
+    thickness: Dp? = null,
+    borderColor: Color? = null,
+    borderWidth: Dp? = null,
+    alpha: Float? = null,
+    stateAnimationMillis: Int? = null,
+    theme: MillenniumScrollbarTheme = MillenniumTheme.scrollbarTheme,
 ) {
     val state = rememberScrollbarState(scrollState)
     val interaction = remember { MutableInteractionSource() }
@@ -93,35 +102,36 @@ fun MillenniumScrollbar(
         hovered -> MillenniumControlState.Hovered
         else -> MillenniumControlState.Default
     }
-    val properties = MillenniumTheme.scrollbarTheme.states.resolve(visualState)
+    val properties = theme.states.resolve(visualState)
     val colors = MillenniumTheme.colors
-    val trackBackground = properties.trackBackground ?: millenniumBevelBrush(colors, sunken = true)
-    val thumbBackground = properties.thumbBackground ?: when (visualState) {
+    val resolvedTrackBackground = trackBackground ?: properties.trackBackground
+        ?: millenniumBevelBrush(colors, sunken = true)
+    val resolvedThumbBackground = thumbBackground ?: properties.thumbBackground ?: when (visualState) {
         MillenniumControlState.Hovered, MillenniumControlState.Focused -> Brush.verticalGradient(listOf(colors.accent, colors.accentBottom))
         MillenniumControlState.Pressed, MillenniumControlState.Selected -> millenniumBevelBrush(colors, accent = true)
         MillenniumControlState.Error -> Brush.verticalGradient(listOf(colors.danger, colors.danger))
         else -> Brush.verticalGradient(listOf(colors.border, androidx.compose.ui.graphics.lerp(colors.border, colors.muted, 0.45f)))
     }
-    val borderColor = properties.borderColor ?: colors.border
+    val resolvedBorderColor = borderColor ?: properties.borderColor ?: colors.border
     val animatedAlpha = animateFloatAsState(
-        targetValue = properties.alpha,
-        animationSpec = tween(properties.stateAnimationMillis),
+        targetValue = alpha ?: properties.alpha,
+        animationSpec = tween(stateAnimationMillis ?: properties.stateAnimationMillis),
     ).value
     if (horizontal) {
         UnstyledHorizontalScrollbar(
             state,
-            modifier.height(properties.thickness).millenniumSurface(
-                background = trackBackground,
-                shape = properties.shape,
-                borderColor = borderColor,
-                borderWidth = properties.borderWidth,
+            modifier.height(thickness ?: properties.thickness).millenniumSurface(
+                background = resolvedTrackBackground,
+                shape = shape ?: properties.shape,
+                borderColor = resolvedBorderColor,
+                borderWidth = borderWidth ?: properties.borderWidth,
             ),
             interactionSource = interaction,
         ) {
             Thumb(
                 Modifier.fillMaxHeight().millenniumSurface(
-                    background = thumbBackground,
-                    shape = properties.shape,
+                    background = resolvedThumbBackground,
+                    shape = shape ?: properties.shape,
                     innerGlowColor = colors.highlight.copy(alpha = 0.4f),
                 ).alpha(animatedAlpha),
             )
@@ -129,18 +139,18 @@ fun MillenniumScrollbar(
     } else {
         UnstyledVerticalScrollbar(
             state,
-            modifier.width(properties.thickness).millenniumSurface(
-                background = trackBackground,
-                shape = properties.shape,
-                borderColor = borderColor,
-                borderWidth = properties.borderWidth,
+            modifier.width(thickness ?: properties.thickness).millenniumSurface(
+                background = resolvedTrackBackground,
+                shape = shape ?: properties.shape,
+                borderColor = resolvedBorderColor,
+                borderWidth = borderWidth ?: properties.borderWidth,
             ),
             interactionSource = interaction,
         ) {
             Thumb(
                 Modifier.fillMaxWidth().millenniumSurface(
-                    background = thumbBackground,
-                    shape = properties.shape,
+                    background = resolvedThumbBackground,
+                    shape = shape ?: properties.shape,
                     innerGlowColor = colors.highlight.copy(alpha = 0.4f),
                 ).alpha(animatedAlpha),
             )

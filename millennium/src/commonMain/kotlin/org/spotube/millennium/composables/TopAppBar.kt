@@ -79,46 +79,63 @@ fun MillenniumTopAppBar(
     navigationIcon: @Composable () -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {},
     windowInsets: WindowInsets = WindowInsets(0, 0, 0, 0),
+    titleStyle: TextStyle? = null,
+    subtitleStyle: TextStyle? = null,
+    titleForeground: Color? = null,
+    subtitleForeground: Color? = null,
+    navigationForeground: Color? = null,
+    actionForeground: Color? = null,
+    background: Brush? = null,
+    contentPadding: PaddingValues? = null,
+    minimumHeight: Dp? = null,
+    navigationSpacing: Dp? = null,
+    actionSpacing: Dp? = null,
+    separatorColor: Color? = null,
+    theme: MillenniumTopAppBarTheme = MillenniumTheme.topAppBarTheme,
 ) {
     val colors = MillenniumTheme.colors
-    val properties = MillenniumTheme.topAppBarTheme.properties
+    val properties = theme.properties
+    val resolvedTitleStyle = titleStyle ?: properties.titleStyle
     Column(
         modifier
             .fillMaxWidth()
-            .background(properties.background ?: millenniumPanelBrush(colors))
+            .background(background ?: properties.background ?: millenniumPanelBrush(colors))
             .windowInsetsPadding(windowInsets),
     ) {
         Row(
             Modifier
                 .fillMaxWidth()
-                .heightIn(min = properties.minimumHeight)
-                .padding(properties.contentPadding),
+                .heightIn(min = minimumHeight ?: properties.minimumHeight)
+                .padding(contentPadding ?: properties.contentPadding),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             MillenniumStyledContent(
-                properties.titleStyle,
-                properties.navigationForeground ?: colors.text,
+                resolvedTitleStyle,
+                navigationForeground ?: properties.navigationForeground ?: colors.text,
             ) { navigationIcon() }
-            Spacer(Modifier.width(properties.navigationSpacing))
+            Spacer(Modifier.width(navigationSpacing ?: properties.navigationSpacing))
             Column(
                 Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(1.dp),
             ) {
-                MillenniumStyledContent(properties.titleStyle, properties.titleForeground ?: colors.text) { title() }
+                MillenniumStyledContent(
+                    resolvedTitleStyle,
+                    titleForeground ?: properties.titleForeground ?: colors.text,
+                ) { title() }
                 if (subtitle != null) {
                     MillenniumStyledContent(
-                        properties.subtitleStyle,
-                        properties.subtitleForeground ?: colors.muted,
+                        subtitleStyle ?: properties.subtitleStyle,
+                        subtitleForeground ?: properties.subtitleForeground ?: colors.muted,
                     ) { subtitle() }
                 }
             }
             Row(
-                horizontalArrangement = Arrangement.spacedBy(properties.actionSpacing),
+                horizontalArrangement = Arrangement.spacedBy(actionSpacing ?: properties.actionSpacing),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 MillenniumStyledContent(
-                    properties.titleStyle,
-                    properties.actionForeground ?: colors.text,
+                    resolvedTitleStyle,
+                    actionForeground ?: properties.actionForeground ?: colors.text,
                 ) { actions() }
             }
         }
@@ -126,7 +143,7 @@ fun MillenniumTopAppBar(
             Modifier
                 .fillMaxWidth()
                 .height(1.dp)
-                .background(properties.separatorColor ?: colors.border),
+                .background(separatorColor ?: properties.separatorColor ?: colors.border),
         )
     }
 }

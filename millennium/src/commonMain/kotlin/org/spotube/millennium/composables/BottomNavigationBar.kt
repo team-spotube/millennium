@@ -99,28 +99,39 @@ fun defaultMillenniumBottomNavigationBarTheme(): MillenniumBottomNavigationBarTh
 fun MillenniumBottomNavigationBar(
     modifier: Modifier = Modifier,
     windowInsets: WindowInsets = WindowInsets.navigationBars,
+    background: Brush? = null,
+    foreground: Color? = null,
+    shape: Shape? = null,
+    contentPadding: PaddingValues? = null,
+    itemSpacing: Dp? = null,
+    minimumHeight: Dp? = null,
+    borderColor: Color? = null,
+    borderWidth: Dp? = null,
+    shadowElevation: Dp? = null,
+    innerGlowColor: Color? = null,
+    theme: MillenniumBottomNavigationBarTheme = MillenniumTheme.bottomNavigationBarTheme,
     content: @Composable RowScope.() -> Unit,
 ) {
     val colors = MillenniumTheme.colors
-    val properties = MillenniumTheme.bottomNavigationBarTheme.states.default
+    val properties = theme.states.default
     Row(
         modifier = modifier.fillMaxWidth()
             .millenniumSurface(
-                background = properties.background ?: gelBrush(colors.raised, colors.surface),
-                shape = properties.shape,
-                borderColor = properties.borderColor ?: colors.border,
-                borderWidth = properties.borderWidth,
-                shadowElevation = properties.shadowElevation,
-                innerGlowColor = properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f),
+                background = background ?: properties.background ?: gelBrush(colors.raised, colors.surface),
+                shape = shape ?: properties.shape,
+                borderColor = borderColor ?: properties.borderColor ?: colors.border,
+                borderWidth = borderWidth ?: properties.borderWidth,
+                shadowElevation = shadowElevation ?: properties.shadowElevation,
+                innerGlowColor = innerGlowColor ?: properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f),
             )
             .windowInsetsPadding(windowInsets)
-            .heightIn(min = properties.minimumHeight)
-            .padding(properties.contentPadding)
+            .heightIn(min = minimumHeight ?: properties.minimumHeight)
+            .padding(contentPadding ?: properties.contentPadding)
             .selectableGroup(),
-        horizontalArrangement = Arrangement.spacedBy(properties.itemSpacing),
+        horizontalArrangement = Arrangement.spacedBy(itemSpacing ?: properties.itemSpacing),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        MillenniumStyledContent(TextStyle.Default, properties.foreground ?: colors.text) { content() }
+        MillenniumStyledContent(TextStyle.Default, foreground ?: properties.foreground ?: colors.text) { content() }
     }
 }
 
@@ -141,6 +152,8 @@ fun RowScope.MillenniumBottomNavigationItem(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     contentDescription: String? = null,
+    iconSize: Dp? = null,
+    theme: MillenniumBottomNavigationBarTheme = MillenniumTheme.bottomNavigationBarTheme,
     icon: @Composable () -> Unit,
     label: (@Composable () -> Unit)? = null,
     badge: (@Composable () -> Unit)? = null,
@@ -151,10 +164,11 @@ fun RowScope.MillenniumBottomNavigationItem(
         modifier = modifier,
         enabled = enabled,
         contentDescription = contentDescription,
+        theme = theme,
     ) { visuals ->
-        val properties = MillenniumTheme.bottomNavigationBarTheme.item.resolve(visuals.state)
+        val properties = theme.item.resolve(visuals.state)
         Box(contentAlignment = Alignment.Center) {
-            Box(Modifier.size(properties.iconSize), contentAlignment = Alignment.Center) { icon() }
+            Box(Modifier.size(iconSize ?: properties.iconSize), contentAlignment = Alignment.Center) { icon() }
             if (badge != null) {
                 Box(Modifier.align(Alignment.TopEnd)) { badge() }
             }
@@ -171,6 +185,21 @@ fun RowScope.MillenniumBottomNavigationItem(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     contentDescription: String? = null,
+    background: Brush? = null,
+    foreground: Color? = null,
+    shape: Shape? = null,
+    contentPadding: PaddingValues? = null,
+    minimumHeight: Dp? = null,
+    minimumWidth: Dp? = null,
+    iconLabelSpacing: Dp? = null,
+    labelStyle: TextStyle? = null,
+    borderColor: Color? = null,
+    borderWidth: Dp? = null,
+    shadowElevation: Dp? = null,
+    innerGlowColor: Color? = null,
+    alpha: Float? = null,
+    animationMillis: Int? = null,
+    theme: MillenniumBottomNavigationBarTheme = MillenniumTheme.bottomNavigationBarTheme,
     content: @Composable ColumnScope.(MillenniumBottomNavigationItemVisuals) -> Unit,
 ) {
     val colors = MillenniumTheme.colors
@@ -186,52 +215,58 @@ fun RowScope.MillenniumBottomNavigationItem(
         selected -> MillenniumControlState.Selected
         else -> MillenniumControlState.Default
     }
-    val properties = MillenniumTheme.bottomNavigationBarTheme.item.resolve(state)
-    val foreground = properties.foreground ?: bottomNavigationItemForeground(colors, selected, enabled)
-    val background = properties.background ?: when {
+    val properties = theme.item.resolve(state)
+    val resolvedForeground = foreground ?: properties.foreground
+        ?: bottomNavigationItemForeground(colors, selected, enabled)
+    val resolvedBackground = background ?: properties.background ?: when {
         selected -> gelBrush(colors.accentTop, colors.accentBottom)
         pressed -> millenniumBevelBrush(colors, sunken = true)
         hovered || focused -> millenniumBevelBrush(colors)
         else -> Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
     }
-    val elevation by animateDpAsState(properties.shadowElevation, tween(properties.animationMillis))
-    val alpha by animateFloatAsState(properties.alpha, tween(properties.animationMillis))
+    val resolvedAnimationMillis = animationMillis ?: properties.animationMillis
+    val elevation by animateDpAsState(
+        shadowElevation ?: properties.shadowElevation,
+        tween(resolvedAnimationMillis),
+    )
+    val animatedAlpha by animateFloatAsState(alpha ?: properties.alpha, tween(resolvedAnimationMillis))
     UnstyledButton(
         onClick = onClick,
         enabled = enabled,
         role = Role.Tab,
         interactionSource = interaction,
         indication = LocalIndication.current,
-        contentPadding = properties.contentPadding,
+        contentPadding = contentPadding ?: properties.contentPadding,
         modifier = modifier.weight(1f)
-            .heightIn(min = properties.minimumHeight).widthIn(min = properties.minimumWidth)
+            .heightIn(min = minimumHeight ?: properties.minimumHeight)
+            .widthIn(min = minimumWidth ?: properties.minimumWidth)
             .semantics {
                 this.selected = selected
                 if (contentDescription != null) this.contentDescription = contentDescription
             }
-            .alpha(alpha)
+            .alpha(animatedAlpha)
             .millenniumSurface(
-                background = background,
-                shape = properties.shape,
-                borderColor = properties.borderColor ?: when {
+                background = resolvedBackground,
+                shape = shape ?: properties.shape,
+                borderColor = borderColor ?: properties.borderColor ?: when {
                     focused -> colors.accent
                     selected -> colors.accentBottom
                     hovered || pressed -> colors.border
                     else -> Color.Transparent
                 },
-                borderWidth = properties.borderWidth,
+                borderWidth = borderWidth ?: properties.borderWidth,
                 shadowElevation = elevation,
-                innerGlowColor = properties.innerGlowColor ?: if (selected || hovered || focused) {
+                innerGlowColor = innerGlowColor ?: properties.innerGlowColor ?: if (selected || hovered || focused) {
                     colors.highlight.copy(alpha = 0.35f)
                 } else null,
             ),
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(properties.iconLabelSpacing),
+            verticalArrangement = Arrangement.spacedBy(iconLabelSpacing ?: properties.iconLabelSpacing),
         ) {
-            MillenniumStyledContent(properties.labelStyle, foreground) {
-                content(MillenniumBottomNavigationItemVisuals(selected, enabled, state, foreground))
+            MillenniumStyledContent(labelStyle ?: properties.labelStyle, resolvedForeground) {
+                content(MillenniumBottomNavigationItemVisuals(selected, enabled, state, resolvedForeground))
             }
         }
     }

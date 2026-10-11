@@ -75,65 +75,95 @@ fun defaultMillenniumProgressTheme(): MillenniumProgressTheme {
 }
 
 @Composable
-fun MillenniumProgress(progress: Float, modifier: Modifier = Modifier) {
-    val properties = MillenniumTheme.progressTheme.states.resolve(MillenniumControlState.Default)
+fun MillenniumProgress(
+    progress: Float,
+    modifier: Modifier = Modifier,
+    trackBackground: Brush? = null,
+    progressBackground: Brush? = null,
+    shape: Shape? = null,
+    height: Dp? = null,
+    borderColor: Color? = null,
+    borderWidth: Dp? = null,
+    innerGlowColor: Color? = null,
+    determinateAnimationMillis: Int? = null,
+    alpha: Float? = null,
+    theme: MillenniumProgressTheme = MillenniumTheme.progressTheme,
+) {
+    val properties = theme.states.resolve(MillenniumControlState.Default)
     val colors = MillenniumTheme.colors
-    val trackBackground = properties.trackBackground ?: millenniumBevelBrush(colors, sunken = true)
-    val progressBackground = properties.progressBackground ?: gelBrush(colors.accentTop, colors.accentBottom)
-    val borderColor = properties.borderColor ?: colors.border
-    val glowColor = properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.45f)
+    val resolvedShape = shape ?: properties.shape
+    val trackBackground = trackBackground ?: properties.trackBackground ?: millenniumBevelBrush(colors, sunken = true)
+    val progressBackground = progressBackground ?: properties.progressBackground
+        ?: gelBrush(colors.accentTop, colors.accentBottom)
+    val borderColor = borderColor ?: properties.borderColor ?: colors.border
+    val glowColor = innerGlowColor ?: properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.45f)
     val animatedProgress by animateFloatAsState(
         targetValue = progress.coerceIn(0f, 1f),
-        animationSpec = tween(properties.determinateAnimationMillis),
+        animationSpec = tween(determinateAnimationMillis ?: properties.determinateAnimationMillis),
     )
     UnstyledProgress(
         animatedProgress,
-        modifier.fillMaxWidth().height(properties.height).millenniumSurface(
+        modifier.fillMaxWidth().height(height ?: properties.height).millenniumSurface(
             background = trackBackground,
-            shape = properties.shape,
+            shape = resolvedShape,
             borderColor = borderColor,
-            borderWidth = properties.borderWidth,
+            borderWidth = borderWidth ?: properties.borderWidth,
             innerGlowColor = glowColor,
             bottomRimColor = colors.highlight.copy(alpha = 0.3f),
-        ).alpha(properties.alpha),
+        ).alpha(alpha ?: properties.alpha),
     ) {
         Indicator(
-            Modifier.fillMaxHeight().background(progressBackground, properties.shape),
+            Modifier.fillMaxHeight().background(progressBackground, resolvedShape),
         )
     }
 }
 
 @Composable
-fun MillenniumIndeterminateProgress(modifier: Modifier = Modifier) {
-    val properties = MillenniumTheme.progressTheme.states.resolve(MillenniumControlState.Default)
+fun MillenniumIndeterminateProgress(
+    modifier: Modifier = Modifier,
+    trackBackground: Brush? = null,
+    progressBackground: Brush? = null,
+    shape: Shape? = null,
+    height: Dp? = null,
+    borderColor: Color? = null,
+    borderWidth: Dp? = null,
+    innerGlowColor: Color? = null,
+    indeterminateAnimationMillis: Int? = null,
+    indeterminateFraction: Float? = null,
+    alpha: Float? = null,
+    theme: MillenniumProgressTheme = MillenniumTheme.progressTheme,
+) {
+    val properties = theme.states.resolve(MillenniumControlState.Default)
     val colors = MillenniumTheme.colors
-    val trackBackground = properties.trackBackground ?: millenniumBevelBrush(colors, sunken = true)
-    val progressBackground = properties.progressBackground ?: gelBrush(colors.accentTop, colors.accentBottom)
-    val borderColor = properties.borderColor ?: colors.border
-    val glowColor = properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.45f)
+    val resolvedShape = shape ?: properties.shape
+    val trackBackground = trackBackground ?: properties.trackBackground ?: millenniumBevelBrush(colors, sunken = true)
+    val progressBackground = progressBackground ?: properties.progressBackground
+        ?: gelBrush(colors.accentTop, colors.accentBottom)
+    val borderColor = borderColor ?: properties.borderColor ?: colors.border
+    val glowColor = innerGlowColor ?: properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.45f)
     val transition = rememberInfiniteTransition()
     val offset by transition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            tween(properties.indeterminateAnimationMillis),
+            tween(indeterminateAnimationMillis ?: properties.indeterminateAnimationMillis),
             RepeatMode.Reverse,
         ),
     )
     UnstyledProgress(
-        modifier.fillMaxWidth().height(properties.height).millenniumSurface(
+        modifier.fillMaxWidth().height(height ?: properties.height).millenniumSurface(
             background = trackBackground,
-            shape = properties.shape,
+            shape = resolvedShape,
             borderColor = borderColor,
-            borderWidth = properties.borderWidth,
+            borderWidth = borderWidth ?: properties.borderWidth,
             innerGlowColor = glowColor,
             bottomRimColor = colors.highlight.copy(alpha = 0.3f),
-        ).alpha(properties.alpha),
+        ).alpha(alpha ?: properties.alpha),
     ) {
         Box(Modifier.fillMaxSize(), contentAlignment = BiasAlignment(offset * 2f - 1f, 0f)) {
             Box(
-                Modifier.fillMaxWidth(properties.indeterminateFraction.coerceIn(0f, 1f))
-                    .fillMaxHeight().background(progressBackground, properties.shape),
+                Modifier.fillMaxWidth((indeterminateFraction ?: properties.indeterminateFraction).coerceIn(0f, 1f))
+                    .fillMaxHeight().background(progressBackground, resolvedShape),
             )
         }
     }

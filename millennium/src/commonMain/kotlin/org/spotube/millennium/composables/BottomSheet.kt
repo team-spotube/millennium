@@ -92,36 +92,52 @@ fun defaultMillenniumBottomSheetTheme(): MillenniumBottomSheetTheme {
 fun MillenniumBottomSheet(
     state: BottomSheetState,
     modifier: Modifier = Modifier,
+    background: Brush? = null,
+    foreground: Color? = null,
+    shape: Shape? = null,
+    maximumWidth: Dp? = null,
+    contentPadding: PaddingValues? = null,
+    contentSpacing: Dp? = null,
+    handleSize: DpSize? = null,
+    handleColor: Color? = null,
+    borderColor: Color? = null,
+    borderWidth: Dp? = null,
+    shadowElevation: Dp? = null,
+    innerGlowColor: Color? = null,
+    alpha: Float? = null,
+    theme: MillenniumBottomSheetTheme = MillenniumTheme.bottomSheetTheme,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = MillenniumTheme.colors
-    val properties = MillenniumTheme.bottomSheetTheme.states.resolve(MillenniumControlState.Default)
-    val background = properties.background ?: millenniumPanelBrush(colors)
-    val foreground = properties.foreground ?: colors.text
-    val handleColor = properties.handleColor ?: colors.muted
-    val borderColor = properties.borderColor ?: colors.border
-    val glowColor = properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f)
+    val properties = theme.states.resolve(MillenniumControlState.Default)
+    val resolvedBackground = background ?: properties.background ?: millenniumPanelBrush(colors)
+    val resolvedForeground = foreground ?: properties.foreground ?: colors.text
+    val resolvedHandleColor = handleColor ?: properties.handleColor ?: colors.muted
+    val resolvedBorderColor = borderColor ?: properties.borderColor ?: colors.border
+    val resolvedGlowColor = innerGlowColor ?: properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f)
     UnstyledBottomSheet(state, modifier) {
         Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.TopCenter) {
             Sheet(
-                Modifier.widthIn(max = properties.maximumWidth).fillMaxWidth().millenniumSurface(
-                    background = background,
-                    shape = properties.shape,
-                    borderColor = borderColor,
-                    borderWidth = properties.borderWidth,
-                    shadowElevation = properties.shadowElevation,
-                    innerGlowColor = glowColor,
-                ).alpha(properties.alpha),
+                Modifier.widthIn(max = maximumWidth ?: properties.maximumWidth).fillMaxWidth().millenniumSurface(
+                    background = resolvedBackground,
+                    shape = shape ?: properties.shape,
+                    borderColor = resolvedBorderColor,
+                    borderWidth = borderWidth ?: properties.borderWidth,
+                    shadowElevation = shadowElevation ?: properties.shadowElevation,
+                    innerGlowColor = resolvedGlowColor,
+                ).alpha(alpha ?: properties.alpha),
             ) {
                 Column(
-                    Modifier.padding(properties.contentPadding).navigationBarsPadding(),
-                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(properties.contentSpacing),
+                    Modifier.padding(contentPadding ?: properties.contentPadding).navigationBarsPadding(),
+                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(
+                        contentSpacing ?: properties.contentSpacing,
+                    ),
                     horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
                 ) {
                     DragIndication(
-                        Modifier.size(properties.handleSize).background(handleColor, CircleShape),
+                        Modifier.size(handleSize ?: properties.handleSize).background(resolvedHandleColor, CircleShape),
                     )
-                    MillenniumStyledContent(TextStyle(color = foreground), foreground) {
+                    MillenniumStyledContent(TextStyle(color = resolvedForeground), resolvedForeground) {
                         content()
                     }
                 }

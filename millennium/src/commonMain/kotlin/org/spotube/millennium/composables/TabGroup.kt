@@ -107,25 +107,47 @@ fun <T> MillenniumTabGroup(
     tabs: List<T>,
     modifier: Modifier = Modifier,
     tabLabel: (T) -> String = { it.toString() },
+    listBackground: Brush? = null,
+    listShape: Shape? = null,
+    listBorderColor: Color? = null,
+    listBorderWidth: Dp? = null,
+    listPadding: Dp? = null,
+    listInnerSpacing: Dp? = null,
+    groupContentSpacing: Dp? = null,
+    tabShape: Shape? = null,
+    selectedTabBackground: Brush? = null,
+    unselectedTabBackground: Brush? = null,
+    selectedTabForeground: Color? = null,
+    unselectedTabForeground: Color? = null,
+    tabTextStyle: TextStyle? = null,
+    tabBorderWidth: Dp? = null,
+    tabElevation: Dp? = null,
+    tabGlowColor: Color? = null,
+    minimumTabHeight: Dp? = null,
+    tabPadding: PaddingValues? = null,
+    stateAnimationMillis: Int? = null,
+    alpha: Float? = null,
+    theme: MillenniumTabGroupTheme = MillenniumTheme.tabGroupTheme,
     panel: @Composable (T) -> Unit,
 ) {
     val colors = MillenniumTheme.colors
-    val groupProperties = MillenniumTheme.tabGroupTheme.states.default
-    val listBackground = groupProperties.listBackground ?: millenniumBevelBrush(colors, sunken = true)
-    val listBorderColor = groupProperties.listBorderColor ?: colors.border
+    val groupProperties = theme.states.default
+    val resolvedListBackground = listBackground ?: groupProperties.listBackground
+        ?: millenniumBevelBrush(colors, sunken = true)
+    val resolvedListBorderColor = listBorderColor ?: groupProperties.listBorderColor ?: colors.border
     UnstyledTabGroup(selectedTab, onSelectedTabChange, tabs, modifier) {
-        Column(verticalArrangement = Arrangement.spacedBy(groupProperties.groupContentSpacing)) {
+        Column(verticalArrangement = Arrangement.spacedBy(groupContentSpacing ?: groupProperties.groupContentSpacing)) {
             TabList(
                 Modifier.fillMaxWidth().millenniumSurface(
-                    background = listBackground,
-                    shape = groupProperties.listShape,
-                    borderColor = listBorderColor,
-                    borderWidth = groupProperties.listBorderWidth,
-                ).padding(groupProperties.listPadding),
+                    background = resolvedListBackground,
+                    shape = listShape ?: groupProperties.listShape,
+                    borderColor = resolvedListBorderColor,
+                    borderWidth = listBorderWidth ?: groupProperties.listBorderWidth,
+                ).padding(listPadding ?: groupProperties.listPadding),
             ) {
                 Row(
                     Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(groupProperties.listInnerSpacing),
+                    horizontalArrangement = Arrangement.spacedBy(listInnerSpacing ?: groupProperties.listInnerSpacing),
                 ) {
                     tabs.forEach { key ->
                         val isSelected = key == selectedTab
@@ -140,38 +162,45 @@ fun <T> MillenniumTabGroup(
                             isSelected -> MillenniumControlState.Selected
                             else -> MillenniumControlState.Default
                         }
-                        val properties = MillenniumTheme.tabGroupTheme.states.resolve(state)
+                        val properties = theme.states.resolve(state)
                         val animatedAlpha = animateFloatAsState(
-                            targetValue = properties.alpha,
-                            animationSpec = tween(properties.stateAnimationMillis),
+                            targetValue = alpha ?: properties.alpha,
+                            animationSpec = tween(stateAnimationMillis ?: properties.stateAnimationMillis),
                         ).value
-                        val tabBackground = if (isSelected) properties.selectedTabBackground
-                            ?: gelBrush(colors.accentTop, colors.accentBottom)
-                        else properties.unselectedTabBackground
+                        val resolvedTabBackground = if (isSelected) selectedTabBackground
+                            ?: properties.selectedTabBackground ?: gelBrush(colors.accentTop, colors.accentBottom)
+                        else unselectedTabBackground
+                            ?: properties.unselectedTabBackground
                             ?: Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
-                        val tabForeground = if (isSelected) properties.selectedTabForeground ?: colors.onAccent
-                            else properties.unselectedTabForeground ?: colors.muted
-                        val tabBorder = properties.listBorderColor ?: if (isSelected) colors.accentBottom else Color.Transparent
+                        val resolvedTabForeground = if (isSelected) selectedTabForeground
+                            ?: properties.selectedTabForeground ?: colors.onAccent
+                        else unselectedTabForeground
+                            ?: properties.unselectedTabForeground ?: colors.muted
+                        val resolvedTabBorder = listBorderColor ?: properties.listBorderColor
+                            ?: if (isSelected) colors.accentBottom else Color.Transparent
+                        val resolvedTabBorderWidth = tabBorderWidth ?: properties.tabBorderWidth
                         Tab(
                             key,
-                            modifier = Modifier.weight(1f).heightIn(min = properties.minimumTabHeight)
+                            modifier = Modifier.weight(1f).heightIn(min = minimumTabHeight ?: properties.minimumTabHeight)
                                 .alpha(animatedAlpha)
                                 .millenniumSurface(
-                                    background = tabBackground,
-                                    shape = properties.tabShape,
-                                    borderColor = if (focused) colors.accent else if (isSelected) tabBorder else null,
-                                    borderWidth = if (focused) maxOf(2.dp, properties.tabBorderWidth) else properties.tabBorderWidth,
-                                    shadowElevation = if (isSelected) properties.tabElevation else 0.dp,
-                                    innerGlowColor = if (isSelected) properties.tabGlowColor ?: colors.highlight.copy(alpha = 0.45f) else null,
+                                    background = resolvedTabBackground,
+                                    shape = tabShape ?: properties.tabShape,
+                                    borderColor = if (focused) colors.accent else if (isSelected) resolvedTabBorder else null,
+                                    borderWidth = if (focused) maxOf(2.dp, resolvedTabBorderWidth) else resolvedTabBorderWidth,
+                                    shadowElevation = if (isSelected) (tabElevation ?: properties.tabElevation) else 0.dp,
+                                    innerGlowColor = if (isSelected) {
+                                        tabGlowColor ?: properties.tabGlowColor ?: colors.highlight.copy(alpha = 0.45f)
+                                    } else null,
                                 )
-                                .padding(properties.tabPadding),
+                                .padding(tabPadding ?: properties.tabPadding),
                             indication = LocalIndication.current,
                             interactionSource = interaction,
                             contentAlignment = androidx.compose.ui.Alignment.Center,
                         ) {
                             CompositionLocalProvider(
-                                LocalTextStyle provides LocalTextStyle.current.merge(properties.tabTextStyle)
-                                    .copy(color = tabForeground),
+                                LocalTextStyle provides LocalTextStyle.current.merge(tabTextStyle ?: properties.tabTextStyle)
+                                    .copy(color = resolvedTabForeground),
                             ) { Text(tabLabel(key)) }
                         }
                     }

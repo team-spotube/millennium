@@ -78,26 +78,38 @@ fun defaultMillenniumCardTheme(): MillenniumCardTheme {
 fun MillenniumCard(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues? = null,
+    maxWidth: Dp? = null,
+    shape: Shape? = null,
+    background: Brush? = null,
+    borderColor: Color? = null,
+    borderWidth: Dp? = null,
+    shadowElevation: Dp? = null,
+    shadowColor: Color? = null,
+    innerGlowColor: Color? = null,
+    bottomRimColor: Color? = null,
+    contentSpacing: Dp? = null,
+    alpha: Float? = null,
+    theme: MillenniumCardTheme = MillenniumTheme.cardTheme,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = MillenniumTheme.colors
-    val properties = MillenniumTheme.cardTheme.states.resolve(MillenniumControlState.Default)
+    val properties = theme.states.resolve(MillenniumControlState.Default)
     Column(
         modifier = modifier
-            .widthIn(max = properties.maxWidth)
+            .widthIn(max = maxWidth ?: properties.maxWidth)
             .millenniumSurface(
-                background = properties.background ?: millenniumPanelBrush(colors),
-                shape = properties.shape,
-                borderColor = properties.borderColor ?: colors.border,
-                borderWidth = properties.borderWidth,
-                shadowElevation = properties.shadowElevation,
-                shadowColor = properties.shadowColor ?: Color.Black.copy(alpha = 0.14f),
-                innerGlowColor = properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f),
-                bottomRimColor = properties.bottomRimColor ?: colors.highlight.copy(alpha = 0.5f),
+                background = background ?: properties.background ?: millenniumPanelBrush(colors),
+                shape = shape ?: properties.shape,
+                borderColor = borderColor ?: properties.borderColor ?: colors.border,
+                borderWidth = borderWidth ?: properties.borderWidth,
+                shadowElevation = shadowElevation ?: properties.shadowElevation,
+                shadowColor = shadowColor ?: properties.shadowColor ?: Color.Black.copy(alpha = 0.14f),
+                innerGlowColor = innerGlowColor ?: properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f),
+                bottomRimColor = bottomRimColor ?: properties.bottomRimColor ?: colors.highlight.copy(alpha = 0.5f),
             )
             .padding(contentPadding ?: properties.contentPadding)
-            .alpha(properties.alpha),
-        verticalArrangement = Arrangement.spacedBy(properties.contentSpacing),
+            .alpha(alpha ?: properties.alpha),
+        verticalArrangement = Arrangement.spacedBy(contentSpacing ?: properties.contentSpacing),
         content = {
             MillenniumStyledContent(properties.contentTextStyle, properties.foreground ?: colors.text) { content() }
         },
