@@ -58,7 +58,7 @@ dependencies {
 | --- | --- |
 | Surfaces | `MillenniumCard` |
 | Layout | `MillenniumScaffold` |
-| Actions | `MillenniumButton` (primary, secondary, quiet, danger), `MillenniumDisclosure` |
+| Actions | `MillenniumButton` (primary, secondary, quiet, danger), `MillenniumIconButton`, `MillenniumDisclosure` |
 | Inputs | `MillenniumCheckbox`, `MillenniumTriStateCheckbox`, `MillenniumSwitch`, `MillenniumTextField`, `MillenniumAutocomplete`, `MillenniumSlider`, `MillenniumRadioGroup` |
 | Navigation | `MillenniumTabGroup`, `MillenniumDropdownMenu`, `MillenniumSidebar`, `MillenniumBottomNavigationBar`, `MillenniumListTile` |
 | Feedback | `MillenniumAvatar`, `MillenniumIcon`, `MillenniumProgress`, `MillenniumIndeterminateProgress`, `MillenniumScrollbar`, `MillenniumSeparator`, `MillenniumTooltip` |
@@ -221,6 +221,28 @@ MillenniumListTile(
     selected = selected == "Air",
     onClick = { selected = "Air" },
     onRightClick = { position -> /* open a context menu at position */ },
+)
+```
+
+#### Icon buttons
+
+`MillenniumIconButton` is a compact 44dp circle holding a single icon. Pass an
+`ImageVector` and a `contentDescription`, or use the content overload for a custom
+glyph. `MillenniumIconButtonStyle` offers `Primary`, `Secondary`, `Quiet` and
+`Danger`: the filled variants (`Primary`, `Danger`) reuse the exact `MillenniumButton`
+gel and add the Aqua glass orb on top — a translucent dome with a curved meniscus, a
+bright top rim and a lower reflection — while
+`Secondary` is enamel and `Quiet` is transparent. Focus rings stay keyboard-only,
+presses animate a subtle scale, and every variant shares the button bevel language.
+Customize through `MillenniumTheme.iconButtonTheme`.
+
+```kotlin
+MillenniumIconButton(MillenniumIcons.Sparkle, "Add to favorites", onClick = { /* … */ })
+MillenniumIconButton(
+    MillenniumIcons.Check,
+    "Delete",
+    onClick = { /* … */ },
+    style = MillenniumIconButtonStyle.Danger,
 )
 ```
 

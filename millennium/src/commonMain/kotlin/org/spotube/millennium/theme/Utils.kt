@@ -10,8 +10,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -152,6 +154,9 @@ fun Modifier.millenniumSurface(
     innerGlowFollowsShape: Boolean = true,
     bottomRimColor: Color? = null,
     insetShadeColor: Color? = null,
+    orbColor: Color? = null,
+    orbBottomFraction: Float = 0.55f,
+    orbDepthFraction: Float = 0.16f,
 ): Modifier {
     var result = this
     if (shadowElevation > 0.dp) {
@@ -169,8 +174,54 @@ fun Modifier.millenniumSurface(
     if (borderColor != null && borderWidth > 0.dp) {
         result = result.border(borderWidth, borderColor, shape)
     }
-    if (innerGlowColor != null || bottomRimColor != null || insetShadeColor != null) {
+    if (innerGlowColor != null || bottomRimColor != null || insetShadeColor != null || orbColor != null) {
         result = result.drawWithContent {
+            // The Aqua glass orb sits above the fill but below the content: a hazy
+            // top dome with a curved meniscus edge, a bright inner top rim and a
+            // soft reflection along the lower rim.
+            if (orbColor != null) {
+                val domeBottom = size.height * orbBottomFraction
+                val domeDepth = size.height * orbDepthFraction
+                val dome = Path().apply {
+                    moveTo(0f, 0f)
+                    lineTo(size.width, 0f)
+                    lineTo(size.width, domeBottom)
+                    quadraticTo(size.width / 2f, domeBottom + domeDepth, 0f, domeBottom)
+                    close()
+                }
+                drawPath(
+                    path = dome,
+                    brush = Brush.verticalGradient(
+                        0f to orbColor,
+                        0.78f to orbColor.copy(alpha = orbColor.alpha * 0.82f),
+                        0.95f to orbColor.copy(alpha = orbColor.alpha * 0.3f),
+                        1f to Color.Transparent,
+                        startY = 0f,
+                        endY = domeBottom,
+                    ),
+                )
+                val minSide = size.minDimension
+                val arcInset = minSide * 0.10f
+                drawArc(
+                    color = orbColor.copy(alpha = (orbColor.alpha + 0.3f).coerceAtMost(1f)),
+                    startAngle = 200f,
+                    sweepAngle = 140f,
+                    useCenter = false,
+                    topLeft = Offset(arcInset, arcInset),
+                    size = Size(size.width - arcInset * 2f, size.height - arcInset * 2f),
+                    style = Stroke(width = minSide * 0.045f),
+                )
+                val reflectionInset = minSide * 0.08f
+                drawArc(
+                    color = orbColor.copy(alpha = orbColor.alpha * 0.55f),
+                    startAngle = 25f,
+                    sweepAngle = 130f,
+                    useCenter = false,
+                    topLeft = Offset(reflectionInset, reflectionInset),
+                    size = Size(size.width - reflectionInset * 2f, size.height - reflectionInset * 2f),
+                    style = Stroke(width = minSide * 0.06f),
+                )
+            }
             drawContent()
             val stroke = innerGlowWidth.toPx()
             val edgeInset = maxOf(borderWidth.toPx(), innerGlowTop.toPx()) + stroke / 2f

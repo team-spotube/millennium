@@ -114,7 +114,7 @@ private fun GalleryApp(onOpenStudy: () -> Unit) {
                                             size = 13.sp
                                         )
                                     }
-                                    if (!compact) Badge("25 COMPONENTS", c.muted)
+                                    if (!compact) Badge("26 COMPONENTS", c.muted)
                                 }
                                 Gallery(
                                     category,
@@ -306,7 +306,7 @@ private fun Sidebar(category: String, onSelect: (String) -> Unit) {
                                 label = item,
                                 onClick = { onSelect(item) },
                                 selected = category == item,
-                                badge = if (index == 0) "25" else listOf("", "2", "6", "6", "6", "4")[index]
+                                badge = if (index == 0) "26" else listOf("", "3", "6", "6", "6", "4")[index]
                             )
                         }
                     }
@@ -486,6 +486,12 @@ private fun Gallery(
             }
             Card("Actions", "01", "Buttons", "A little gloss. A satisfying click.") { ButtonDemo() }
             Card(
+                "Actions",
+                "26",
+                "Icon buttons",
+                "One symbol, a satisfying press. Filled ones carry the orb."
+            ) { IconButtonDemo() }
+            Card(
                 "Inputs",
                 "02–04",
                 "Selection controls",
@@ -634,6 +640,23 @@ private fun ButtonDemo() {
         if (clicks == 0) "Try a click. Or navigate with Tab + Enter." else "$clicks clicks. Still feels good.",
         color = MillenniumTheme.colors.muted,
         size = 11.sp
+    )
+}
+
+@Composable
+private fun IconButtonDemo() {
+    var saved by rememberSaveable { mutableStateOf(false) }
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        MillenniumIconButton(MillenniumIcons.Sparkle, "Add to favorites", { saved = !saved })
+        MillenniumIconButton(MillenniumIcons.Music, "Play", {}, style = MillenniumIconButtonStyle.Secondary)
+        MillenniumIconButton(MillenniumIcons.Chevron, "More options", {}, style = MillenniumIconButtonStyle.Quiet)
+        MillenniumIconButton(MillenniumIcons.Check, "Delete", {}, style = MillenniumIconButtonStyle.Danger)
+        MillenniumIconButton(MillenniumIcons.Sparkle, "Disabled", {}, enabled = false)
+    }
+    MillenniumText(
+        if (saved) "Filled variants wear the orb sheen." else "Primary, secondary, quiet, danger — all 44dp targets.",
+        size = 11.sp,
+        color = MillenniumTheme.colors.muted
     )
 }
 
