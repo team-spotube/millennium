@@ -78,7 +78,11 @@ fun defaultMillenniumTextFieldTheme(): MillenniumTextFieldTheme {
     val base = MillenniumTextFieldThemeProperties(
         shape = androidx.compose.foundation.shape.RoundedCornerShape(7.dp),
         textStyle = TextStyle(fontSize = 14.sp, lineHeight = 21.sp),
-        labelStyle = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium),
+        labelStyle = TextStyle(
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            fontWeight = FontWeight.Medium
+        ),
         placeholderStyle = TextStyle(fontSize = 14.sp, lineHeight = 21.sp),
         errorStyle = TextStyle(fontSize = 12.sp, lineHeight = 17.sp),
         borderWidth = 1.dp,
@@ -103,7 +107,7 @@ fun defaultMillenniumTextFieldTheme(): MillenniumTextFieldTheme {
 @Composable
 fun MillenniumTextField(
     state: TextFieldState,
-    label: String,
+    label: String? = null,
     modifier: Modifier = Modifier,
     placeholder: String = "",
     enabled: Boolean = true,
@@ -156,7 +160,8 @@ fun MillenniumTextField(
         ?: resolvedPlaceholderStyle.color.takeUnless { it == Color.Unspecified }
         ?: colors.muted
     val resolvedCursorColor = cursorColor ?: properties.cursorColor ?: colors.accent
-    val resolvedSelectionColor = selectionColor ?: properties.selectionColor ?: colors.accent.copy(alpha = 0.25f)
+    val resolvedSelectionColor =
+        selectionColor ?: properties.selectionColor ?: colors.accent.copy(alpha = 0.25f)
     val resolvedErrorColor = errorColor ?: properties.errorColor ?: colors.danger
     val resolvedBorderColor = borderColor ?: properties.borderColor ?: when (controlState) {
         MillenniumControlState.Focused, MillenniumControlState.Hovered, MillenniumControlState.Pressed -> colors.accent
@@ -178,20 +183,34 @@ fun MillenniumTextField(
         cursorBrush = SolidColor(resolvedCursorColor),
         selectionColors = TextSelectionColors(resolvedCursorColor, resolvedSelectionColor),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(contentSpacing ?: properties.contentSpacing)) {
-            Text(label, style = (labelStyle ?: properties.labelStyle).copy(color = resolvedForeground))
+        Column(
+            verticalArrangement = Arrangement.spacedBy(
+                contentSpacing ?: properties.contentSpacing
+            )
+        ) {
+            if (!label.isNullOrBlank())
+                Text(
+                    label,
+                    style = (labelStyle ?: properties.labelStyle).copy(color = resolvedForeground)
+                )
             Box(
                 Modifier
                     .fillMaxWidth()
                     .heightIn(min = minimumHeight ?: properties.minimumHeight)
                     .millenniumSurface(
-                        background = background ?: properties.background ?: millenniumBevelBrush(colors, sunken = true),
+                        background = background ?: properties.background ?: millenniumBevelBrush(
+                            colors,
+                            sunken = true
+                        ),
                         shape = shape ?: properties.shape,
                         borderColor = animatedBorder,
                         borderWidth = borderWidth ?: properties.borderWidth,
-                        insetShadeColor = insetShadeColor ?: properties.insetShadeColor ?: colors.text.copy(alpha = 0.09f),
-                        innerGlowColor = innerGlowColor ?: properties.innerGlowColor ?: colors.border.copy(alpha = 0.4f),
-                        bottomRimColor = bottomRimColor ?: properties.bottomRimColor ?: colors.highlight.copy(alpha = 0.8f),
+                        insetShadeColor = insetShadeColor ?: properties.insetShadeColor
+                        ?: colors.text.copy(alpha = 0.09f),
+                        innerGlowColor = innerGlowColor ?: properties.innerGlowColor
+                        ?: colors.border.copy(alpha = 0.4f),
+                        bottomRimColor = bottomRimColor ?: properties.bottomRimColor
+                        ?: colors.highlight.copy(alpha = 0.8f),
                     ),
                 contentAlignment = Alignment.CenterStart,
             ) {
