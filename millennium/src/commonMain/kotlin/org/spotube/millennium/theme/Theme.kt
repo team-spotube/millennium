@@ -11,11 +11,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import com.composeunstyled.LocalTextStyle
+import com.composeunstyled.LocalContentColor
+import com.composeunstyled.ProvideWindowHeightBreakpoints
+import com.composeunstyled.ProvideWindowWidthBreakpoints
 import com.composeunstyled.theme.ColorScheme
 import com.composeunstyled.theme.ColoredIndication
 import com.composeunstyled.theme.ThemeProperty
 import com.composeunstyled.theme.ThemeToken
 import com.composeunstyled.theme.buildThemeV2
+import org.spotube.millennium.adaptive.heightBreakpoints
+import org.spotube.millennium.adaptive.widthBreakpoints
 import org.spotube.millennium.composables.*
 
 /** Global semantic palette roles. Component themes do not own palette copies. */
@@ -105,11 +110,12 @@ data class MillenniumColorSchemes(
 /** Accent families that can be swapped without changing component themes. */
 enum class MillenniumPalette { Blue, Orange, Lime }
 
-fun MillenniumColorSchemes.resolve(palette: MillenniumPalette, dark: Boolean): MillenniumColors = when (palette) {
-    MillenniumPalette.Blue -> if (dark) this.dark else light
-    MillenniumPalette.Orange -> if (dark) orangeDark else orangeLight
-    MillenniumPalette.Lime -> if (dark) limeDark else limeLight
-}
+fun MillenniumColorSchemes.resolve(palette: MillenniumPalette, dark: Boolean): MillenniumColors =
+    when (palette) {
+        MillenniumPalette.Blue -> if (dark) this.dark else light
+        MillenniumPalette.Orange -> if (dark) orangeDark else orangeLight
+        MillenniumPalette.Lime -> if (dark) limeDark else limeLight
+    }
 
 /** The complete set of component-owned themes for one appearance. */
 @Immutable
@@ -262,10 +268,12 @@ fun MillenniumTheme(
             name = "Millennium / Aero refined"
             colorSchemeTransitionSpec = tween(config.themeTransitionMillis)
             colorScheme(ColorScheme.Light) {
-                properties[paletteProperty] = mapOf(paletteToken to config.colorSchemes.resolve(config.palette, dark = false))
+                properties[paletteProperty] =
+                    mapOf(paletteToken to config.colorSchemes.resolve(config.palette, dark = false))
             }
             colorScheme(ColorScheme.Dark) {
-                properties[paletteProperty] = mapOf(paletteToken to config.colorSchemes.resolve(config.palette, dark = true))
+                properties[paletteProperty] =
+                    mapOf(paletteToken to config.colorSchemes.resolve(config.palette, dark = true))
             }
         }
     }
@@ -281,16 +289,21 @@ fun MillenniumTheme(
             )
         }
         val bodyStyle = activeComponents.textTheme.states.default.body
-        CompositionLocalProvider(
-            LocalMillenniumConfig provides config,
-            LocalMillenniumComponents provides activeComponents,
-            LocalMillenniumColors provides activeColors,
-        ) {
-            CompositionLocalProvider(
-                LocalIndication provides indication,
-                LocalTextStyle provides bodyStyle.copy(color = activeColors.text),
-                content = content,
-            )
+        ProvideWindowWidthBreakpoints(widthBreakpoints) {
+            ProvideWindowHeightBreakpoints(heightBreakpoints) {
+                CompositionLocalProvider(
+                    LocalMillenniumConfig provides config,
+                    LocalMillenniumComponents provides activeComponents,
+                    LocalMillenniumColors provides activeColors,
+                ) {
+                    CompositionLocalProvider(
+                        LocalIndication provides indication,
+                        LocalContentColor provides activeColors.text,
+                        LocalTextStyle provides bodyStyle.copy(color = activeColors.text),
+                        content = content,
+                    )
+                }
+            }
         }
     }
 }

@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.composeunstyled.LocalContentColor
 import com.composeunstyled.LocalTextStyle
 
 /** States understood by every Millennium control. Each component decides how they look. */
@@ -272,6 +273,7 @@ internal fun MillenniumStyledContent(
 ) {
     CompositionLocalProvider(
         LocalTextStyle provides LocalTextStyle.current.merge(textStyle).copy(color = foreground),
+        LocalContentColor provides foreground,
         content = content,
     )
 }
