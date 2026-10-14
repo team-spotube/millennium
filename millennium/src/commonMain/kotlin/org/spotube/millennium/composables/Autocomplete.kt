@@ -176,7 +176,7 @@ data class MillenniumAutocompleteItemVisuals(
 @Composable
 fun <T> MillenniumAutocomplete(
     state: TextFieldState,
-    label: String,
+    label: String? = null,
     suggestions: List<T>,
     onSuggestionSelected: (T) -> Unit,
     suggestionLabel: (T) -> String,
@@ -225,8 +225,10 @@ fun <T> MillenniumAutocomplete(
     val query = state.text.toString()
     var dismissedQuery by remember { mutableStateOf<String?>(null) }
     var highlightedIndex by remember { mutableIntStateOf(-1) }
-    val hasMenuContent = suggestions.isNotEmpty() || emptyContent != null || menuHeader != null || menuFooter != null
-    val menuOpen = autocompleteMenuShouldShow(enabled, focused, query, hasMenuContent, dismissedQuery)
+    val hasMenuContent =
+        suggestions.isNotEmpty() || emptyContent != null || menuHeader != null || menuFooter != null
+    val menuOpen =
+        autocompleteMenuShouldShow(enabled, focused, query, hasMenuContent, dismissedQuery)
     val controlState = when {
         !enabled -> MillenniumControlState.Disabled
         error != null -> MillenniumControlState.Error
@@ -284,7 +286,8 @@ fun <T> MillenniumAutocomplete(
                 val gap = with(density) { 4.dp.roundToPx() }
                 val left = if (layoutDirection == LayoutDirection.Ltr) anchorBounds.left
                 else anchorBounds.right - popupContentSize.width
-                val x = left.coerceIn(0, (windowSize.width - popupContentSize.width).coerceAtLeast(0))
+                val x =
+                    left.coerceIn(0, (windowSize.width - popupContentSize.width).coerceAtLeast(0))
                 val below = anchorBounds.bottom + gap
                 val y = if (below + popupContentSize.height <= windowSize.height) below
                 else (anchorBounds.top - popupContentSize.height - gap).coerceAtLeast(0)
@@ -318,20 +321,32 @@ fun <T> MillenniumAutocomplete(
                         highlightedIndex = -1
                         true
                     } else false
+
                     Key.DirectionDown -> if (suggestions.isNotEmpty()) {
                         dismissedQuery = null
-                        highlightedIndex = nextAutocompleteIndex(highlightedIndex, suggestions.size, forward = true)
+                        highlightedIndex = nextAutocompleteIndex(
+                            highlightedIndex,
+                            suggestions.size,
+                            forward = true
+                        )
                         true
                     } else false
+
                     Key.DirectionUp -> if (suggestions.isNotEmpty()) {
                         dismissedQuery = null
-                        highlightedIndex = nextAutocompleteIndex(highlightedIndex, suggestions.size, forward = false)
+                        highlightedIndex = nextAutocompleteIndex(
+                            highlightedIndex,
+                            suggestions.size,
+                            forward = false
+                        )
                         true
                     } else false
+
                     Key.Enter -> if (menuOpen && suggestions.isNotEmpty()) {
                         commit(highlightedIndex.takeIf { it in suggestions.indices } ?: 0)
                         true
                     } else false
+
                     else -> false
                 }
             },
@@ -347,26 +362,36 @@ fun <T> MillenniumAutocomplete(
         ),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(field.contentSpacing)) {
-            Text(label, style = field.labelStyle.copy(color = foreground))
+            if (!label.isNullOrBlank()) {
+                Text(label, style = field.labelStyle.copy(color = foreground))
+            }
             Box(
                 Modifier.fillMaxWidth()
                     .heightIn(min = field.minimumHeight)
                     .onGloballyPositioned { anchorWidth = with(density) { it.size.width.toDp() } }
                     .millenniumSurface(
-                        background = field.background ?: millenniumBevelBrush(colors, sunken = true),
+                        background = field.background ?: millenniumBevelBrush(
+                            colors,
+                            sunken = true
+                        ),
                         shape = field.shape,
                         borderColor = animatedBorder,
                         borderWidth = field.borderWidth,
                         insetShadeColor = field.insetShadeColor ?: colors.text.copy(alpha = 0.09f),
                         innerGlowColor = field.innerGlowColor ?: colors.border.copy(alpha = 0.4f),
-                        bottomRimColor = field.bottomRimColor ?: colors.highlight.copy(alpha = 0.8f),
+                        bottomRimColor = field.bottomRimColor
+                            ?: colors.highlight.copy(alpha = 0.8f),
                     ),
                 contentAlignment = Alignment.CenterStart,
             ) {
                 TextInput(
                     Modifier.fillMaxWidth().padding(field.contentPadding),
                     placeholder = {
-                        Text(placeholder, style = field.placeholderStyle.copy(color = placeholderColor), color = placeholderColor)
+                        Text(
+                            placeholder,
+                            style = field.placeholderStyle.copy(color = placeholderColor),
+                            color = placeholderColor
+                        )
                     },
                 )
                 if ((menuOpen || menuVisibility.currentState || menuVisibility.targetState) && anchorWidth > 0.dp) {
@@ -408,7 +433,10 @@ fun <T> MillenniumAutocomplete(
                     }
                 }
             }
-            if (error != null) Text(error, style = field.errorStyle.copy(color = field.errorColor ?: colors.danger))
+            if (error != null) Text(
+                error,
+                style = field.errorStyle.copy(color = field.errorColor ?: colors.danger)
+            )
         }
     }
 }
@@ -462,23 +490,23 @@ private fun <T> AutocompleteAnimatedMenu(
     AnimatedVisibility(
         visibleState = visibleState,
         enter = fadeIn(tween(properties.openAnimationMillis)) +
-            expandVertically(
-                animationSpec = tween(properties.openAnimationMillis),
-                expandFrom = Alignment.Top,
-            ) + scaleIn(
-                initialScale = 0.97f,
-                animationSpec = tween(properties.openAnimationMillis),
-                transformOrigin = TransformOrigin(0.5f, 0f),
-            ),
+                expandVertically(
+                    animationSpec = tween(properties.openAnimationMillis),
+                    expandFrom = Alignment.Top,
+                ) + scaleIn(
+            initialScale = 0.97f,
+            animationSpec = tween(properties.openAnimationMillis),
+            transformOrigin = TransformOrigin(0.5f, 0f),
+        ),
         exit = fadeOut(tween(properties.closeAnimationMillis)) +
-            shrinkVertically(
-                animationSpec = tween(properties.closeAnimationMillis),
-                shrinkTowards = Alignment.Top,
-            ) + scaleOut(
-                targetScale = 0.98f,
-                animationSpec = tween(properties.closeAnimationMillis),
-                transformOrigin = TransformOrigin(0.5f, 0f),
-            ),
+                shrinkVertically(
+                    animationSpec = tween(properties.closeAnimationMillis),
+                    shrinkTowards = Alignment.Top,
+                ) + scaleOut(
+            targetScale = 0.98f,
+            animationSpec = tween(properties.closeAnimationMillis),
+            transformOrigin = TransformOrigin(0.5f, 0f),
+        ),
     ) {
         AutocompleteMenu(
             suggestions = suggestions,
@@ -575,16 +603,18 @@ private fun <T> AutocompleteMenu(
                             else -> MillenniumControlState.Default
                         },
                     )
-                    val resolvedItemAnimationMillis = itemStateAnimationMillis ?: itemTheme.itemStateAnimationMillis
+                    val resolvedItemAnimationMillis =
+                        itemStateAnimationMillis ?: itemTheme.itemStateAnimationMillis
                     val foreground = itemForeground ?: itemTheme.itemForeground
-                        ?: if (highlighted) {
-                            highlightedItemForeground ?: itemTheme.highlightedItemForeground ?: colors.onAccent
-                        } else colors.text
+                    ?: if (highlighted) {
+                        highlightedItemForeground ?: itemTheme.highlightedItemForeground
+                        ?: colors.onAccent
+                    } else colors.text
                     val background = if (highlighted) {
                         highlightedItemBackground ?: itemTheme.highlightedItemBackground
-                            ?: gelBrush(colors.accentTop, colors.accentBottom)
+                        ?: gelBrush(colors.accentTop, colors.accentBottom)
                     } else itemBackground ?: itemTheme.itemBackground
-                        ?: Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
+                    ?: Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
                     val targetBorder = when {
                         highlighted -> colors.accentBottom
                         hovered -> colors.border
@@ -624,17 +654,31 @@ private fun <T> AutocompleteMenu(
                                 borderColor = border,
                                 borderWidth = if (highlighted || hovered) 1.dp else 0.dp,
                                 shadowElevation = elevation,
-                                innerGlowColor = if (highlighted || hovered) colors.highlight.copy(alpha = 0.25f) else null,
+                                innerGlowColor = if (highlighted || hovered) colors.highlight.copy(
+                                    alpha = 0.25f
+                                ) else null,
                             ),
                     ) {
-                        MillenniumStyledContent(itemTextStyle ?: itemTheme.itemTextStyle, foreground) {
+                        MillenniumStyledContent(
+                            itemTextStyle ?: itemTheme.itemTextStyle,
+                            foreground
+                        ) {
                             Row(
-                                Modifier.fillMaxWidth().padding(itemPadding ?: itemTheme.itemPadding),
+                                Modifier.fillMaxWidth()
+                                    .padding(itemPadding ?: itemTheme.itemPadding),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                             ) {
                                 if (suggestionContent != null) {
-                                    suggestionContent(item, MillenniumAutocompleteItemVisuals(highlighted, hovered, pressed, foreground))
+                                    suggestionContent(
+                                        item,
+                                        MillenniumAutocompleteItemVisuals(
+                                            highlighted,
+                                            hovered,
+                                            pressed,
+                                            foreground
+                                        )
+                                    )
                                 } else {
                                     leadingContent?.invoke(item)
                                     Box(Modifier.weight(1f)) { Text(suggestionLabel(item)) }

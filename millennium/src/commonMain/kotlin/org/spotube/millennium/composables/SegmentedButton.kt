@@ -48,10 +48,10 @@ import org.spotube.millennium.theme.millenniumSurface
 object MillenniumSegmentedButtonDefaults {
     /** A single segment's shape: only the outer edges of the row are rounded. */
     fun itemShape(index: Int, count: Int): Shape = RoundedCornerShape(
-        topStart = if (index == 0) 10.dp else 4.dp,
-        bottomStart = if (index == 0) 10.dp else 4.dp,
-        topEnd = if (index == count - 1) 10.dp else 4.dp,
-        bottomEnd = if (index == count - 1) 10.dp else 4.dp,
+        topStart = if (index == 0) 10.dp else 0.dp,
+        bottomStart = if (index == 0) 10.dp else 0.dp,
+        topEnd = if (index == count - 1) 10.dp else 0.dp,
+        bottomEnd = if (index == count - 1) 10.dp else 0.dp,
     )
 }
 

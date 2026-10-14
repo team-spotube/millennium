@@ -105,7 +105,7 @@ fun defaultMillenniumToggleSwitchTheme(): MillenniumToggleSwitchTheme {
 fun MillenniumSwitch(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    label: String,
+    label: String? = null,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     trackBackground: Brush? = null,
@@ -146,7 +146,8 @@ fun MillenniumSwitch(
     }
     val properties = theme.states.resolve(state)
     val colors = MillenniumTheme.colors
-    val resolvedTrackBackground = trackBackground ?: properties.trackBackground ?: millenniumBevelBrush(colors, sunken = true)
+    val resolvedTrackBackground =
+        trackBackground ?: properties.trackBackground ?: millenniumBevelBrush(colors, sunken = true)
     val resolvedSelectedTrackBackground = selectedTrackBackground
         ?: properties.selectedTrackBackground ?: gelBrush(colors.accentTop, colors.accentBottom)
     val resolvedTrackBorderColor = trackBorderColor ?: properties.trackBorderColor ?: when (state) {
@@ -156,10 +157,11 @@ fun MillenniumSwitch(
         else -> colors.border
     }
     val resolvedTrackGlowColor = trackGlowColor ?: properties.trackGlowColor
-        ?: if (checked) colors.highlight.copy(alpha = 0.35f) else null
-    val resolvedThumbBackground = thumbBackground ?: properties.thumbBackground ?: gelBrush(colors.raised, colors.inset)
+    ?: if (checked) colors.highlight.copy(alpha = 0.35f) else null
+    val resolvedThumbBackground =
+        thumbBackground ?: properties.thumbBackground ?: gelBrush(colors.raised, colors.inset)
     val resolvedLabelForeground = labelForeground ?: properties.labelForeground
-        ?: if (state == MillenniumControlState.Disabled) colors.muted else colors.text
+    ?: if (state == MillenniumControlState.Disabled) colors.muted else colors.text
     UnstyledSwitch(
         checked = checked,
         onCheckedChange = onCheckedChange,
@@ -173,9 +175,13 @@ fun MillenniumSwitch(
         interactionSource = interaction,
     ) {
         Row(
-            modifier = androidx.compose.ui.Modifier.padding(contentPadding ?: properties.contentPadding),
+            modifier = androidx.compose.ui.Modifier.padding(
+                contentPadding ?: properties.contentPadding
+            ),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(contentSpacing ?: properties.contentSpacing),
+            horizontalArrangement = Arrangement.spacedBy(
+                contentSpacing ?: properties.contentSpacing
+            ),
         ) {
             Track(
                 Modifier
@@ -197,17 +203,22 @@ fun MillenniumSwitch(
                             background = resolvedThumbBackground,
                             shape = thumbShape ?: properties.thumbShape,
                             shadowElevation = thumbElevation ?: properties.thumbElevation,
-                            borderColor = thumbBorderColor ?: properties.thumbBorderColor ?: colors.border,
+                            borderColor = thumbBorderColor ?: properties.thumbBorderColor
+                            ?: colors.border,
                             borderWidth = thumbBorderWidth ?: properties.thumbBorderWidth,
                             innerGlowColor = thumbGlowColor ?: properties.thumbGlowColor
-                                ?: colors.highlight.copy(alpha = 0.36f),
+                            ?: colors.highlight.copy(alpha = 0.36f),
                         ),
                 )
             }
-            CompositionLocalProvider(
-                LocalTextStyle provides LocalTextStyle.current.merge(labelStyle ?: properties.labelStyle)
-                    .copy(color = resolvedLabelForeground),
-            ) { Text(label) }
+            if (!label.isNullOrBlank()) {
+                CompositionLocalProvider(
+                    LocalTextStyle provides LocalTextStyle.current.merge(
+                        labelStyle ?: properties.labelStyle
+                    )
+                        .copy(color = resolvedLabelForeground),
+                ) { Text(label) }
+            }
         }
     }
 }
