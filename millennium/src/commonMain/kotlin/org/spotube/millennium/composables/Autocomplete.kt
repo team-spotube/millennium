@@ -675,6 +675,8 @@ private fun <T> AutocompleteMenu(
                                 borderColor = border,
                                 borderWidth = if (highlighted || hovered) 1.dp else 0.dp,
                                 shadowElevation = elevation,
+                                // Only the highlighted row's gel is opaque; a hover fill is translucent.
+                                opaqueFill = highlighted,
                                 innerGlowColor = if (highlighted || hovered) colors.highlight.copy(
                                     alpha = 0.25f
                                 ) else null,

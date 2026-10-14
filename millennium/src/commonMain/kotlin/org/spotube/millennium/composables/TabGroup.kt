@@ -179,8 +179,6 @@ fun <T> MillenniumTabGroup(
                     shape = listShape ?: groupProperties.listShape,
                     borderColor = resolvedListBorderColor,
                     borderWidth = listBorderWidth ?: groupProperties.listBorderWidth,
-                    insetShadeColor = colors.text.copy(alpha = 0.08f),
-                    bottomRimColor = colors.highlight.copy(alpha = 0.55f),
                 ).padding(listPadding ?: groupProperties.listPadding),
             ) {
                 BoxWithConstraints(Modifier.fillMaxWidth()) {

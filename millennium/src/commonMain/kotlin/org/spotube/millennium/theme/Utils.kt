@@ -146,6 +146,13 @@ fun Modifier.millenniumSurface(
     borderColor: Color? = null,
     borderWidth: Dp = 0.dp,
     shadowElevation: Dp = 0.dp,
+    /**
+     * Whether [background] fully covers what is behind it. Compose draws a drop shadow
+     * *behind* the fill, so a translucent fill lets the shadow bleed through as a darker
+     * inner shape ("a box inside the box"). Set this to `false` for translucent fills
+     * (hover presses/washes) to keep them flat.
+     */
+    opaqueFill: Boolean = true,
     shadowColor: Color = Color.Black.copy(alpha = 0.16f),
     shadowColors: List<Color>? = null,
     innerGlowColor: Color? = null,
@@ -160,7 +167,7 @@ fun Modifier.millenniumSurface(
     orbDepthFraction: Float = 0.16f,
 ): Modifier {
     var result = this
-    if (shadowElevation > 0.dp) {
+    if (shadowElevation > 0.dp && opaqueFill) {
         val colors = shadowColors?.takeIf { it.isNotEmpty() } ?: listOf(shadowColor)
         colors.forEach { color ->
             result = result.shadow(

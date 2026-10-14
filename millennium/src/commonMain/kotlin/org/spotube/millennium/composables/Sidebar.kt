@@ -720,12 +720,13 @@ fun MillenniumSidebarGroupLabel(
         MillenniumControlState.Pressed -> Brush.verticalGradient(
             listOf(colors.accent.copy(alpha = 0.18f), colors.accent.copy(alpha = 0.10f)),
         )
-        else -> labelBackground ?: properties.labelBackground ?: millenniumBevelBrush(colors)
+        else -> labelBackground ?: properties.labelBackground
+            ?: Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
     }
     val borderColor = labelBorderColor ?: properties.labelBorderColor ?: when (state) {
         MillenniumControlState.Focused -> colors.accent
         MillenniumControlState.Error -> colors.danger
-        else -> colors.border.copy(alpha = 0.6f)
+        else -> null
     }
     val resolvedLabelBorderWidth = labelBorderWidth ?: properties.labelBorderWidth
     val borderWidth = when (state) {
@@ -773,7 +774,7 @@ fun MillenniumSidebarGroupLabel(
             borderColor = borderColor,
             borderWidth = borderWidth,
             innerGlowColor = labelInnerGlowColor ?: properties.labelInnerGlowColor
-                ?: colors.highlight.copy(alpha = 0.45f),
+                ?: if (state == MillenniumControlState.Focused) colors.highlight.copy(alpha = 0.45f) else null,
         )
         .padding(labelPadding ?: properties.labelPadding)
 
@@ -1123,6 +1124,9 @@ private fun SidebarItemContainer(
                 borderColor = resolvedBorderColor,
                 borderWidth = borderWidth ?: properties.borderWidth,
                 shadowElevation = elevation,
+                // Only the selected gel is opaque; hover/focus/press are translucent
+                // washes, and a shadow behind them would show through as an inner box.
+                opaqueFill = selected,
                 innerGlowColor = innerGlowColor ?: properties.innerGlowColor ?: if (selected || hovered || focused) {
                     colors.highlight.copy(alpha = 0.35f)
                 } else null,
@@ -1285,6 +1289,8 @@ fun MillenniumSidebarTrigger(
                 },
                 borderWidth = borderWidth ?: properties.borderWidth,
                 shadowElevation = shadowElevation ?: properties.shadowElevation,
+                // Hover/press washes are translucent; only the resting bevel is opaque.
+                opaqueFill = state == MillenniumControlState.Default || state == MillenniumControlState.Disabled,
                 innerGlowColor = innerGlowColor ?: properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.5f),
             ),
     ) {

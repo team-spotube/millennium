@@ -2,14 +2,20 @@ package org.spotube.millennium.theme
 
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Indication
+import androidx.compose.foundation.IndicationNodeFactory
 import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.ContentDrawScope
+import androidx.compose.ui.node.DelegatableNode
+import androidx.compose.ui.node.DrawModifierNode
 import com.composeunstyled.LocalTextStyle
 import com.composeunstyled.LocalContentColor
 import com.composeunstyled.ProvideWindowHeightBreakpoints
@@ -254,6 +260,27 @@ object MillenniumTheme {
     fun <T : Any> token(key: String, default: T): T = config.extensions[key] as? T ?: default
 }
 
+private object DefaultDebugIndication : IndicationNodeFactory {
+
+    override fun create(interactionSource: InteractionSource): DelegatableNode =
+        DefaultDebugIndicationInstance(interactionSource)
+
+    override fun hashCode(): Int = -1
+
+    override fun equals(other: Any?) = other === this
+
+    private class DefaultDebugIndicationInstance(private val interactionSource: InteractionSource) :
+        Modifier.Node(), DrawModifierNode {
+        override fun onAttach() {
+            // no op
+        }
+
+        override fun ContentDrawScope.draw() {
+            drawContent()
+        }
+    }
+}
+
 /** Install the selected light/dark component themes at an application or preview root. */
 @Composable
 fun MillenniumTheme(
@@ -300,6 +327,7 @@ fun MillenniumTheme(
                         LocalIndication provides indication,
                         LocalContentColor provides activeColors.text,
                         LocalTextStyle provides bodyStyle.copy(color = activeColors.text),
+                        LocalIndication provides DefaultDebugIndication,
                         content = content,
                     )
                 }
