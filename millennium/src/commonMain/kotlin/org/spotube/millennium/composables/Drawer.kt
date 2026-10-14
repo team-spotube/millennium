@@ -44,6 +44,7 @@ import com.composeunstyled.Viewport
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
+import org.spotube.millennium.theme.millenniumActionPointer
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.MillenniumStyledContent
 import org.spotube.millennium.theme.millenniumBevelBrush
@@ -147,6 +148,7 @@ fun MillenniumDrawer(
         presentation = com.composeunstyled.DrawerPresentation.Modal,
         overlay = {
             Overlay(
+                modifier = Modifier.millenniumActionPointer(),
                 enter = fadeIn(tween(resolvedAnimationMillis, easing = FastOutSlowInEasing)),
                 exit = fadeOut(tween((resolvedAnimationMillis * 0.8f).toInt().coerceAtLeast(120), easing = FastOutLinearInEasing)),
             ) {

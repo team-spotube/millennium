@@ -5,8 +5,9 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.hoverable
 import org.spotube.millennium.theme.collectIsKeyboardFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -51,8 +52,10 @@ import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.MillenniumStyledContent
 import org.spotube.millennium.theme.MillenniumTheme
+import org.spotube.millennium.theme.millenniumActionPointer
 import org.spotube.millennium.theme.millenniumSelectedGelBrush
 import org.spotube.millennium.theme.millenniumSurface
+import org.spotube.millennium.theme.millenniumInteractionSurface
 
 /** Complete, state-specific list-tile appearance and layout configuration. */
 @Immutable
@@ -207,7 +210,7 @@ fun MillenniumListTile(
     val focused by interaction.collectIsKeyboardFocusedAsState()
     val hovered by interaction.collectIsHoveredAsState()
     val hasOnClick = onClick != null
-    val clickable = hasOnClick && enabled
+    val clickable = (hasOnClick || onRightClick != null) && enabled
     val state = listTileControlState(
         enabled = enabled,
         clickable = clickable,
@@ -269,6 +272,8 @@ fun MillenniumListTile(
         animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMedium),
     )
     val surfaceModifier = modifier
+        .millenniumActionPointer(enabled && (hasOnClick || onRightClick != null))
+        .hoverable(interaction, enabled = clickable && !hasOnClick)
         .fillMaxWidth()
         .graphicsLayer { scaleX = rowScale; scaleY = rowScale }
         .alpha(animatedAlpha)
@@ -284,7 +289,8 @@ fun MillenniumListTile(
                     null
                 },
         )
-        .then(secondaryClickModifier(onRightClick))
+        .millenniumInteractionSurface(state, resolvedProperties.shape, animationMillis = stateAnimationMillis ?: properties.stateAnimationMillis)
+        .then(secondaryClickModifier(if (enabled) onRightClick else null, interaction))
     val row: @Composable () -> Unit = {
         ListTileRow(
             properties = resolvedProperties,
@@ -301,7 +307,7 @@ fun MillenniumListTile(
             onClick = onClick,
             enabled = enabled,
             interactionSource = interaction,
-            indication = LocalIndication.current,
+            indication = null,
             contentPadding = PaddingValues(0.dp),
             modifier = surfaceModifier,
         ) { row() }
@@ -311,18 +317,29 @@ fun MillenniumListTile(
 }
 
 @Composable
-private fun secondaryClickModifier(onRightClick: ((Offset) -> Unit)?): Modifier {
+private fun secondaryClickModifier(onRightClick: ((Offset) -> Unit)?, interaction: MutableInteractionSource): Modifier {
     if (onRightClick == null) return Modifier
     val current by rememberUpdatedState(onRightClick)
     return Modifier.pointerInput(Unit) {
-        awaitPointerEventScope {
-            while (true) {
-                val event = awaitPointerEvent()
-                if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
-                    current(event.changes.firstOrNull()?.position ?: Offset.Zero)
-                    event.changes.forEach { it.consume() }
+        var press: PressInteraction.Press? = null
+        try {
+            awaitPointerEventScope {
+                while (true) {
+                    val event = awaitPointerEvent()
+                    if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                        val position = event.changes.firstOrNull()?.position ?: Offset.Zero
+                        press?.let { interaction.tryEmit(PressInteraction.Cancel(it)) }
+                        press = PressInteraction.Press(position).also { interaction.tryEmit(it) }
+                        current(position)
+                        event.changes.forEach { it.consume() }
+                    } else if (event.type == PointerEventType.Release && !event.buttons.isSecondaryPressed) {
+                        press?.let { interaction.tryEmit(PressInteraction.Release(it)) }
+                        press = null
+                    }
                 }
             }
+        } finally {
+            press?.let { interaction.tryEmit(PressInteraction.Cancel(it)) }
         }
     }
 }

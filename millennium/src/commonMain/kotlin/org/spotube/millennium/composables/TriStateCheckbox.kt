@@ -1,6 +1,5 @@
 package org.spotube.millennium.composables
 
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import org.spotube.millennium.theme.collectIsKeyboardFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -33,6 +32,7 @@ import com.composeunstyled.UnstyledTriStateCheckbox
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
+import org.spotube.millennium.theme.millenniumActionPointer
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.gelBrush
 import org.spotube.millennium.theme.millenniumBevelBrush
@@ -96,7 +96,7 @@ fun defaultMillenniumTriStateCheckboxTheme(): MillenniumTriStateCheckboxTheme {
 fun MillenniumTriStateCheckbox(
     value: ToggleableState,
     onClick: () -> Unit,
-    label: String,
+    label: String?,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     faceBackground: Brush? = null,
@@ -154,7 +154,8 @@ fun MillenniumTriStateCheckbox(
     UnstyledTriStateCheckbox(
         value = value,
         onClick = onClick,
-        modifier = modifier.heightIn(min = minimumTouchHeight ?: properties.minimumTouchHeight),
+        modifier = modifier.millenniumActionPointer(enabled)
+            .heightIn(min = minimumTouchHeight ?: properties.minimumTouchHeight),
         enabled = enabled,
         accessibilityLabel = label,
         indication = null,
@@ -163,13 +164,19 @@ fun MillenniumTriStateCheckbox(
         Row(
             modifier = Modifier.padding(contentPadding ?: properties.contentPadding),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(contentSpacing ?: properties.contentSpacing),
+            horizontalArrangement = Arrangement.spacedBy(
+                contentSpacing ?: properties.contentSpacing
+            ),
         ) {
             MillenniumCheckFace(value, faceProperties, state)
-            CompositionLocalProvider(
-                LocalTextStyle provides LocalTextStyle.current.merge(labelStyle ?: properties.labelStyle)
-                    .copy(color = labelColor),
-            ) { Text(label) }
+            if (!label.isNullOrBlank()) {
+                CompositionLocalProvider(
+                    LocalTextStyle provides LocalTextStyle.current.merge(
+                        labelStyle ?: properties.labelStyle
+                    )
+                        .copy(color = labelColor),
+                ) { Text(label) }
+            }
         }
     }
 }
@@ -177,5 +184,9 @@ fun MillenniumTriStateCheckbox(
 @Preview
 @Composable
 private fun MillenniumTriStateCheckboxPreview() = MillenniumPreview {
-    MillenniumTriStateCheckbox(value = ToggleableState.Indeterminate, onClick = {}, label = "Select the collection")
+    MillenniumTriStateCheckbox(
+        value = ToggleableState.Indeterminate,
+        onClick = {},
+        label = "Select the collection"
+    )
 }

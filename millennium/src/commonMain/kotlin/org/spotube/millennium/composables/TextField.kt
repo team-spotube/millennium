@@ -43,6 +43,8 @@ import org.spotube.millennium.theme.MillenniumTheme
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
+import org.spotube.millennium.theme.millenniumInteractionSurface
+import androidx.compose.foundation.hoverable
 
 @Immutable
 data class MillenniumTextFieldThemeProperties(
@@ -195,6 +197,7 @@ fun MillenniumTextField(
                 )
             Box(
                 Modifier
+                    .hoverable(interaction, enabled)
                     .fillMaxWidth()
                     .heightIn(min = minimumHeight ?: properties.minimumHeight)
                     .millenniumSurface(
@@ -211,7 +214,8 @@ fun MillenniumTextField(
                         ?: colors.border.copy(alpha = 0.4f),
                         bottomRimColor = bottomRimColor ?: properties.bottomRimColor
                         ?: colors.highlight.copy(alpha = 0.8f),
-                    ),
+                    )
+                    .millenniumInteractionSurface(controlState, shape ?: properties.shape, animationMillis = stateAnimationMillis ?: properties.stateAnimationMillis),
                 contentAlignment = Alignment.CenterStart,
             ) {
                 TextInput(

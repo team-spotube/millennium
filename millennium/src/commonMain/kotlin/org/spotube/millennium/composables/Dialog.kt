@@ -60,11 +60,13 @@ import com.composeunstyled.UnstyledDialog
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
+import org.spotube.millennium.theme.millenniumActionPointer
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.MillenniumStyledContent
 import org.spotube.millennium.theme.collectIsKeyboardFocusedAsState
 import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
+import org.spotube.millennium.theme.millenniumInteractionSurface
 import org.spotube.millennium.theme.millenniumPanelBrush
 
 @Immutable
@@ -191,6 +193,7 @@ fun MillenniumDialog(
         onDismissRequest = onDismissRequest,
         overlay = {
             Scrim(
+                modifier = Modifier.millenniumActionPointer(),
                 scrimColor = resolvedScrimColor,
                 enter = fadeIn(animationSpec = tween(resolvedAnimationMillis, easing = FastOutSlowInEasing)),
                 exit = fadeOut(animationSpec = tween(resolvedCloseMillis, easing = FastOutLinearInEasing)),
@@ -268,7 +271,7 @@ fun MillenniumDialog(
                                 interactionSource = closeInteraction,
                                 contentPadding = PaddingValues(0.dp),
                                 contentAlignment = Alignment.Center,
-                                modifier = Modifier.size(44.dp)
+                                modifier = Modifier.millenniumActionPointer().size(44.dp)
                                     .semantics { contentDescription = "Close dialog" },
                             ) {
                                 Box(
@@ -285,6 +288,14 @@ fun MillenniumDialog(
                                             borderWidth = if (closeFocused) 2.dp else 1.dp,
                                             shadowElevation = closeElevation,
                                             innerGlowColor = colors.highlight.copy(alpha = if (closeHovered) 0.65f else 0.45f),
+                                        )
+                                        .millenniumInteractionSurface(
+                                            when {
+                                                closePressed -> MillenniumControlState.Pressed
+                                                closeHovered || closeFocused -> MillenniumControlState.Hovered
+                                                else -> MillenniumControlState.Default
+                                            },
+                                            RoundedCornerShape(5.dp), tint = colors.danger,
                                         ),
                                     contentAlignment = Alignment.Center,
                                 ) {

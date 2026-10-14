@@ -6,7 +6,6 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import org.spotube.millennium.theme.collectIsKeyboardFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -43,11 +42,14 @@ import com.composeunstyled.UnstyledButton
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
+import org.spotube.millennium.theme.millenniumActionPointer
 import org.spotube.millennium.theme.MillenniumStyledContent
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.gelBrush
 import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
+import org.spotube.millennium.theme.millenniumInteractionSurface
+import org.spotube.millennium.theme.millenniumQuietEnamelStops
 
 enum class MillenniumButtonStyle { Primary, Secondary, Quiet, Danger }
 
@@ -111,9 +113,9 @@ fun defaultMillenniumButtonTheme(): MillenniumButtonTheme {
         )
         return MillenniumControlStateProperty(
             default = base,
-            hovered = base.copy(borderWidth = if (isQuiet) 1.dp else base.borderWidth),
+            hovered = base.copy(borderWidth = if (isQuiet) 1.dp else base.borderWidth, shadowElevation = 7.dp),
             focused = base.copy(borderWidth = 2.dp),
-            pressed = base.copy(shadowElevation = 0.dp),
+            pressed = base.copy(borderWidth = maxOf(1.dp, base.borderWidth), shadowElevation = 0.dp),
             disabled = base.copy(alpha = 0.45f, shadowElevation = 0.dp),
             selected = base.copy(borderWidth = 2.dp),
             error = base.copy(borderWidth = 2.dp),
@@ -189,7 +191,9 @@ fun MillenniumButton(
     val resolvedBackground = background ?: properties.background ?: when (style) {
         MillenniumButtonStyle.Primary -> gelBrush(colors.accentTop, colors.accentBottom)
         MillenniumButtonStyle.Secondary -> millenniumBevelBrush(colors)
-        MillenniumButtonStyle.Quiet -> Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
+        MillenniumButtonStyle.Quiet -> if (state == MillenniumControlState.Hovered || state == MillenniumControlState.Focused || state == MillenniumControlState.Pressed) {
+            Brush.verticalGradient(*millenniumQuietEnamelStops(colors, pressed).toTypedArray())
+        } else Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
         MillenniumButtonStyle.Danger -> gelBrush(
             colors.danger,
             lerp(colors.danger, if (colors.surface.luminance() > colors.danger.luminance()) Color.Black else Color.White, 0.20f),
@@ -201,7 +205,7 @@ fun MillenniumButton(
         else -> when (style) {
             MillenniumButtonStyle.Primary -> colors.accentBottom
             MillenniumButtonStyle.Secondary -> colors.border
-            MillenniumButtonStyle.Quiet -> Color.Transparent
+            MillenniumButtonStyle.Quiet -> if (hovered || pressed) colors.accent.copy(alpha = 0.55f) else Color.Transparent
             MillenniumButtonStyle.Danger -> colors.danger
         }
     }
@@ -238,8 +242,9 @@ fun MillenniumButton(
         onClick = onClick,
         enabled = enabled,
         interactionSource = interaction,
-        indication = LocalIndication.current,
+        indication = null,
         modifier = modifier
+            .millenniumActionPointer(enabled)
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .defaultMinSize(minWidth = resolvedMinSize.width, minHeight = resolvedMinSize.height)
             .alpha(alpha ?: properties.alpha)
@@ -249,6 +254,7 @@ fun MillenniumButton(
                 borderColor = animatedBorderColor,
                 borderWidth = borderWidth ?: properties.borderWidth,
                 shadowElevation = elevation,
+                opaqueFill = style != MillenniumButtonStyle.Quiet || state != MillenniumControlState.Default,
                 shadowColors = resolvedShadowColors,
                 innerGlowColor = animatedInnerGlowColor,
                 innerGlowWidth = innerGlowWidth ?: properties.innerGlowWidth,
@@ -257,7 +263,10 @@ fun MillenniumButton(
                 innerGlowFollowsShape = innerGlowFollowsShape ?: properties.innerGlowFollowsShape,
                 bottomRimColor = bottomRimColor ?: properties.bottomRimColor
                     ?: if (style != MillenniumButtonStyle.Quiet) colors.highlight.copy(alpha = 0.28f) else null,
-            ),
+            )
+            .millenniumInteractionSurface(state, shape ?: properties.shape,
+                tint = if (style == MillenniumButtonStyle.Danger) colors.danger else colors.accent,
+                animationMillis = resolvedMotion.stateChangeMillis),
         contentPadding = padding ?: properties.padding,
     ) {
         val labelStyle = if (style == MillenniumButtonStyle.Primary && resolvedTextStyle.shadow == null) {

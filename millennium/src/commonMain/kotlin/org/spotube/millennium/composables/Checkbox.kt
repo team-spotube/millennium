@@ -13,7 +13,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import org.spotube.millennium.theme.collectIsKeyboardFocusedAsState
@@ -52,10 +51,12 @@ import com.composeunstyled.UnstyledCheckbox
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
+import org.spotube.millennium.theme.millenniumActionPointer
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.gelBrush
 import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
+import org.spotube.millennium.theme.millenniumInteractionSurface
 
 /** Shared face anatomy for the binary and tri-state checkbox controls. */
 interface MillenniumCheckFaceStyle {
@@ -145,7 +146,10 @@ internal fun MillenniumCheckFace(
         ?: if (value == ToggleableState.Off) millenniumBevelBrush(colors, sunken = true)
         else gelBrush(colors.accentTop, colors.accentBottom)
     val targetBorderColor = properties.faceBorderColor
-        ?: if (value == ToggleableState.Off) colors.border else colors.accentBottom
+        ?: when (state) {
+            MillenniumControlState.Hovered, MillenniumControlState.Pressed, MillenniumControlState.Focused -> colors.accent
+            else -> if (value == ToggleableState.Off) colors.border else colors.accentBottom
+        }
     val borderColor by animateColorAsState(
         targetValue = targetBorderColor,
         animationSpec = tween(properties.stateChangeMillis),
@@ -166,13 +170,15 @@ internal fun MillenniumCheckFace(
             .size(properties.faceSize)
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .millenniumSurface(
-                background = if (selected) properties.selectedFaceBackground ?: gelBrush(colors.accentTop, colors.accentBottom) else faceBackground,
+                background = if (selected) properties.selectedFaceBackground
+                    ?: gelBrush(colors.accentTop, colors.accentBottom) else faceBackground,
                 shape = properties.faceShape,
                 borderColor = borderColor,
                 borderWidth = properties.faceBorderWidth,
                 shadowElevation = properties.faceElevation,
                 innerGlowColor = glowColor,
             )
+            .millenniumInteractionSurface(state, properties.faceShape, animationMillis = properties.stateChangeMillis)
             .alpha(properties.faceAlpha),
         contentAlignment = Alignment.Center,
     ) {
@@ -181,12 +187,28 @@ internal fun MillenniumCheckFace(
             transitionSpec = {
                 (scaleIn(
                     initialScale = 0.4f,
-                    animationSpec = spring(dampingRatio = 0.52f, stiffness = Spring.StiffnessMedium),
-                ) + fadeIn(tween(properties.stateChangeMillis, easing = FastOutSlowInEasing))) togetherWith
-                    (scaleOut(
-                        targetScale = 0.4f,
-                        animationSpec = tween((properties.stateChangeMillis * 0.7f).toInt().coerceAtLeast(60), easing = FastOutLinearInEasing),
-                    ) + fadeOut(tween((properties.stateChangeMillis * 0.7f).toInt().coerceAtLeast(60), easing = FastOutLinearInEasing)))
+                    animationSpec = spring(
+                        dampingRatio = 0.52f,
+                        stiffness = Spring.StiffnessMedium
+                    ),
+                ) + fadeIn(
+                    tween(
+                        properties.stateChangeMillis,
+                        easing = FastOutSlowInEasing
+                    )
+                )) togetherWith
+                        (scaleOut(
+                            targetScale = 0.4f,
+                            animationSpec = tween(
+                                (properties.stateChangeMillis * 0.7f).toInt().coerceAtLeast(60),
+                                easing = FastOutLinearInEasing
+                            ),
+                        ) + fadeOut(
+                            tween(
+                                (properties.stateChangeMillis * 0.7f).toInt().coerceAtLeast(60),
+                                easing = FastOutLinearInEasing
+                            )
+                        ))
             },
         ) { currentValue ->
             Box(Modifier.size(properties.faceSize), contentAlignment = Alignment.Center) {
@@ -196,11 +218,13 @@ internal fun MillenniumCheckFace(
                         modifier = Modifier.size(properties.markSize),
                         tint = selectedForeground,
                     )
+
                     ToggleableState.Indeterminate -> Box(
                         Modifier
                             .size(properties.dashSize)
                             .background(selectedForeground, CircleShape),
                     )
+
                     ToggleableState.Off -> Unit
                 }
             }
@@ -212,7 +236,7 @@ internal fun MillenniumCheckFace(
 fun MillenniumCheckbox(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    label: String,
+    label: String? = null,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     faceBackground: Brush? = null,
@@ -270,7 +294,8 @@ fun MillenniumCheckbox(
     UnstyledCheckbox(
         checked = checked,
         onCheckedChange = onCheckedChange,
-        modifier = modifier.heightIn(min = minimumTouchHeight ?: properties.minimumTouchHeight),
+        modifier = modifier.millenniumActionPointer(enabled)
+            .heightIn(min = minimumTouchHeight ?: properties.minimumTouchHeight),
         enabled = enabled,
         accessibilityLabel = label,
         indication = null,
@@ -279,17 +304,23 @@ fun MillenniumCheckbox(
         Row(
             modifier = Modifier.padding(contentPadding ?: properties.contentPadding),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(contentSpacing ?: properties.contentSpacing),
+            horizontalArrangement = Arrangement.spacedBy(
+                contentSpacing ?: properties.contentSpacing
+            ),
         ) {
             MillenniumCheckFace(
                 value = if (checked) ToggleableState.On else ToggleableState.Off,
                 properties = faceProperties,
                 state = state,
             )
-            CompositionLocalProvider(
-                LocalTextStyle provides LocalTextStyle.current.merge(labelStyle ?: properties.labelStyle)
-                    .copy(color = labelColor),
-            ) { Text(label) }
+            if (!label.isNullOrBlank()) {
+                CompositionLocalProvider(
+                    LocalTextStyle provides LocalTextStyle.current.merge(
+                        labelStyle ?: properties.labelStyle
+                    )
+                        .copy(color = labelColor),
+                ) { Text(label) }
+            }
         }
     }
 }

@@ -53,10 +53,12 @@ import com.composeunstyled.UnstyledRadioGroup
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
+import org.spotube.millennium.theme.millenniumActionPointer
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.gelBrush
 import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
+import org.spotube.millennium.theme.millenniumInteractionSurface
 
 @Immutable
 data class MillenniumRadioGroupThemeProperties(
@@ -175,7 +177,7 @@ fun <T> MillenniumRadioGroup(
                 val targetIndicatorBorderColor =
                     indicatorBorderColor ?: itemProperties.indicatorBorderColor ?: when (state) {
                         MillenniumControlState.Focused -> colors.accent
-                        MillenniumControlState.Hovered -> colors.border
+                        MillenniumControlState.Hovered, MillenniumControlState.Pressed -> colors.accent
                         MillenniumControlState.Selected -> colors.accent
                         MillenniumControlState.Error -> colors.danger
                         else -> colors.border
@@ -202,7 +204,7 @@ fun <T> MillenniumRadioGroup(
                 )
                 RadioButton(
                     value = option,
-                    modifier = Modifier.heightIn(
+                    modifier = Modifier.millenniumActionPointer().heightIn(
                         min = minimumTouchHeight ?: itemProperties.minimumTouchHeight
                     )
                         .alpha(animatedAlpha)
@@ -236,7 +238,8 @@ fun <T> MillenniumRadioGroup(
                                     innerGlowColor = indicatorGlowColor
                                         ?: itemProperties.indicatorGlowColor
                                         ?: if (selected) colors.highlight.copy(alpha = 0.32f) else null,
-                                ),
+                                )
+                                .millenniumInteractionSurface(state, indicatorShape ?: itemProperties.indicatorShape, animationMillis = resolvedMillis),
                             contentAlignment = Alignment.Center,
                         ) {
                             SelectedIndicator(

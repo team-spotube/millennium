@@ -18,7 +18,6 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -93,9 +92,12 @@ import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumStyledContent
 import org.spotube.millennium.theme.MillenniumTheme
+import org.spotube.millennium.theme.millenniumActionPointer
 import org.spotube.millennium.theme.gelBrush
 import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
+import org.spotube.millennium.theme.millenniumInteractionSurface
+import androidx.compose.foundation.hoverable
 
 /** Component-owned popup layout and suggestion-row styling. */
 @Immutable
@@ -374,6 +376,7 @@ fun <T> MillenniumAutocomplete(
             Box(
                 Modifier.fillMaxWidth()
                     .heightIn(min = field.minimumHeight)
+                    .hoverable(interaction, enabled)
                     .onGloballyPositioned { anchorWidth = with(density) { it.size.width.toDp() } }
                     .millenniumSurface(
                         background = field.background ?: millenniumBevelBrush(
@@ -387,7 +390,8 @@ fun <T> MillenniumAutocomplete(
                         innerGlowColor = field.innerGlowColor ?: colors.border.copy(alpha = 0.4f),
                         bottomRimColor = field.bottomRimColor
                             ?: colors.highlight.copy(alpha = 0.8f),
-                    ),
+                    )
+                    .millenniumInteractionSurface(controlState, field.shape, animationMillis = field.stateAnimationMillis),
                 contentAlignment = Alignment.CenterStart,
             ) {
                 TextInput(
@@ -660,9 +664,9 @@ private fun <T> AutocompleteMenu(
                     UnstyledButton(
                         onClick = { onSelect(index) },
                         interactionSource = interaction,
-                        indication = LocalIndication.current,
+                        indication = null,
                         contentPadding = PaddingValues(0.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.millenniumActionPointer().fillMaxWidth()
                             .heightIn(min = itemMinimumHeight ?: itemTheme.itemMinimumHeight)
                             .semantics {
                                 selected = highlighted
@@ -680,6 +684,15 @@ private fun <T> AutocompleteMenu(
                                 innerGlowColor = if (highlighted || hovered) colors.highlight.copy(
                                     alpha = 0.25f
                                 ) else null,
+                            )
+                            .millenniumInteractionSurface(
+                                when {
+                                    pressed -> MillenniumControlState.Pressed
+                                    hovered -> MillenniumControlState.Hovered
+                                    else -> MillenniumControlState.Default
+                                },
+                                itemShape ?: itemTheme.itemShape,
+                                animationMillis = resolvedItemAnimationMillis,
                             ),
                     ) {
                         MillenniumStyledContent(

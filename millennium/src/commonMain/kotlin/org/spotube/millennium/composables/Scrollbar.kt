@@ -36,9 +36,11 @@ import com.composeunstyled.rememberScrollbarState
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
+import org.spotube.millennium.theme.millenniumActionPointer
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
+import org.spotube.millennium.theme.millenniumInteractionSurface
 
 @Immutable
 data class MillenniumScrollbarThemeProperties(
@@ -120,7 +122,7 @@ fun MillenniumScrollbar(
     if (horizontal) {
         UnstyledHorizontalScrollbar(
             state,
-            modifier.height(thickness ?: properties.thickness).millenniumSurface(
+            modifier.millenniumActionPointer(scrollState.maxValue > 0).height(thickness ?: properties.thickness).millenniumSurface(
                 background = resolvedTrackBackground,
                 shape = shape ?: properties.shape,
                 borderColor = resolvedBorderColor,
@@ -133,13 +135,13 @@ fun MillenniumScrollbar(
                     background = resolvedThumbBackground,
                     shape = shape ?: properties.shape,
                     innerGlowColor = colors.highlight.copy(alpha = 0.4f),
-                ).alpha(animatedAlpha),
+                ).millenniumInteractionSurface(visualState, shape ?: properties.shape).alpha(animatedAlpha),
             )
         }
     } else {
         UnstyledVerticalScrollbar(
             state,
-            modifier.width(thickness ?: properties.thickness).millenniumSurface(
+            modifier.millenniumActionPointer(scrollState.maxValue > 0).width(thickness ?: properties.thickness).millenniumSurface(
                 background = resolvedTrackBackground,
                 shape = shape ?: properties.shape,
                 borderColor = resolvedBorderColor,
@@ -152,7 +154,7 @@ fun MillenniumScrollbar(
                     background = resolvedThumbBackground,
                     shape = shape ?: properties.shape,
                     innerGlowColor = colors.highlight.copy(alpha = 0.4f),
-                ).alpha(animatedAlpha),
+                ).millenniumInteractionSurface(visualState, shape ?: properties.shape).alpha(animatedAlpha),
             )
         }
     }

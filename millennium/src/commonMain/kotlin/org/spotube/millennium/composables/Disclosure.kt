@@ -12,7 +12,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import org.spotube.millennium.theme.collectIsKeyboardFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -49,10 +48,12 @@ import com.composeunstyled.UnstyledDisclosure
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
+import org.spotube.millennium.theme.millenniumActionPointer
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.MillenniumStyledContent
 import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
+import org.spotube.millennium.theme.millenniumInteractionSurface
 
 @Immutable
 data class MillenniumDisclosureThemeProperties(
@@ -185,11 +186,12 @@ fun MillenniumDisclosure(
     ) {
         Column {
             DisclosureButton(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.millenniumActionPointer().fillMaxWidth()
                     .heightIn(min = minimumHeaderHeight ?: properties.minimumHeaderHeight)
+                    .millenniumInteractionSurface(state, shape ?: properties.shape, animationMillis = resolvedAnimationMillis)
                     .padding(headerPadding ?: properties.headerPadding),
                 contentPadding = PaddingValues(0.dp),
-                indication = LocalIndication.current,
+                indication = null,
                 interactionSource = interaction,
             ) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

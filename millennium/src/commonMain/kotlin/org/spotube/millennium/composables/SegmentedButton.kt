@@ -42,10 +42,12 @@ import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.MillenniumStyledContent
 import org.spotube.millennium.theme.MillenniumTheme
+import org.spotube.millennium.theme.millenniumActionPointer
 import org.spotube.millennium.theme.collectIsKeyboardFocusedAsState
 import org.spotube.millennium.theme.gelBrush
 import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
+import org.spotube.millennium.theme.millenniumInteractionSurface
 
 /** Shape helpers for [MillenniumSegmentedButton]. */
 object MillenniumSegmentedButtonDefaults {
@@ -180,8 +182,10 @@ fun RowScope.MillenniumSegmentedButton(
         onClick = onClick,
         enabled = enabled,
         interactionSource = interaction,
+        indication = null,
         contentPadding = PaddingValues(0.dp),
         modifier = modifier
+            .millenniumActionPointer(enabled)
             .weight(1f)
             .defaultMinSize(minHeight = minimumHeight ?: properties.minimumHeight)
             .graphicsLayer { scaleX = scale; scaleY = scale }
@@ -193,7 +197,8 @@ fun RowScope.MillenniumSegmentedButton(
                 borderWidth = borderWidth ?: properties.borderWidth,
                 innerGlowColor = innerGlowColor ?: properties.innerGlowColor
                     ?: colors.highlight.copy(alpha = if (selected) 0.5f else 0.3f),
-            ),
+            )
+            .millenniumInteractionSurface(state, shape, animationMillis = resolvedMotion.stateChangeMillis),
     ) {
         Row(
             Modifier.padding(contentPadding ?: properties.contentPadding),

@@ -6,12 +6,10 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
@@ -21,9 +19,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.inset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
@@ -44,8 +49,11 @@ import org.spotube.millennium.theme.MillenniumStyledContent
 import org.spotube.millennium.theme.MillenniumTheme
 import org.spotube.millennium.theme.collectIsKeyboardFocusedAsState
 import org.spotube.millennium.theme.gelBrush
+import org.spotube.millennium.theme.millenniumActionPointer
 import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
+import org.spotube.millennium.theme.millenniumInteractionSurface
+import org.spotube.millennium.theme.millenniumQuietEnamelStops
 
 enum class MillenniumIconButtonStyle { Primary, Secondary, Quiet, Danger }
 
@@ -64,7 +72,7 @@ data class MillenniumIconButtonThemeProperties(
     val shadowElevation: Dp,
     val innerGlowColor: Color? = null,
     val bottomRimColor: Color? = null,
-    /** Draws the glass orb dome used by filled (gel) variants. */
+    /** Draws the spherical glass reflections used by filled variants. */
     val orb: Boolean = false,
     val orbColor: Color? = null,
     val orbStrength: Float = 0.55f,
@@ -91,18 +99,18 @@ fun defaultMillenniumIconButtonTheme(): MillenniumIconButtonTheme {
             contentPadding = PaddingValues(10.dp),
             borderWidth = when {
                 style == MillenniumIconButtonStyle.Quiet -> 0.dp
-                filled -> 3.dp
+                filled -> 1.dp
                 else -> 1.dp
             },
             shadowElevation = if (style == MillenniumIconButtonStyle.Quiet) 0.dp else 5.dp,
             orb = filled,
-            orbStrength = 0.60f,
+            orbStrength = 0.48f,
         )
         return MillenniumControlStateProperty(
             default = base,
-            hovered = base,
+            hovered = base.copy(borderWidth = 1.dp, shadowElevation = if (filled) 7.dp else 3.dp, orbStrength = 0.62f),
             focused = base.copy(borderWidth = maxOf(base.borderWidth, 2.dp)),
-            pressed = base.copy(shadowElevation = 0.dp, orbStrength = base.orbStrength * 0.8f),
+            pressed = base.copy(borderWidth = maxOf(base.borderWidth, 1.dp), shadowElevation = 0.dp, orbStrength = base.orbStrength * 0.8f),
             disabled = base.copy(alpha = 0.45f, shadowElevation = 0.dp),
             selected = base.copy(borderWidth = 2.dp),
             error = base.copy(borderWidth = 2.dp),
@@ -127,8 +135,8 @@ private fun MillenniumIconButtonTheme.forStyle(style: MillenniumIconButtonStyle)
 /**
  * A compact, circular control holding a single icon. Filled variants
  * ([MillenniumIconButtonStyle.Primary], [MillenniumIconButtonStyle.Danger]) carry the
- * glass orb dome; [MillenniumIconButtonStyle.Secondary] is enamel and
- * [MillenniumIconButtonStyle.Quiet] is transparent.
+ * Vista-style glass orb; [MillenniumIconButtonStyle.Secondary] is enamel and
+ * [MillenniumIconButtonStyle.Quiet] is transparent at rest and becomes glassy enamel on hover/press.
  */
 @Composable
 fun MillenniumIconButton(
@@ -279,16 +287,40 @@ private fun IconButtonContainer(
     }
     val colors = MillenniumTheme.colors
     val properties = theme.forStyle(style).resolve(state)
+    val resolvedOrb = orb ?: properties.orb
+    val orbTop = if (style == MillenniumIconButtonStyle.Danger) colors.danger else colors.accentTop
+    val orbBottom = if (style == MillenniumIconButtonStyle.Danger) {
+        lerp(colors.danger, Color.Black, 0.20f)
+    } else {
+        colors.accentBottom
+    }
     val resolvedMotion = motion ?: properties.motion
     val resolvedForeground = foreground ?: properties.foreground ?: when (style) {
-        MillenniumIconButtonStyle.Primary -> colors.onAccent
-        MillenniumIconButtonStyle.Danger -> colors.surface
+        MillenniumIconButtonStyle.Primary -> if (resolvedOrb) Color.White else colors.onAccent
+        MillenniumIconButtonStyle.Danger -> if (resolvedOrb) Color.White else colors.surface
+        MillenniumIconButtonStyle.Quiet -> when (state) {
+            MillenniumControlState.Hovered, MillenniumControlState.Focused,
+            MillenniumControlState.Pressed -> colors.accent
+            else -> colors.text
+        }
         else -> colors.text
     }
-    val resolvedBackground = background ?: properties.background ?: when (style) {
+    val quietVisibility by animateFloatAsState(
+        targetValue = if (state == MillenniumControlState.Hovered || state == MillenniumControlState.Focused || state == MillenniumControlState.Pressed) 1f else 0f,
+        animationSpec = tween(resolvedMotion.stateChangeMillis),
+    )
+    val quietStops = millenniumQuietEnamelStops(colors, state == MillenniumControlState.Pressed)
+        .map { (stop, color) -> stop to color.copy(alpha = color.alpha * quietVisibility) }
+    val animatedForeground by animateColorAsState(
+        targetValue = resolvedForeground,
+        animationSpec = tween(resolvedMotion.stateChangeMillis),
+    )
+    val resolvedBackground = background ?: properties.background ?: if (resolvedOrb) {
+        Brush.verticalGradient(*millenniumIconOrbStops(orbTop, orbBottom).toTypedArray())
+    } else when (style) {
         MillenniumIconButtonStyle.Primary -> gelBrush(colors.accentTop, colors.accentBottom)
         MillenniumIconButtonStyle.Secondary -> millenniumBevelBrush(colors)
-        MillenniumIconButtonStyle.Quiet -> Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
+        MillenniumIconButtonStyle.Quiet -> Brush.verticalGradient(*quietStops.toTypedArray())
         MillenniumIconButtonStyle.Danger -> gelBrush(
             colors.danger,
             lerp(colors.danger, if (colors.surface.luminance() > colors.danger.luminance()) Color.Black else Color.White, 0.20f),
@@ -298,18 +330,19 @@ private fun IconButtonContainer(
         MillenniumControlState.Focused, MillenniumControlState.Selected -> colors.accent
         MillenniumControlState.Error -> colors.danger
         else -> when (style) {
-            MillenniumIconButtonStyle.Primary -> colors.accentBottom
+            MillenniumIconButtonStyle.Primary -> if (resolvedOrb) lerp(colors.accentBottom, Color.Black, 0.45f) else colors.accentBottom
             MillenniumIconButtonStyle.Secondary -> colors.border
-            MillenniumIconButtonStyle.Quiet -> Color.Transparent
+            MillenniumIconButtonStyle.Quiet -> if (hovered || pressed) colors.accent.copy(alpha = 0.55f) else Color.Transparent
             MillenniumIconButtonStyle.Danger -> lerp(colors.danger, Color.Black, 0.35f)
         }
     }
-    val resolvedInnerGlowColor = innerGlowColor ?: properties.innerGlowColor ?: when (state) {
+    val resolvedInnerGlowColor = innerGlowColor ?: properties.innerGlowColor
+        ?: if (resolvedOrb || style == MillenniumIconButtonStyle.Quiet) null else when (state) {
         MillenniumControlState.Hovered, MillenniumControlState.Focused -> colors.highlight.copy(alpha = 0.60f)
         MillenniumControlState.Pressed -> colors.inset.copy(alpha = 0.32f)
         else -> colors.highlight.copy(alpha = 0.70f)
     }
-    val resolvedOrbColor = if (orb ?: properties.orb) {
+    val resolvedOrbColor = if (resolvedOrb) {
         orbColor ?: properties.orbColor ?: Color.White.copy(alpha = orbStrength ?: properties.orbStrength)
     } else {
         null
@@ -340,10 +373,11 @@ private fun IconButtonContainer(
         onClick = onClick,
         enabled = enabled,
         interactionSource = interaction,
-        indication = LocalIndication.current,
+        indication = null,
         contentPadding = PaddingValues(0.dp),
         contentAlignment = Alignment.Center,
         modifier = modifier
+            .millenniumActionPointer(enabled)
             .then(semantics)
             .size(size ?: properties.size)
             .graphicsLayer { scaleX = scale; scaleY = scale }
@@ -354,18 +388,118 @@ private fun IconButtonContainer(
                 borderColor = animatedBorderColor,
                 borderWidth = borderWidth ?: properties.borderWidth,
                 shadowElevation = elevation,
+                opaqueFill = style != MillenniumIconButtonStyle.Quiet || resolvedOrb,
                 shadowColors = shadows ?: properties.shadows ?: listOf(Color.Black.copy(alpha = 0.16f)),
                 innerGlowColor = resolvedInnerGlowColor,
                 bottomRimColor = bottomRimColor ?: properties.bottomRimColor
-                    ?: if (style != MillenniumIconButtonStyle.Quiet) colors.highlight.copy(alpha = 0.28f) else null,
-                orbColor = resolvedOrbColor,
-            ),
+                    ?: if (!resolvedOrb && style != MillenniumIconButtonStyle.Quiet) colors.highlight.copy(alpha = 0.28f) else null,
+            )
+            .then(
+                if (resolvedOrbColor != null) Modifier.millenniumIconOrb(
+                    reflection = resolvedOrbColor,
+                    tint = orbTop,
+                    shape = shape ?: properties.shape,
+                    borderWidth = borderWidth ?: properties.borderWidth,
+                    borderColor = if (borderColor != null || properties.borderColor != null || focused) animatedBorderColor else null,
+                ) else Modifier,
+            )
+            .millenniumInteractionSurface(state, shape ?: properties.shape,
+                tint = if (style == MillenniumIconButtonStyle.Danger) colors.danger else colors.accent,
+                animationMillis = resolvedMotion.stateChangeMillis),
     ) {
         if (icon != null) {
-            UnstyledIcon(icon, null, Modifier.size(iconSize ?: properties.iconSize), resolvedForeground)
+            UnstyledIcon(icon, null, Modifier.size(iconSize ?: properties.iconSize), animatedForeground)
         } else {
-            MillenniumStyledContent(TextStyle.Default, resolvedForeground) { content?.invoke() }
+            MillenniumStyledContent(TextStyle.Default, animatedForeground) { content?.invoke() }
         }
+    }
+}
+
+/** Continuous spherical shading, deliberately without the button gel's hard halfway break. */
+internal fun millenniumIconOrbStops(top: Color, bottom: Color): List<Pair<Float, Color>> {
+    // Every accent uses deep jewel glass. Bright amber/citron belong at the illuminated lip,
+    // not across the face; keeping the body dark also gives every orb a white icon.
+    val body = lerp(bottom, Color.Black, 0.52f)
+    return listOf(
+        0f to lerp(bottom, body, 0.65f),
+        0.28f to body,
+        0.60f to body,
+        0.82f to lerp(body, top, 0.40f),
+        1f to top,
+    )
+}
+
+/** Cached, size-relative glass layers; the surface clips them to the caller's shape. */
+private fun Modifier.millenniumIconOrb(
+    reflection: Color,
+    tint: Color,
+    shape: Shape,
+    borderWidth: Dp,
+    borderColor: Color?,
+): Modifier = drawWithCache {
+    val width = size.width
+    val height = size.height
+    val rim = maxOf(borderWidth.toPx(), size.minDimension * 0.025f)
+    val outline = shape.createOutline(size, layoutDirection, this)
+    val dome = Path().apply {
+        moveTo(width * 0.08f, height * 0.37f)
+        cubicTo(width * 0.12f, -height * 0.04f, width * 0.88f, -height * 0.04f, width * 0.92f, height * 0.37f)
+        cubicTo(width * 0.94f, height * 0.49f, width * 0.81f, height * 0.39f, width * 0.70f, height * 0.38f)
+        cubicTo(width * 0.48f, height * 0.32f, width * 0.28f, height * 0.43f, width * 0.12f, height * 0.44f)
+        cubicTo(width * 0.08f, height * 0.45f, width * 0.07f, height * 0.41f, width * 0.08f, height * 0.37f)
+        close()
+    }
+    val domeBrush = Brush.radialGradient(
+        0f to reflection,
+        0.50f to reflection.copy(alpha = reflection.alpha * 0.42f),
+        1f to reflection.copy(alpha = reflection.alpha * 0.03f),
+        center = Offset(width * 0.46f, height * 0.04f),
+        radius = size.minDimension * 0.63f,
+    )
+    // A light pool below the sphere, not a white smile painted across its face.
+    val glowTint = if (tint.blue > tint.red && tint.blue > tint.green) {
+        lerp(tint, Color(0xFF65E8FF), 0.65f)
+    } else {
+        lerp(tint, Color.White, 0.25f)
+    }
+    val lowerGlow = Brush.radialGradient(
+        0f to glowTint.copy(alpha = reflection.alpha * 0.95f),
+        0.40f to glowTint.copy(alpha = reflection.alpha * 0.65f),
+        0.78f to glowTint.copy(alpha = reflection.alpha * 0.10f),
+        1f to Color.Transparent,
+        center = Offset(width * 0.5f, height * 1.12f),
+        radius = size.minDimension * 0.66f,
+    )
+    val rimBrush = Brush.linearGradient(
+        0f to Color(0xFF26364F),
+        0.28f to Color(0xFF66748A),
+        0.62f to Color(0xFFC6D4DA),
+        1f to Color(0xFF89949D),
+        start = Offset.Zero,
+        end = Offset(width * 0.65f, height),
+    )
+    val innerRim = Brush.verticalGradient(
+        0f to reflection.copy(alpha = reflection.alpha * 0.70f),
+        0.35f to Color.Transparent,
+        0.75f to Color.Transparent,
+        1f to glowTint.copy(alpha = reflection.alpha * 0.75f),
+    )
+    onDrawWithContent {
+        drawRect(lowerGlow)
+        drawPath(dome, domeBrush)
+        if (borderWidth > 0.dp) {
+            if (borderColor != null) drawOutline(outline, borderColor, style = Stroke(rim * 2f))
+            else drawOutline(outline, rimBrush, style = Stroke(rim * 2f))
+        }
+        val innerInset = rim * 1.7f
+        if (size.minDimension > innerInset * 2f) {
+            val innerSize = Size(width - innerInset * 2f, height - innerInset * 2f)
+            val innerOutline = shape.createOutline(innerSize, layoutDirection, this)
+            inset(innerInset) {
+                drawOutline(innerOutline, innerRim, style = Stroke(size.minDimension * 0.018f))
+            }
+        }
+        drawContent()
     }
 }
 

@@ -16,7 +16,6 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import org.spotube.millennium.theme.collectIsKeyboardFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -65,10 +64,12 @@ import com.composeunstyled.UnstyledTabGroup
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
+import org.spotube.millennium.theme.millenniumActionPointer
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.gelBrush
 import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
+import org.spotube.millennium.theme.millenniumInteractionSurface
 
 @Immutable
 data class MillenniumTabGroupThemeProperties(
@@ -282,7 +283,7 @@ fun <T> MillenniumTabGroup(
                             )
                             Tab(
                                 key,
-                                modifier = Modifier.weight(1f).heightIn(min = resolvedMinimumTabHeight)
+                                modifier = Modifier.millenniumActionPointer().weight(1f).heightIn(min = resolvedMinimumTabHeight)
                                     .graphicsLayer { scaleX = tabScale; scaleY = tabScale }
                                     .alpha(animatedAlpha)
                                     .millenniumSurface(
@@ -291,8 +292,9 @@ fun <T> MillenniumTabGroup(
                                         borderColor = if (focused) colors.accent else if (hovered && !isSelected) colors.border else null,
                                         borderWidth = if (focused) maxOf(2.dp, resolvedTabBorderWidth) else if (hovered && !isSelected) 1.dp else 0.dp,
                                     )
+                                    .millenniumInteractionSurface(state, resolvedTabShape, animationMillis = resolvedStateMillis)
                                     .padding(tabPadding ?: properties.tabPadding),
-                                indication = LocalIndication.current,
+                                indication = null,
                                 interactionSource = interaction,
                                 contentAlignment = Alignment.Center,
                             ) {

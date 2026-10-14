@@ -18,7 +18,6 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import org.spotube.millennium.theme.collectIsKeyboardFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -60,9 +59,11 @@ import com.composeunstyled.UnstyledDropdownMenuItem
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
+import org.spotube.millennium.theme.millenniumActionPointer
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
+import org.spotube.millennium.theme.millenniumInteractionSurface
 import org.spotube.millennium.theme.millenniumPanelBrush
 
 @Immutable
@@ -323,9 +324,9 @@ fun MillenniumDropdownMenu(
                         )
                         UnstyledDropdownMenuItem(
                             onClick = { onItemClick(item) },
-                            indication = LocalIndication.current,
+                            indication = null,
                             interactionSource = interaction,
-                            modifier = Modifier.width(itemWidth ?: properties.itemWidth)
+                            modifier = Modifier.millenniumActionPointer().width(itemWidth ?: properties.itemWidth)
                                 .heightIn(min = itemMinimumHeight ?: properties.itemMinimumHeight)
                                 .graphicsLayer { scaleX = itemScale; scaleY = itemScale }
                                 .alpha(animatedAlpha)
@@ -338,7 +339,8 @@ fun MillenniumDropdownMenu(
                                     shadowElevation = itemElevation,
                                     innerGlowColor = itemGlowColor ?: properties.itemGlowColor
                                         ?: if (active) colors.highlight.copy(alpha = 0.35f) else null,
-                                ),
+                                )
+                                .millenniumInteractionSurface(state, itemShape ?: properties.itemShape, animationMillis = resolvedStateMillis),
                         ) {
                             Box(
                                 modifier = Modifier.fillMaxWidth()

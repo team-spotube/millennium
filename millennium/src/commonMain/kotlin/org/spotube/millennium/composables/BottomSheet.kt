@@ -1,6 +1,9 @@
 package org.spotube.millennium.composables
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -16,6 +19,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
@@ -36,6 +41,8 @@ import com.composeunstyled.rememberBottomSheetState
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
+import org.spotube.millennium.theme.millenniumInteractionSurface
+import org.spotube.millennium.theme.millenniumActionPointer
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.MillenniumStyledContent
 import org.spotube.millennium.theme.millenniumBevelBrush
@@ -109,6 +116,14 @@ fun MillenniumBottomSheet(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = MillenniumTheme.colors
+    val handleInteraction = remember { MutableInteractionSource() }
+    val handleHovered by handleInteraction.collectIsHoveredAsState()
+    val handlePressed by handleInteraction.collectIsPressedAsState()
+    val handleState = when {
+        handlePressed -> MillenniumControlState.Pressed
+        handleHovered -> MillenniumControlState.Hovered
+        else -> MillenniumControlState.Default
+    }
     val properties = theme.states.resolve(MillenniumControlState.Default)
     val resolvedBackground = background ?: properties.background ?: millenniumPanelBrush(colors)
     val resolvedForeground = foreground ?: properties.foreground ?: colors.text
@@ -135,7 +150,9 @@ fun MillenniumBottomSheet(
                     horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
                 ) {
                     DragIndication(
-                        Modifier.size(handleSize ?: properties.handleSize).background(resolvedHandleColor, CircleShape),
+                        Modifier.millenniumActionPointer().size(handleSize ?: properties.handleSize).background(resolvedHandleColor, CircleShape)
+                            .millenniumInteractionSurface(handleState, CircleShape),
+                        interactionSource = handleInteraction,
                     )
                     MillenniumStyledContent(TextStyle(color = resolvedForeground), resolvedForeground) {
                         content()

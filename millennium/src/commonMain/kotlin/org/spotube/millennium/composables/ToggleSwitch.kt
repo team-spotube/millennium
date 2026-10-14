@@ -43,10 +43,12 @@ import com.composeunstyled.UnstyledSwitch
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
+import org.spotube.millennium.theme.millenniumActionPointer
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.gelBrush
 import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
+import org.spotube.millennium.theme.millenniumInteractionSurface
 
 @Immutable
 data class MillenniumToggleSwitchThemeProperties(
@@ -158,7 +160,7 @@ fun MillenniumSwitch(
         ?: properties.selectedTrackBackground ?: gelBrush(colors.accentTop, colors.accentBottom)
     val resolvedTrackBorderColor = trackBorderColor ?: properties.trackBorderColor ?: when (state) {
         MillenniumControlState.Focused, MillenniumControlState.Selected -> colors.accent
-        MillenniumControlState.Hovered -> colors.border
+        MillenniumControlState.Hovered, MillenniumControlState.Pressed -> colors.accent
         MillenniumControlState.Error -> colors.danger
         else -> colors.border
     }
@@ -198,7 +200,7 @@ fun MillenniumSwitch(
     UnstyledSwitch(
         checked = checked,
         onCheckedChange = onCheckedChange,
-        modifier = modifier.heightIn(min = minimumTouchHeight ?: properties.minimumTouchHeight)
+        modifier = modifier.millenniumActionPointer(enabled).heightIn(min = minimumTouchHeight ?: properties.minimumTouchHeight)
             .alpha(alpha ?: properties.alpha),
         enabled = enabled,
         accessibilityLabel = label,
@@ -225,7 +227,8 @@ fun MillenniumSwitch(
                         borderColor = animatedTrackBorderColor,
                         borderWidth = trackBorderWidth ?: properties.trackBorderWidth,
                         innerGlowColor = resolvedTrackGlowColor,
-                    ),
+                    )
+                    .millenniumInteractionSurface(state, trackShape ?: properties.trackShape, animationMillis = resolvedMillis),
             ) {
                 Thumb(
                     animationSpec = spring(
@@ -245,7 +248,8 @@ fun MillenniumSwitch(
                             borderWidth = thumbBorderWidth ?: properties.thumbBorderWidth,
                             innerGlowColor = thumbGlowColor ?: properties.thumbGlowColor
                             ?: colors.highlight.copy(alpha = 0.36f),
-                        ),
+                        )
+                        .millenniumInteractionSurface(state, thumbShape ?: properties.thumbShape, animationMillis = resolvedMillis),
                 )
             }
             if (!label.isNullOrBlank()) {

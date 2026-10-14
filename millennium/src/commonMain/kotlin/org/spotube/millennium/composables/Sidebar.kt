@@ -12,7 +12,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import org.spotube.millennium.theme.collectIsKeyboardFocusedAsState
@@ -74,9 +73,11 @@ import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.MillenniumStyledContent
 import org.spotube.millennium.theme.MillenniumTheme
+import org.spotube.millennium.theme.millenniumActionPointer
 import org.spotube.millennium.theme.gelBrush
 import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
+import org.spotube.millennium.theme.millenniumInteractionSurface
 import org.spotube.millennium.theme.millenniumPanelBrush
 
 // ---------------------------------------------------------------------------
@@ -826,6 +827,7 @@ fun MillenniumSidebarGroupLabel(
             innerGlowColor = labelInnerGlowColor ?: properties.labelInnerGlowColor
             ?: if (state == MillenniumControlState.Focused) colors.highlight.copy(alpha = 0.45f) else null,
         )
+        .millenniumInteractionSurface(if (collapsible) state else MillenniumControlState.Default, labelShape ?: properties.labelShape)
         .padding(labelPadding ?: properties.labelPadding)
 
     if (collapsible) {
@@ -833,9 +835,9 @@ fun MillenniumSidebarGroupLabel(
             onClick = { group.toggle() },
             enabled = enabled,
             interactionSource = interaction,
-            indication = LocalIndication.current,
+            indication = null,
             contentPadding = PaddingValues(0.dp),
-            modifier = modifier.then(surface),
+            modifier = modifier.millenniumActionPointer(enabled).then(surface),
         ) {
             Row(
                 Modifier.fillMaxWidth(),
@@ -1198,9 +1200,10 @@ private fun SidebarItemContainer(
         onClick = onClick,
         enabled = enabled,
         interactionSource = interaction,
-        indication = LocalIndication.current,
+        indication = null,
         contentPadding = PaddingValues(0.dp),
         modifier = modifier
+            .millenniumActionPointer(enabled)
             .fillMaxWidth()
             .graphicsLayer { scaleX = itemScale; scaleY = itemScale }
             .alpha(animatedAlpha)
@@ -1217,7 +1220,8 @@ private fun SidebarItemContainer(
                 ?: if (selected || hovered || focused) {
                     colors.highlight.copy(alpha = 0.35f)
                 } else null,
-            ),
+            )
+            .millenniumInteractionSurface(state, shape ?: properties.shape),
     ) {
         Box(Modifier.fillMaxWidth()) {
             Row(

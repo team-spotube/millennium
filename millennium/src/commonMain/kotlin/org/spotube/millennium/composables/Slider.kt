@@ -10,6 +10,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import org.spotube.millennium.theme.collectIsKeyboardFocusedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -39,10 +41,12 @@ import com.composeunstyled.UnstyledSlider
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
+import org.spotube.millennium.theme.millenniumActionPointer
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.gelBrush
 import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
+import org.spotube.millennium.theme.millenniumInteractionSurface
 
 @Immutable
 data class MillenniumSliderThemeProperties(
@@ -133,10 +137,12 @@ fun MillenniumSlider(
     val focused by interaction.collectIsKeyboardFocusedAsState()
     val pressed by interaction.collectIsPressedAsState()
     val dragged by interaction.collectIsDraggedAsState()
+    val hovered by interaction.collectIsHoveredAsState()
     val controlState = when {
         !enabled -> MillenniumControlState.Disabled
         dragged || pressed -> MillenniumControlState.Pressed
         focused -> MillenniumControlState.Focused
+        hovered -> MillenniumControlState.Hovered
         else -> MillenniumControlState.Default
     }
     val properties = theme.states.resolve(controlState)
@@ -150,7 +156,8 @@ fun MillenniumSlider(
     UnstyledSlider(
         value = value,
         onValueChange = onValueChange,
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier.millenniumActionPointer(enabled).fillMaxWidth()
+            .hoverable(interaction, enabled)
             .heightIn(min = touchTargetHeight ?: properties.touchTargetHeight)
             .alpha(alpha ?: properties.alpha).semantics { contentDescription = label },
         enabled = enabled,
@@ -170,7 +177,8 @@ fun MillenniumSlider(
                         borderWidth = trackBorderWidth ?: properties.trackBorderWidth,
                         insetShadeColor = trackInsetShadeColor ?: properties.trackInsetShadeColor
                             ?: colors.text.copy(alpha = 0.1f),
-                    ),
+                    )
+                    .millenniumInteractionSurface(controlState, trackShape ?: properties.trackShape, animationMillis = stateAnimationMillis ?: properties.stateAnimationMillis),
                 ) {
                     Box(
                         Modifier.fillMaxHeight().fillMaxWidth(state.fraction)
@@ -183,14 +191,16 @@ fun MillenniumSlider(
             val thumbState = when {
                 !enabled -> MillenniumControlState.Disabled
                 state.isDragging || state.isPressed -> MillenniumControlState.Pressed
-                state.isFocused -> MillenniumControlState.Focused
+                focused -> MillenniumControlState.Focused
+                hovered -> MillenniumControlState.Hovered
                 else -> MillenniumControlState.Default
             }
             val thumbProperties = theme.states.resolve(thumbState)
             val resolvedThumbBackground = thumbBackground ?: thumbProperties.thumbBackground
                 ?: millenniumBevelBrush(colors)
             val resolvedThumbBorderColor = thumbBorderColor ?: thumbProperties.thumbBorderColor ?: when (thumbState) {
-                MillenniumControlState.Focused, MillenniumControlState.Selected -> colors.accent
+                MillenniumControlState.Focused, MillenniumControlState.Selected,
+                MillenniumControlState.Hovered, MillenniumControlState.Pressed -> colors.accent
                 MillenniumControlState.Error -> colors.danger
                 else -> colors.border
             }
@@ -224,7 +234,8 @@ fun MillenniumSlider(
                         innerGlowColor = resolvedThumbGlowColor,
                         bottomRimColor = thumbBottomRimColor ?: thumbProperties.thumbBottomRimColor
                             ?: colors.highlight.copy(alpha = 0.6f),
-                    ),
+                    )
+                    .millenniumInteractionSurface(thumbState, thumbShape ?: thumbProperties.thumbShape, animationMillis = stateAnimationMillis ?: thumbProperties.stateAnimationMillis),
                 )
             }
         },

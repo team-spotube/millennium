@@ -6,7 +6,6 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import org.spotube.millennium.theme.collectIsKeyboardFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -262,9 +261,9 @@ fun RowScope.MillenniumBottomNavigationItem(
         enabled = enabled,
         role = Role.Tab,
         interactionSource = interaction,
-        indication = LocalIndication.current,
+        indication = null,
         contentPadding = contentPadding ?: properties.contentPadding,
-        modifier = modifier.weight(1f)
+        modifier = modifier.millenniumActionPointer(enabled).weight(1f)
             .heightIn(min = minimumHeight ?: properties.minimumHeight)
             .widthIn(min = minimumWidth ?: properties.minimumWidth)
             .semantics {
@@ -282,7 +281,8 @@ fun RowScope.MillenniumBottomNavigationItem(
                 innerGlowColor = innerGlowColor ?: properties.innerGlowColor ?: if (selected || hovered || focused) {
                     colors.highlight.copy(alpha = 0.35f)
                 } else null,
-            ),
+            )
+            .millenniumInteractionSurface(state, shape ?: properties.shape, animationMillis = resolvedAnimationMillis),
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
