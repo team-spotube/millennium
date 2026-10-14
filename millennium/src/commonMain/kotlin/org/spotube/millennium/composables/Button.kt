@@ -1,7 +1,10 @@
 package org.spotube.millennium.composables
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -216,10 +219,18 @@ fun MillenniumButton(
     }
     val scale by animateFloatAsState(
         targetValue = targetScale,
-        animationSpec = tween(resolvedMotion.stateChangeMillis),
+        animationSpec = spring(dampingRatio = 0.65f, stiffness = Spring.StiffnessMedium),
     )
     val elevation by animateDpAsState(
         targetValue = shadowElevation ?: properties.shadowElevation,
+        animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow),
+    )
+    val animatedBorderColor by animateColorAsState(
+        targetValue = resolvedBorderColor,
+        animationSpec = tween(resolvedMotion.stateChangeMillis),
+    )
+    val animatedInnerGlowColor by animateColorAsState(
+        targetValue = resolvedInnerGlowColor,
         animationSpec = tween(resolvedMotion.stateChangeMillis),
     )
     val resolvedMinSize = minSize ?: properties.minSize
@@ -235,11 +246,11 @@ fun MillenniumButton(
             .millenniumSurface(
                 background = resolvedBackground,
                 shape = shape ?: properties.shape,
-                borderColor = resolvedBorderColor,
+                borderColor = animatedBorderColor,
                 borderWidth = borderWidth ?: properties.borderWidth,
                 shadowElevation = elevation,
                 shadowColors = resolvedShadowColors,
-                innerGlowColor = resolvedInnerGlowColor,
+                innerGlowColor = animatedInnerGlowColor,
                 innerGlowWidth = innerGlowWidth ?: properties.innerGlowWidth,
                 innerGlowInset = innerGlowInset ?: properties.innerGlowInset,
                 innerGlowTop = innerGlowTop ?: properties.innerGlowTop,

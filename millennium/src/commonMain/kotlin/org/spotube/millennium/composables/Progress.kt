@@ -99,7 +99,10 @@ fun MillenniumProgress(
     val glowColor = innerGlowColor ?: properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.45f)
     val animatedProgress by animateFloatAsState(
         targetValue = progress.coerceIn(0f, 1f),
-        animationSpec = tween(determinateAnimationMillis ?: properties.determinateAnimationMillis),
+        animationSpec = spring(
+            dampingRatio = 0.80f,
+            stiffness = Spring.StiffnessMediumLow,
+        ),
     )
     UnstyledProgress(
         animatedProgress,
@@ -146,7 +149,10 @@ fun MillenniumIndeterminateProgress(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            tween(indeterminateAnimationMillis ?: properties.indeterminateAnimationMillis),
+            tween(
+                durationMillis = indeterminateAnimationMillis ?: properties.indeterminateAnimationMillis,
+                easing = FastOutSlowInEasing,
+            ),
             RepeatMode.Reverse,
         ),
     )

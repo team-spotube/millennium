@@ -1,16 +1,23 @@
 package org.spotube.millennium.composables
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -40,7 +47,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -489,22 +495,28 @@ private fun <T> AutocompleteAnimatedMenu(
 ) {
     AnimatedVisibility(
         visibleState = visibleState,
-        enter = fadeIn(tween(properties.openAnimationMillis)) +
+        enter = fadeIn(tween(properties.openAnimationMillis, easing = FastOutSlowInEasing)) +
                 expandVertically(
-                    animationSpec = tween(properties.openAnimationMillis),
+                    animationSpec = spring(dampingRatio = 0.80f, stiffness = Spring.StiffnessMediumLow),
                     expandFrom = Alignment.Top,
+                ) + slideInVertically(
+                    animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow),
+                    initialOffsetY = { -it / 6 },
                 ) + scaleIn(
-            initialScale = 0.97f,
-            animationSpec = tween(properties.openAnimationMillis),
+            initialScale = 0.94f,
+            animationSpec = spring(dampingRatio = 0.76f, stiffness = Spring.StiffnessMediumLow),
             transformOrigin = TransformOrigin(0.5f, 0f),
         ),
-        exit = fadeOut(tween(properties.closeAnimationMillis)) +
+        exit = fadeOut(tween(properties.closeAnimationMillis, easing = FastOutLinearInEasing)) +
                 shrinkVertically(
-                    animationSpec = tween(properties.closeAnimationMillis),
+                    animationSpec = tween(properties.closeAnimationMillis, easing = FastOutLinearInEasing),
                     shrinkTowards = Alignment.Top,
+                ) + slideOutVertically(
+                    animationSpec = tween(properties.closeAnimationMillis, easing = FastOutLinearInEasing),
+                    targetOffsetY = { -it / 8 },
                 ) + scaleOut(
-            targetScale = 0.98f,
-            animationSpec = tween(properties.closeAnimationMillis),
+            targetScale = 0.96f,
+            animationSpec = tween(properties.closeAnimationMillis, easing = FastOutLinearInEasing),
             transformOrigin = TransformOrigin(0.5f, 0f),
         ),
     ) {
@@ -605,11 +617,15 @@ private fun <T> AutocompleteMenu(
                     )
                     val resolvedItemAnimationMillis =
                         itemStateAnimationMillis ?: itemTheme.itemStateAnimationMillis
-                    val foreground = itemForeground ?: itemTheme.itemForeground
+                    val targetForeground = itemForeground ?: itemTheme.itemForeground
                     ?: if (highlighted) {
                         highlightedItemForeground ?: itemTheme.highlightedItemForeground
                         ?: colors.onAccent
                     } else colors.text
+                    val foreground by animateColorAsState(
+                        targetForeground,
+                        tween(resolvedItemAnimationMillis),
+                    )
                     val background = if (highlighted) {
                         highlightedItemBackground ?: itemTheme.highlightedItemBackground
                         ?: gelBrush(colors.accentTop, colors.accentBottom)
@@ -626,6 +642,7 @@ private fun <T> AutocompleteMenu(
                     )
                     val elevation by animateDpAsState(
                         when {
+                            pressed -> 0.dp
                             highlighted -> 2.dp
                             hovered -> 1.dp
                             else -> 0.dp
@@ -633,8 +650,12 @@ private fun <T> AutocompleteMenu(
                         tween(resolvedItemAnimationMillis),
                     )
                     val rowScale by animateFloatAsState(
-                        if (hovered && !highlighted) 1.008f else 1f,
-                        tween(resolvedItemAnimationMillis),
+                        when {
+                            pressed -> 0.98f
+                            hovered && !highlighted -> 1.008f
+                            else -> 1f
+                        },
+                        spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMedium),
                     )
                     UnstyledButton(
                         onClick = { onSelect(index) },

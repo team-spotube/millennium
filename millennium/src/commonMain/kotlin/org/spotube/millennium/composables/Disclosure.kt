@@ -1,11 +1,17 @@
 package org.spotube.millennium.composables
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import org.spotube.millennium.theme.collectIsKeyboardFocusedAsState
@@ -29,6 +35,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -137,27 +144,44 @@ fun MillenniumDisclosure(
     val properties = theme.states.resolve(state)
     val colors = MillenniumTheme.colors
     val resolvedForeground = foreground ?: properties.foreground ?: colors.text
-    val resolvedBorderColor = borderColor ?: properties.borderColor ?: when (state) {
+    val targetBorderColor = borderColor ?: properties.borderColor ?: when (state) {
         MillenniumControlState.Hovered, MillenniumControlState.Focused, MillenniumControlState.Selected -> colors.accent
         MillenniumControlState.Error -> colors.danger
         else -> colors.border
     }
     val resolvedAnimationMillis = animationMillis ?: properties.animationMillis
+    val resolvedBorderColor by animateColorAsState(
+        targetValue = targetBorderColor,
+        animationSpec = tween(resolvedAnimationMillis),
+    )
+    val resolvedElevation by animateDpAsState(
+        targetValue = shadowElevation ?: properties.shadowElevation,
+        animationSpec = tween(resolvedAnimationMillis),
+    )
+    val headerScale by animateFloatAsState(
+        targetValue = if (pressed) 0.992f else 1f,
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMedium),
+    )
     val arrowRotation by animateFloatAsState(
         targetValue = if (expanded) 180f else 0f,
-        animationSpec = tween(resolvedAnimationMillis),
+        animationSpec = spring(
+            dampingRatio = 0.68f,
+            stiffness = Spring.StiffnessMediumLow,
+        ),
     )
     UnstyledDisclosure(
         expanded = expanded,
         onExpandedChange = onExpandedChange,
-        modifier = modifier.millenniumSurface(
-            background = background ?: properties.background ?: millenniumBevelBrush(colors),
-            shape = shape ?: properties.shape,
-            borderColor = resolvedBorderColor,
-            borderWidth = borderWidth ?: properties.borderWidth,
-            shadowElevation = shadowElevation ?: properties.shadowElevation,
-            innerGlowColor = innerGlowColor ?: properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.5f),
-        ).alpha(alpha ?: properties.alpha),
+        modifier = modifier
+            .graphicsLayer { scaleX = headerScale; scaleY = headerScale }
+            .millenniumSurface(
+                background = background ?: properties.background ?: millenniumBevelBrush(colors),
+                shape = shape ?: properties.shape,
+                borderColor = resolvedBorderColor,
+                borderWidth = borderWidth ?: properties.borderWidth,
+                shadowElevation = resolvedElevation,
+                innerGlowColor = innerGlowColor ?: properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.5f),
+            ).alpha(alpha ?: properties.alpha),
     ) {
         Column {
             DisclosureButton(
@@ -178,10 +202,17 @@ fun MillenniumDisclosure(
                 }
             }
             DisclosedContent(
-                enter = expandVertically(animationSpec = tween(resolvedAnimationMillis)) +
-                    fadeIn(animationSpec = tween(resolvedAnimationMillis)),
-                exit = shrinkVertically(animationSpec = tween(resolvedAnimationMillis)) +
-                    fadeOut(animationSpec = tween(resolvedAnimationMillis)),
+                enter = expandVertically(
+                    animationSpec = spring(
+                        dampingRatio = 0.80f,
+                        stiffness = Spring.StiffnessMediumLow,
+                    ),
+                    expandFrom = Alignment.Top,
+                ) + fadeIn(animationSpec = tween(resolvedAnimationMillis, easing = FastOutSlowInEasing)),
+                exit = shrinkVertically(
+                    animationSpec = tween((resolvedAnimationMillis * 0.8f).toInt().coerceAtLeast(100), easing = FastOutLinearInEasing),
+                    shrinkTowards = Alignment.Top,
+                ) + fadeOut(animationSpec = tween((resolvedAnimationMillis * 0.7f).toInt().coerceAtLeast(90), easing = FastOutLinearInEasing)),
             ) {
                 Column(
                     Modifier.padding(contentPadding ?: properties.contentPadding),

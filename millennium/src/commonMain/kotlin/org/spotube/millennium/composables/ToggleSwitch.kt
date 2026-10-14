@@ -1,5 +1,10 @@
 package org.spotube.millennium.composables
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import org.spotube.millennium.theme.collectIsKeyboardFocusedAsState
@@ -23,6 +28,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -156,12 +162,39 @@ fun MillenniumSwitch(
         MillenniumControlState.Error -> colors.danger
         else -> colors.border
     }
+    val resolvedMillis = thumbAnimationMillis ?: properties.thumbAnimationMillis
+    val animatedTrackBorderColor by animateColorAsState(
+        targetValue = resolvedTrackBorderColor,
+        animationSpec = tween(resolvedMillis),
+    )
     val resolvedTrackGlowColor = trackGlowColor ?: properties.trackGlowColor
     ?: if (checked) colors.highlight.copy(alpha = 0.35f) else null
     val resolvedThumbBackground =
         thumbBackground ?: properties.thumbBackground ?: gelBrush(colors.raised, colors.inset)
     val resolvedLabelForeground = labelForeground ?: properties.labelForeground
     ?: if (state == MillenniumControlState.Disabled) colors.muted else colors.text
+    val animatedThumbElevation by animateDpAsState(
+        targetValue = thumbElevation ?: properties.thumbElevation,
+        animationSpec = tween(resolvedMillis),
+    )
+    val thumbScaleX by animateFloatAsState(
+        targetValue = when {
+            !enabled -> 1f
+            pressed -> 1.12f
+            hovered -> 1.04f
+            else -> 1f
+        },
+        animationSpec = spring(dampingRatio = 0.62f, stiffness = Spring.StiffnessMedium),
+    )
+    val thumbScaleY by animateFloatAsState(
+        targetValue = when {
+            !enabled -> 1f
+            pressed -> 0.92f
+            hovered -> 1.04f
+            else -> 1f
+        },
+        animationSpec = spring(dampingRatio = 0.62f, stiffness = Spring.StiffnessMedium),
+    )
     UnstyledSwitch(
         checked = checked,
         onCheckedChange = onCheckedChange,
@@ -189,20 +222,24 @@ fun MillenniumSwitch(
                     .millenniumSurface(
                         background = if (checked) resolvedSelectedTrackBackground else resolvedTrackBackground,
                         shape = trackShape ?: properties.trackShape,
-                        borderColor = resolvedTrackBorderColor,
+                        borderColor = animatedTrackBorderColor,
                         borderWidth = trackBorderWidth ?: properties.trackBorderWidth,
                         innerGlowColor = resolvedTrackGlowColor,
                     ),
             ) {
                 Thumb(
-                    animationSpec = tween(thumbAnimationMillis ?: properties.thumbAnimationMillis),
+                    animationSpec = spring(
+                        dampingRatio = 0.68f,
+                        stiffness = Spring.StiffnessMediumLow,
+                    ),
                     modifier = Modifier
                         .padding(thumbInset ?: properties.thumbInset)
                         .size(thumbSize ?: properties.thumbSize)
+                        .graphicsLayer { scaleX = thumbScaleX; scaleY = thumbScaleY }
                         .millenniumSurface(
                             background = resolvedThumbBackground,
                             shape = thumbShape ?: properties.thumbShape,
-                            shadowElevation = thumbElevation ?: properties.thumbElevation,
+                            shadowElevation = animatedThumbElevation,
                             borderColor = thumbBorderColor ?: properties.thumbBorderColor
                             ?: colors.border,
                             borderWidth = thumbBorderWidth ?: properties.thumbBorderWidth,

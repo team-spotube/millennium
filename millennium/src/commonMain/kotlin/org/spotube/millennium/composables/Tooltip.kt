@@ -1,5 +1,16 @@
 package org.spotube.millennium.composables
 
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
@@ -11,6 +22,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -42,6 +54,10 @@ data class MillenniumTooltipThemeProperties(
     val innerGlowColor: Color? = null,
     val hoverDelayMillis: Long,
     val sideOffset: Dp,
+    val openAnimationMillis: Int = 150,
+    val closeAnimationMillis: Int = 110,
+    val enterScale: Float = 0.90f,
+    val exitScale: Float = 0.94f,
     val alpha: Float,
 )
 
@@ -95,6 +111,10 @@ fun MillenniumTooltip(
     innerGlowColor: Color? = null,
     hoverDelayMillis: Long? = null,
     sideOffset: Dp? = null,
+    openAnimationMillis: Int? = null,
+    closeAnimationMillis: Int? = null,
+    enterScale: Float? = null,
+    exitScale: Float? = null,
     alpha: Float? = null,
     theme: MillenniumTooltipTheme = MillenniumTheme.tooltipTheme,
     anchor: @Composable () -> Unit,
@@ -105,12 +125,17 @@ fun MillenniumTooltip(
     val resolvedBorderColor = borderColor ?: properties.borderColor ?: colors.border
     val resolvedGlowColor = innerGlowColor ?: properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.5f)
     val resolvedForeground = foreground ?: properties.foreground ?: colors.text
+    val resolvedOpenMillis = openAnimationMillis ?: properties.openAnimationMillis
+    val resolvedCloseMillis = closeAnimationMillis ?: properties.closeAnimationMillis
+    val resolvedEnterScale = enterScale ?: properties.enterScale
+    val resolvedExitScale = exitScale ?: properties.exitScale
+    val origin = TransformOrigin(0.5f, 1f)
     UnstyledTooltip(
         hoverDelayMillis = hoverDelayMillis ?: properties.hoverDelayMillis,
         sideOffset = sideOffset ?: properties.sideOffset,
         panel = {
             TooltipPanel(
-                Modifier.widthIn(max = maxWidth ?: properties.maxWidth).millenniumSurface(
+                modifier = Modifier.widthIn(max = maxWidth ?: properties.maxWidth).millenniumSurface(
                     background = resolvedBackground,
                     shape = shape ?: properties.shape,
                     borderColor = resolvedBorderColor,
@@ -118,6 +143,32 @@ fun MillenniumTooltip(
                     shadowElevation = shadowElevation ?: properties.shadowElevation,
                     innerGlowColor = resolvedGlowColor,
                 ).padding(padding ?: properties.padding).alpha(alpha ?: properties.alpha),
+                enter = fadeIn(tween(resolvedOpenMillis, easing = FastOutSlowInEasing)) +
+                    scaleIn(
+                        initialScale = resolvedEnterScale,
+                        transformOrigin = origin,
+                        animationSpec = spring(
+                            dampingRatio = 0.72f,
+                            stiffness = Spring.StiffnessMediumLow,
+                        ),
+                    ) +
+                    slideInVertically(
+                        animationSpec = spring(
+                            dampingRatio = 0.76f,
+                            stiffness = Spring.StiffnessMediumLow,
+                        ),
+                        initialOffsetY = { it / 4 },
+                    ),
+                exit = fadeOut(tween(resolvedCloseMillis, easing = FastOutLinearInEasing)) +
+                    scaleOut(
+                        targetScale = resolvedExitScale,
+                        transformOrigin = origin,
+                        animationSpec = tween(resolvedCloseMillis, easing = FastOutLinearInEasing),
+                    ) +
+                    slideOutVertically(
+                        animationSpec = tween(resolvedCloseMillis, easing = FastOutLinearInEasing),
+                        targetOffsetY = { it / 6 },
+                    ),
             ) {
                 Text(text, style = textStyle ?: properties.textStyle, color = resolvedForeground)
             }

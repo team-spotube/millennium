@@ -119,6 +119,30 @@ class VisualRefinementTest {
     }
 
     @Test
+    fun overlayAndTabComponentsExposeAsymmetricOpenCloseAndPanelDurations() {
+        val light = MillenniumThemeConfig().light
+        val dropdown = light.dropdownMenuTheme.states.default
+        assertTrue(dropdown.openAnimationMillis > dropdown.closeAnimationMillis)
+        assertTrue(dropdown.enterScale in 0.85f..0.99f)
+        assertTrue(dropdown.exitScale in dropdown.enterScale..1f)
+
+        val dialog = light.dialogTheme.states.default
+        assertTrue(dialog.animationMillis > dialog.closeAnimationMillis)
+        assertTrue(dialog.enterScale in 0.85f..0.99f)
+        assertTrue(dialog.exitScale in 0.85f..0.99f)
+
+        val tooltip = light.tooltipTheme.states.default
+        assertTrue(tooltip.openAnimationMillis > tooltip.closeAnimationMillis)
+        assertTrue(tooltip.enterScale in 0.85f..0.99f)
+
+        val tabGroup = light.tabGroupTheme.states.default
+        assertTrue(tabGroup.panelAnimationMillis >= tabGroup.stateAnimationMillis)
+
+        val drawer = light.drawerTheme.states.default
+        assertTrue(drawer.animationMillis >= 150)
+    }
+
+    @Test
     fun builtInPaletteFamiliesMeetContrastAcrossLightDarkAndGelStops() {
         val schemes = MillenniumThemeConfig().colorSchemes
         assertEquals(schemes.orangeLight.background, schemes.limeLight.background)

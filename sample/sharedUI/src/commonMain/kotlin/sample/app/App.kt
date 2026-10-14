@@ -1,5 +1,8 @@
 package sample.app
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -11,6 +14,7 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.state.ToggleableState
@@ -1181,6 +1185,10 @@ private fun DisclosureDemo() {
 private fun MenuDemo() {
     var expanded by rememberSaveable { mutableStateOf(false) }
     var choice by rememberSaveable { mutableStateOf("Choose your mood") }
+    val chevronRotation by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        animationSpec = spring(dampingRatio = 0.68f, stiffness = Spring.StiffnessMediumLow),
+    )
     MillenniumDropdownMenu(
         expanded,
         { expanded = it },
@@ -1192,9 +1200,13 @@ private fun MenuDemo() {
                 style = MillenniumButtonStyle.Secondary,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Text(choice)
-                    MillenniumIcon(MillenniumIcons.Chevron)
+                    MillenniumIcon(MillenniumIcons.Chevron, modifier = Modifier.rotate(chevronRotation))
                 }
             }
         })

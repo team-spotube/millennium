@@ -1,6 +1,9 @@
 package org.spotube.millennium.composables
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -30,6 +33,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
@@ -255,8 +259,18 @@ fun MillenniumListTile(
         alpha ?: properties.alpha,
         tween(stateAnimationMillis ?: properties.stateAnimationMillis),
     )
+    val rowScale by animateFloatAsState(
+        targetValue = when {
+            !clickable -> 1f
+            pressed -> 0.985f
+            hovered -> 1.006f
+            else -> 1f
+        },
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMedium),
+    )
     val surfaceModifier = modifier
         .fillMaxWidth()
+        .graphicsLayer { scaleX = rowScale; scaleY = rowScale }
         .alpha(animatedAlpha)
         .millenniumSurface(
             background = resolvedBackground,

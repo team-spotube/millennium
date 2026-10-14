@@ -1,7 +1,16 @@
 package org.spotube.millennium.composables
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import org.spotube.millennium.theme.collectIsKeyboardFocusedAsState
@@ -28,6 +37,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -157,13 +167,12 @@ fun <T> MillenniumRadioGroup(
                     else -> MillenniumControlState.Default
                 }
                 val itemProperties = theme.states.resolve(state)
+                val resolvedMillis = stateAnimationMillis ?: itemProperties.stateAnimationMillis
                 val animatedAlpha = animateFloatAsState(
                     targetValue = alpha ?: itemProperties.alpha,
-                    animationSpec = tween(
-                        stateAnimationMillis ?: itemProperties.stateAnimationMillis
-                    ),
+                    animationSpec = tween(resolvedMillis),
                 ).value
-                val resolvedIndicatorBorderColor =
+                val targetIndicatorBorderColor =
                     indicatorBorderColor ?: itemProperties.indicatorBorderColor ?: when (state) {
                         MillenniumControlState.Focused -> colors.accent
                         MillenniumControlState.Hovered -> colors.border
@@ -171,10 +180,26 @@ fun <T> MillenniumRadioGroup(
                         MillenniumControlState.Error -> colors.danger
                         else -> colors.border
                     }
+                val resolvedIndicatorBorderColor by animateColorAsState(
+                    targetValue = targetIndicatorBorderColor,
+                    animationSpec = tween(resolvedMillis),
+                )
+                val indicatorScale by animateFloatAsState(
+                    targetValue = when {
+                        pressed -> 0.90f
+                        hovered -> 1.05f
+                        else -> 1f
+                    },
+                    animationSpec = spring(dampingRatio = 0.65f, stiffness = Spring.StiffnessMedium),
+                )
                 val resolvedLabelColor = labelColor ?: itemProperties.labelColor
                 ?: if (state == MillenniumControlState.Disabled) colors.muted else colors.text
                 val resolvedSelectedLabelColor =
                     selectedLabelColor ?: itemProperties.selectedLabelColor ?: colors.text
+                val animatedLabelColor by animateColorAsState(
+                    targetValue = if (selected) resolvedSelectedLabelColor else resolvedLabelColor,
+                    animationSpec = tween(resolvedMillis),
+                )
                 RadioButton(
                     value = option,
                     modifier = Modifier.heightIn(
@@ -195,6 +220,7 @@ fun <T> MillenniumRadioGroup(
                     ) {
                         Box(
                             Modifier.size(indicatorSize ?: itemProperties.indicatorSize)
+                                .graphicsLayer { scaleX = indicatorScale; scaleY = indicatorScale }
                                 .millenniumSurface(
                                     background = if (selected) selectedIndicatorBackground
                                         ?: itemProperties.selectedIndicatorBackground
@@ -213,7 +239,19 @@ fun <T> MillenniumRadioGroup(
                                 ),
                             contentAlignment = Alignment.Center,
                         ) {
-                            SelectedIndicator {
+                            SelectedIndicator(
+                                enter = scaleIn(
+                                    initialScale = 0.3f,
+                                    animationSpec = spring(
+                                        dampingRatio = 0.52f,
+                                        stiffness = Spring.StiffnessMedium,
+                                    ),
+                                ) + fadeIn(tween(resolvedMillis, easing = FastOutSlowInEasing)),
+                                exit = scaleOut(
+                                    targetScale = 0.3f,
+                                    animationSpec = tween((resolvedMillis * 0.75f).toInt().coerceAtLeast(70), easing = FastOutLinearInEasing),
+                                ) + fadeOut(tween((resolvedMillis * 0.75f).toInt().coerceAtLeast(70), easing = FastOutLinearInEasing)),
+                            ) {
                                 Box(
                                     Modifier.size(dotSize ?: itemProperties.dotSize)
                                         .background(
@@ -228,7 +266,7 @@ fun <T> MillenniumRadioGroup(
                                 LocalTextStyle provides LocalTextStyle.current.merge(
                                     labelStyle ?: itemProperties.labelStyle
                                 )
-                                    .copy(color = if (selected) resolvedSelectedLabelColor else resolvedLabelColor),
+                                    .copy(color = animatedLabelColor),
                             ) { Text(optionLabel(option)) }
                         }
                     }

@@ -1,7 +1,18 @@
 package org.spotube.millennium.composables
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -133,14 +144,22 @@ internal fun MillenniumCheckFace(
     val faceBackground = properties.faceBackground
         ?: if (value == ToggleableState.Off) millenniumBevelBrush(colors, sunken = true)
         else gelBrush(colors.accentTop, colors.accentBottom)
-    val borderColor = properties.faceBorderColor
+    val targetBorderColor = properties.faceBorderColor
         ?: if (value == ToggleableState.Off) colors.border else colors.accentBottom
+    val borderColor by animateColorAsState(
+        targetValue = targetBorderColor,
+        animationSpec = tween(properties.stateChangeMillis),
+    )
     val glowColor = properties.faceGlowColor ?: colors.highlight.copy(alpha = 0.55f)
     val selectedForeground = properties.selectedFaceForeground ?: colors.onAccent
     val selected = value != ToggleableState.Off
     val scale by animateFloatAsState(
-        targetValue = if (state == MillenniumControlState.Pressed) 0.94f else 1f,
-        animationSpec = tween(properties.stateChangeMillis),
+        targetValue = when (state) {
+            MillenniumControlState.Pressed -> 0.90f
+            MillenniumControlState.Hovered -> 1.05f
+            else -> 1f
+        },
+        animationSpec = spring(dampingRatio = 0.62f, stiffness = Spring.StiffnessMedium),
     )
     Box(
         Modifier
@@ -157,18 +176,34 @@ internal fun MillenniumCheckFace(
             .alpha(properties.faceAlpha),
         contentAlignment = Alignment.Center,
     ) {
-        when (value) {
-            ToggleableState.On -> MillenniumIcon(
-                MillenniumIcons.Check,
-                modifier = Modifier.size(properties.markSize),
-                tint = selectedForeground,
-            )
-            ToggleableState.Indeterminate -> Box(
-                Modifier
-                    .size(properties.dashSize)
-                    .background(selectedForeground, CircleShape),
-            )
-            ToggleableState.Off -> Unit
+        AnimatedContent(
+            targetState = value,
+            transitionSpec = {
+                (scaleIn(
+                    initialScale = 0.4f,
+                    animationSpec = spring(dampingRatio = 0.52f, stiffness = Spring.StiffnessMedium),
+                ) + fadeIn(tween(properties.stateChangeMillis, easing = FastOutSlowInEasing))) togetherWith
+                    (scaleOut(
+                        targetScale = 0.4f,
+                        animationSpec = tween((properties.stateChangeMillis * 0.7f).toInt().coerceAtLeast(60), easing = FastOutLinearInEasing),
+                    ) + fadeOut(tween((properties.stateChangeMillis * 0.7f).toInt().coerceAtLeast(60), easing = FastOutLinearInEasing)))
+            },
+        ) { currentValue ->
+            Box(Modifier.size(properties.faceSize), contentAlignment = Alignment.Center) {
+                when (currentValue) {
+                    ToggleableState.On -> MillenniumIcon(
+                        MillenniumIcons.Check,
+                        modifier = Modifier.size(properties.markSize),
+                        tint = selectedForeground,
+                    )
+                    ToggleableState.Indeterminate -> Box(
+                        Modifier
+                            .size(properties.dashSize)
+                            .background(selectedForeground, CircleShape),
+                    )
+                    ToggleableState.Off -> Unit
+                }
+            }
         }
     }
 }

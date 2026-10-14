@@ -1,30 +1,55 @@
 package org.spotube.millennium.composables
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import org.spotube.millennium.theme.collectIsKeyboardFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -63,6 +88,7 @@ data class MillenniumTabGroupThemeProperties(
     val minimumTabHeight: Dp,
     val tabPadding: PaddingValues,
     val stateAnimationMillis: Int,
+    val panelAnimationMillis: Int = 200,
     val alpha: Float = 1f,
     val tabBorderWidth: Dp = 1.dp,
     val tabElevation: Dp = 2.dp,
@@ -126,6 +152,7 @@ fun <T> MillenniumTabGroup(
     minimumTabHeight: Dp? = null,
     tabPadding: PaddingValues? = null,
     stateAnimationMillis: Int? = null,
+    panelAnimationMillis: Int? = null,
     alpha: Float? = null,
     theme: MillenniumTabGroupTheme = MillenniumTheme.tabGroupTheme,
     panel: @Composable (T) -> Unit,
@@ -135,6 +162,15 @@ fun <T> MillenniumTabGroup(
     val resolvedListBackground = listBackground ?: groupProperties.listBackground
         ?: millenniumBevelBrush(colors, sunken = true)
     val resolvedListBorderColor = listBorderColor ?: groupProperties.listBorderColor ?: colors.border
+    val resolvedListInnerSpacing = listInnerSpacing ?: groupProperties.listInnerSpacing
+    val resolvedMinimumTabHeight = minimumTabHeight ?: groupProperties.minimumTabHeight
+    val resolvedTabShape = tabShape ?: groupProperties.tabShape
+    val resolvedTabBorderWidth = tabBorderWidth ?: groupProperties.tabBorderWidth
+    val resolvedTabElevation = tabElevation ?: groupProperties.tabElevation
+    val resolvedPanelMillis = panelAnimationMillis ?: groupProperties.panelAnimationMillis
+    val selectedIndex = tabs.indexOf(selectedTab).coerceAtLeast(0)
+    val density = LocalDensity.current
+    var measuredTabHeight by remember { mutableStateOf(resolvedMinimumTabHeight) }
     UnstyledTabGroup(selectedTab, onSelectedTabChange, tabs, modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(groupContentSpacing ?: groupProperties.groupContentSpacing)) {
             TabList(
@@ -143,70 +179,171 @@ fun <T> MillenniumTabGroup(
                     shape = listShape ?: groupProperties.listShape,
                     borderColor = resolvedListBorderColor,
                     borderWidth = listBorderWidth ?: groupProperties.listBorderWidth,
+                    insetShadeColor = colors.text.copy(alpha = 0.08f),
+                    bottomRimColor = colors.highlight.copy(alpha = 0.55f),
                 ).padding(listPadding ?: groupProperties.listPadding),
             ) {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(listInnerSpacing ?: groupProperties.listInnerSpacing),
-                ) {
-                    tabs.forEach { key ->
-                        val isSelected = key == selectedTab
-                        val interaction = remember(key) { MutableInteractionSource() }
-                        val pressed by interaction.collectIsPressedAsState()
-                        val focused by interaction.collectIsKeyboardFocusedAsState()
-                        val hovered by interaction.collectIsHoveredAsState()
-                        val state = when {
-                            pressed -> MillenniumControlState.Pressed
-                            focused -> MillenniumControlState.Focused
-                            hovered -> MillenniumControlState.Hovered
-                            isSelected -> MillenniumControlState.Selected
-                            else -> MillenniumControlState.Default
-                        }
-                        val properties = theme.states.resolve(state)
-                        val animatedAlpha = animateFloatAsState(
-                            targetValue = alpha ?: properties.alpha,
-                            animationSpec = tween(stateAnimationMillis ?: properties.stateAnimationMillis),
-                        ).value
-                        val resolvedTabBackground = if (isSelected) selectedTabBackground
-                            ?: properties.selectedTabBackground ?: gelBrush(colors.accentTop, colors.accentBottom)
-                        else unselectedTabBackground
-                            ?: properties.unselectedTabBackground
-                            ?: Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
-                        val resolvedTabForeground = if (isSelected) selectedTabForeground
-                            ?: properties.selectedTabForeground ?: colors.onAccent
-                        else unselectedTabForeground
-                            ?: properties.unselectedTabForeground ?: colors.muted
-                        val resolvedTabBorder = listBorderColor ?: properties.listBorderColor
-                            ?: if (isSelected) colors.accentBottom else Color.Transparent
-                        val resolvedTabBorderWidth = tabBorderWidth ?: properties.tabBorderWidth
-                        Tab(
-                            key,
-                            modifier = Modifier.weight(1f).heightIn(min = minimumTabHeight ?: properties.minimumTabHeight)
-                                .alpha(animatedAlpha)
+                BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    val tabCount = tabs.size.coerceAtLeast(1)
+                    val totalSpacing = resolvedListInnerSpacing * (tabCount - 1)
+                    val slotWidth = (maxWidth - totalSpacing) / tabCount
+                    val indicatorOffset by animateDpAsState(
+                        targetValue = (slotWidth + resolvedListInnerSpacing) * selectedIndex,
+                        animationSpec = spring(
+                            dampingRatio = 0.78f,
+                            stiffness = Spring.StiffnessMediumLow,
+                        ),
+                    )
+                    val selectedProps = theme.states.resolve(MillenniumControlState.Selected)
+                    val resolvedSelectedBackground = selectedTabBackground
+                        ?: selectedProps.selectedTabBackground
+                        ?: gelBrush(colors.accentTop, colors.accentBottom)
+                    val resolvedSelectedBorder = listBorderColor ?: selectedProps.listBorderColor ?: colors.accentBottom
+                    if (tabs.isNotEmpty() && selectedTab in tabs) {
+                        Box(
+                            Modifier
+                                .offset(x = indicatorOffset)
+                                .width(slotWidth)
+                                .height(measuredTabHeight)
                                 .millenniumSurface(
-                                    background = resolvedTabBackground,
-                                    shape = tabShape ?: properties.tabShape,
-                                    borderColor = if (focused) colors.accent else if (isSelected) resolvedTabBorder else null,
-                                    borderWidth = if (focused) maxOf(2.dp, resolvedTabBorderWidth) else resolvedTabBorderWidth,
-                                    shadowElevation = if (isSelected) (tabElevation ?: properties.tabElevation) else 0.dp,
-                                    innerGlowColor = if (isSelected) {
-                                        tabGlowColor ?: properties.tabGlowColor ?: colors.highlight.copy(alpha = 0.45f)
-                                    } else null,
-                                )
-                                .padding(tabPadding ?: properties.tabPadding),
-                            indication = LocalIndication.current,
-                            interactionSource = interaction,
-                            contentAlignment = androidx.compose.ui.Alignment.Center,
-                        ) {
-                            CompositionLocalProvider(
-                                LocalTextStyle provides LocalTextStyle.current.merge(tabTextStyle ?: properties.tabTextStyle)
-                                    .copy(color = resolvedTabForeground),
-                            ) { Text(tabLabel(key)) }
+                                    background = resolvedSelectedBackground,
+                                    shape = resolvedTabShape,
+                                    borderColor = resolvedSelectedBorder,
+                                    borderWidth = resolvedTabBorderWidth,
+                                    shadowElevation = resolvedTabElevation,
+                                    innerGlowColor = tabGlowColor ?: selectedProps.tabGlowColor
+                                        ?: colors.highlight.copy(alpha = 0.50f),
+                                    bottomRimColor = colors.highlight.copy(alpha = 0.30f),
+                                ),
+                        )
+                    }
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .onSizeChanged { size ->
+                                if (size.height > 0) {
+                                    measuredTabHeight = with(density) { size.height.toDp() }
+                                }
+                            },
+                        horizontalArrangement = Arrangement.spacedBy(resolvedListInnerSpacing),
+                    ) {
+                        tabs.forEach { key ->
+                            val isSelected = key == selectedTab
+                            val interaction = remember(key) { MutableInteractionSource() }
+                            val pressed by interaction.collectIsPressedAsState()
+                            val focused by interaction.collectIsKeyboardFocusedAsState()
+                            val hovered by interaction.collectIsHoveredAsState()
+                            val state = when {
+                                pressed -> MillenniumControlState.Pressed
+                                focused -> MillenniumControlState.Focused
+                                hovered -> MillenniumControlState.Hovered
+                                isSelected -> MillenniumControlState.Selected
+                                else -> MillenniumControlState.Default
+                            }
+                            val properties = theme.states.resolve(state)
+                            val resolvedStateMillis = stateAnimationMillis ?: properties.stateAnimationMillis
+                            val animatedAlpha by animateFloatAsState(
+                                targetValue = alpha ?: properties.alpha,
+                                animationSpec = tween(resolvedStateMillis),
+                            )
+                            val tabScale by animateFloatAsState(
+                                targetValue = when {
+                                    pressed -> 0.96f
+                                    hovered && !isSelected -> 1.015f
+                                    else -> 1f
+                                },
+                                animationSpec = spring(
+                                    dampingRatio = 0.70f,
+                                    stiffness = Spring.StiffnessMedium,
+                                ),
+                            )
+                            val resolvedTabBackground = if (isSelected) {
+                                Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
+                            } else {
+                                unselectedTabBackground
+                                    ?: properties.unselectedTabBackground
+                                    ?: if (hovered || pressed) {
+                                        Brush.verticalGradient(
+                                            listOf(
+                                                colors.accent.copy(alpha = if (pressed) 0.14f else 0.08f),
+                                                colors.accent.copy(alpha = if (pressed) 0.07f else 0.03f),
+                                            ),
+                                        )
+                                    } else {
+                                        Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
+                                    }
+                            }
+                            val targetTabForeground = if (isSelected) {
+                                selectedTabForeground ?: properties.selectedTabForeground ?: colors.onAccent
+                            } else {
+                                unselectedTabForeground ?: properties.unselectedTabForeground
+                                    ?: if (hovered || focused) colors.text else colors.muted
+                            }
+                            val resolvedTabForeground by animateColorAsState(
+                                targetValue = targetTabForeground,
+                                animationSpec = tween(resolvedStateMillis),
+                            )
+                            Tab(
+                                key,
+                                modifier = Modifier.weight(1f).heightIn(min = resolvedMinimumTabHeight)
+                                    .graphicsLayer { scaleX = tabScale; scaleY = tabScale }
+                                    .alpha(animatedAlpha)
+                                    .millenniumSurface(
+                                        background = resolvedTabBackground,
+                                        shape = resolvedTabShape,
+                                        borderColor = if (focused) colors.accent else if (hovered && !isSelected) colors.border else null,
+                                        borderWidth = if (focused) maxOf(2.dp, resolvedTabBorderWidth) else if (hovered && !isSelected) 1.dp else 0.dp,
+                                    )
+                                    .padding(tabPadding ?: properties.tabPadding),
+                                indication = LocalIndication.current,
+                                interactionSource = interaction,
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                CompositionLocalProvider(
+                                    LocalTextStyle provides LocalTextStyle.current.merge(tabTextStyle ?: properties.tabTextStyle)
+                                        .copy(color = resolvedTabForeground),
+                                ) { Text(tabLabel(key)) }
+                            }
                         }
                     }
                 }
             }
-            tabs.forEach { key -> TabPanel(key) { panel(key) } }
+            AnimatedContent(
+                targetState = selectedTab,
+                transitionSpec = {
+                    val fromIndex = tabs.indexOf(initialState)
+                    val toIndex = tabs.indexOf(targetState)
+                    val forward = toIndex >= fromIndex
+                    (fadeIn(tween(resolvedPanelMillis, easing = FastOutSlowInEasing)) +
+                        slideInHorizontally(
+                            animationSpec = spring(
+                                dampingRatio = 0.82f,
+                                stiffness = Spring.StiffnessMediumLow,
+                            ),
+                            initialOffsetX = { width -> if (forward) width / 12 else -width / 12 },
+                        ) +
+                        scaleIn(
+                            initialScale = 0.985f,
+                            animationSpec = spring(
+                                dampingRatio = 0.82f,
+                                stiffness = Spring.StiffnessMediumLow,
+                            ),
+                        )) togetherWith
+                        (fadeOut(tween((resolvedPanelMillis * 0.65f).toInt().coerceAtLeast(80), easing = FastOutLinearInEasing)) +
+                            slideOutHorizontally(
+                                animationSpec = tween(
+                                    (resolvedPanelMillis * 0.75f).toInt().coerceAtLeast(90),
+                                    easing = FastOutLinearInEasing,
+                                ),
+                                targetOffsetX = { width -> if (forward) -width / 16 else width / 16 },
+                            ) +
+                            scaleOut(
+                                targetScale = 0.99f,
+                                animationSpec = tween((resolvedPanelMillis * 0.75f).toInt().coerceAtLeast(90)),
+                            ))
+                },
+            ) { tab ->
+                TabPanel(tab) { panel(tab) }
+            }
         }
     }
 }

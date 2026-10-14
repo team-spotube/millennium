@@ -1,7 +1,18 @@
 package org.spotube.millennium.composables
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -24,6 +35,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellableContinuation
@@ -75,7 +87,7 @@ fun defaultMillenniumSnackbarTheme(): MillenniumSnackbarTheme = MillenniumSnackb
         shadowElevation = 10.dp,
         maxWidth = 600.dp,
         actionSpacing = 12.dp,
-        animationMillis = 160,
+        animationMillis = 200,
     ),
 )
 
@@ -158,26 +170,52 @@ fun MillenniumSnackbarHost(
     if (data != null) lastData = data
     val visible = data != null
     val properties = theme.properties
-    val alpha by animateFloatAsState(
-        if (visible) 1f else 0f,
-        tween(animationMillis ?: properties.animationMillis),
-    )
-
-    val showing = lastData
-    if (showing != null && (visible || alpha > 0.01f)) {
-        LaunchedEffect(showing) {
-            if (showing.duration != MillenniumSnackbarDuration.Indefinite) {
-                delay(showing.duration.millis)
-                showing.dismiss()
+    val resolvedMillis = animationMillis ?: properties.animationMillis
+    val closeMillis = (resolvedMillis * 0.75f).toInt().coerceAtLeast(120)
+    if (data != null) {
+        LaunchedEffect(data) {
+            if (data.duration != MillenniumSnackbarDuration.Indefinite) {
+                delay(data.duration.millis)
+                data.dismiss()
             }
         }
-        val colors = MillenniumTheme.colors
-        Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+    }
+    val colors = MillenniumTheme.colors
+    Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        AnimatedVisibility(
+            visible = visible,
+            enter = fadeIn(tween(resolvedMillis, easing = FastOutSlowInEasing)) +
+                slideInVertically(
+                    animationSpec = spring(
+                        dampingRatio = 0.72f,
+                        stiffness = Spring.StiffnessMediumLow,
+                    ),
+                    initialOffsetY = { it / 2 },
+                ) +
+                scaleIn(
+                    initialScale = 0.92f,
+                    transformOrigin = TransformOrigin(0.5f, 1f),
+                    animationSpec = spring(
+                        dampingRatio = 0.72f,
+                        stiffness = Spring.StiffnessMediumLow,
+                    ),
+                ),
+            exit = fadeOut(tween(closeMillis, easing = FastOutLinearInEasing)) +
+                slideOutVertically(
+                    animationSpec = tween(closeMillis, easing = FastOutLinearInEasing),
+                    targetOffsetY = { it / 2 },
+                ) +
+                scaleOut(
+                    targetScale = 0.95f,
+                    transformOrigin = TransformOrigin(0.5f, 1f),
+                    animationSpec = tween(closeMillis, easing = FastOutLinearInEasing),
+                ),
+        ) {
+            val showing = lastData ?: return@AnimatedVisibility
             Row(
                 modifier = Modifier
                     .widthIn(max = maxWidth ?: properties.maxWidth)
                     .padding(margin ?: properties.margin)
-                    .alpha(alpha)
                     .millenniumSurface(
                         background = background ?: properties.background ?: millenniumPanelBrush(colors),
                         shape = shape ?: properties.shape,

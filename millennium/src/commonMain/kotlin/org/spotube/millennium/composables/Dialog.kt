@@ -1,10 +1,22 @@
 package org.spotube.millennium.composables
 
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -22,12 +34,15 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.semantics.Role
@@ -47,6 +62,7 @@ import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.MillenniumStyledContent
+import org.spotube.millennium.theme.collectIsKeyboardFocusedAsState
 import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
 import org.spotube.millennium.theme.millenniumPanelBrush
@@ -67,7 +83,9 @@ data class MillenniumDialogThemeProperties(
     val contentSpacing: Dp,
     val scrimColor: Color? = null,
     val enterScale: Float,
+    val exitScale: Float = 0.94f,
     val animationMillis: Int,
+    val closeAnimationMillis: Int = 150,
     val alpha: Float = 1f,
     val titleBarBackground: Brush? = null,
     val titleBarForeground: Color? = null,
@@ -91,8 +109,8 @@ fun defaultMillenniumDialogTheme(): MillenniumDialogTheme {
         overlayPadding = 24.dp,
         contentPadding = 24.dp,
         contentSpacing = 16.dp,
-        enterScale = 0.96f,
-        animationMillis = 180,
+        enterScale = 0.92f,
+        animationMillis = 220,
     )
     return MillenniumDialogTheme(
         states = MillenniumControlStateProperty(
@@ -127,7 +145,9 @@ fun MillenniumDialog(
     contentSpacing: Dp? = null,
     scrimColor: Color? = null,
     enterScale: Float? = null,
+    exitScale: Float? = null,
     animationMillis: Int? = null,
+    closeAnimationMillis: Int? = null,
     alpha: Float? = null,
     titleBarBackground: Brush? = null,
     titleBarForeground: Color? = null,
@@ -145,14 +165,35 @@ fun MillenniumDialog(
     val resolvedPanelGlowColor = panelGlowColor ?: properties.panelGlowColor ?: colors.highlight.copy(alpha = 0.6f)
     val resolvedScrimColor = scrimColor ?: properties.scrimColor ?: colors.scrim
     val resolvedAnimationMillis = animationMillis ?: properties.animationMillis
+    val resolvedCloseMillis = closeAnimationMillis ?: properties.closeAnimationMillis
+    val closeInteraction = remember { MutableInteractionSource() }
+    val closePressed by closeInteraction.collectIsPressedAsState()
+    val closeHovered by closeInteraction.collectIsHoveredAsState()
+    val closeFocused by closeInteraction.collectIsKeyboardFocusedAsState()
+    val closeScale by animateFloatAsState(
+        targetValue = when {
+            closePressed -> 0.90f
+            closeHovered || closeFocused -> 1.08f
+            else -> 1f
+        },
+        animationSpec = spring(dampingRatio = 0.62f, stiffness = Spring.StiffnessMedium),
+    )
+    val closeElevation by animateDpAsState(
+        targetValue = when {
+            closePressed -> 0.dp
+            closeHovered || closeFocused -> 3.dp
+            else -> 1.dp
+        },
+        animationSpec = tween(120),
+    )
     UnstyledDialog(
         visible = visible,
         onDismissRequest = onDismissRequest,
         overlay = {
             Scrim(
                 scrimColor = resolvedScrimColor,
-                enter = fadeIn(animationSpec = tween(resolvedAnimationMillis)),
-                exit = fadeOut(animationSpec = tween(resolvedAnimationMillis)),
+                enter = fadeIn(animationSpec = tween(resolvedAnimationMillis, easing = FastOutSlowInEasing)),
+                exit = fadeOut(animationSpec = tween(resolvedCloseMillis, easing = FastOutLinearInEasing)),
             )
         },
     ) {
@@ -172,12 +213,30 @@ fun MillenniumDialog(
                         innerGlowColor = resolvedPanelGlowColor,
                     ),
                 paneTitle = title,
-                enter = fadeIn(animationSpec = tween(resolvedAnimationMillis)) +
+                enter = fadeIn(animationSpec = tween(resolvedAnimationMillis, easing = FastOutSlowInEasing)) +
                     scaleIn(
                         initialScale = enterScale ?: properties.enterScale,
-                        animationSpec = tween(resolvedAnimationMillis),
+                        animationSpec = spring(
+                            dampingRatio = 0.72f,
+                            stiffness = Spring.StiffnessMediumLow,
+                        ),
+                    ) +
+                    slideInVertically(
+                        animationSpec = spring(
+                            dampingRatio = 0.76f,
+                            stiffness = Spring.StiffnessMediumLow,
+                        ),
+                        initialOffsetY = { it / 10 },
                     ),
-                exit = fadeOut(animationSpec = tween(resolvedAnimationMillis)),
+                exit = fadeOut(animationSpec = tween(resolvedCloseMillis, easing = FastOutLinearInEasing)) +
+                    scaleOut(
+                        targetScale = exitScale ?: properties.exitScale,
+                        animationSpec = tween(resolvedCloseMillis, easing = FastOutLinearInEasing),
+                    ) +
+                    slideOutVertically(
+                        animationSpec = tween(resolvedCloseMillis, easing = FastOutLinearInEasing),
+                        targetOffsetY = { it / 14 },
+                    ),
             ) {
                 MillenniumStyledContent(
                     TextStyle(color = resolvedForeground),
@@ -206,22 +265,27 @@ fun MillenniumDialog(
                                 onClick = onDismissRequest,
                                 role = Role.Button,
                                 indication = null,
+                                interactionSource = closeInteraction,
                                 contentPadding = PaddingValues(0.dp),
                                 contentAlignment = Alignment.Center,
                                 modifier = Modifier.size(44.dp)
                                     .semantics { contentDescription = "Close dialog" },
                             ) {
                                 Box(
-                                    Modifier.size(28.dp).millenniumSurface(
-                                        background = org.spotube.millennium.theme.gelBrush(
-                                            colors.danger,
-                                            colors.danger.copy(alpha = 0.78f),
+                                    Modifier.size(28.dp)
+                                        .graphicsLayer { scaleX = closeScale; scaleY = closeScale }
+                                        .millenniumSurface(
+                                            background = org.spotube.millennium.theme.gelBrush(
+                                                colors.danger,
+                                                colors.danger.copy(alpha = 0.78f),
+                                            ),
+                                            shape = RoundedCornerShape(5.dp),
+                                            borderColor = if (closeFocused) colors.accent
+                                            else colors.onAccent.copy(alpha = if (closeHovered) 0.85f else 0.62f),
+                                            borderWidth = if (closeFocused) 2.dp else 1.dp,
+                                            shadowElevation = closeElevation,
+                                            innerGlowColor = colors.highlight.copy(alpha = if (closeHovered) 0.65f else 0.45f),
                                         ),
-                                        shape = RoundedCornerShape(5.dp),
-                                        borderColor = colors.onAccent.copy(alpha = 0.62f),
-                                        borderWidth = 1.dp,
-                                        innerGlowColor = colors.highlight.copy(alpha = 0.45f),
-                                    ),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Text("×", color = colors.surface, fontSize = 21.sp, fontWeight = FontWeight.Medium)

@@ -1,7 +1,10 @@
 package org.spotube.millennium.composables
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -21,6 +24,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
@@ -216,20 +220,43 @@ fun RowScope.MillenniumBottomNavigationItem(
         else -> MillenniumControlState.Default
     }
     val properties = theme.item.resolve(state)
-    val resolvedForeground = foreground ?: properties.foreground
+    val targetForeground = foreground ?: properties.foreground
         ?: bottomNavigationItemForeground(colors, selected, enabled)
+    val resolvedAnimationMillis = animationMillis ?: properties.animationMillis
+    val resolvedForeground by animateColorAsState(
+        targetValue = targetForeground,
+        animationSpec = tween(resolvedAnimationMillis),
+    )
     val resolvedBackground = background ?: properties.background ?: when {
         selected -> gelBrush(colors.accentTop, colors.accentBottom)
         pressed -> millenniumBevelBrush(colors, sunken = true)
         hovered || focused -> millenniumBevelBrush(colors)
         else -> Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
     }
-    val resolvedAnimationMillis = animationMillis ?: properties.animationMillis
     val elevation by animateDpAsState(
         shadowElevation ?: properties.shadowElevation,
-        tween(resolvedAnimationMillis),
+        spring(dampingRatio = 0.76f, stiffness = Spring.StiffnessMediumLow),
     )
     val animatedAlpha by animateFloatAsState(alpha ?: properties.alpha, tween(resolvedAnimationMillis))
+    val itemScale by animateFloatAsState(
+        targetValue = when {
+            !enabled -> 1f
+            pressed -> 0.96f
+            hovered && !selected -> 1.02f
+            else -> 1f
+        },
+        animationSpec = spring(dampingRatio = 0.68f, stiffness = Spring.StiffnessMedium),
+    )
+    val targetBorderColor = borderColor ?: properties.borderColor ?: when {
+        focused -> colors.accent
+        selected -> colors.accentBottom
+        hovered || pressed -> colors.border
+        else -> Color.Transparent
+    }
+    val animatedBorderColor by animateColorAsState(
+        targetValue = targetBorderColor,
+        animationSpec = tween(resolvedAnimationMillis),
+    )
     UnstyledButton(
         onClick = onClick,
         enabled = enabled,
@@ -244,16 +271,12 @@ fun RowScope.MillenniumBottomNavigationItem(
                 this.selected = selected
                 if (contentDescription != null) this.contentDescription = contentDescription
             }
+            .graphicsLayer { scaleX = itemScale; scaleY = itemScale }
             .alpha(animatedAlpha)
             .millenniumSurface(
                 background = resolvedBackground,
                 shape = shape ?: properties.shape,
-                borderColor = borderColor ?: properties.borderColor ?: when {
-                    focused -> colors.accent
-                    selected -> colors.accentBottom
-                    hovered || pressed -> colors.border
-                    else -> Color.Transparent
-                },
+                borderColor = animatedBorderColor,
                 borderWidth = borderWidth ?: properties.borderWidth,
                 shadowElevation = elevation,
                 innerGlowColor = innerGlowColor ?: properties.innerGlowColor ?: if (selected || hovered || focused) {

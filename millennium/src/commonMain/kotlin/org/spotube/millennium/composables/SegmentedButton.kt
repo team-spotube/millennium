@@ -1,6 +1,9 @@
 package org.spotube.millennium.composables
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -150,15 +153,28 @@ fun RowScope.MillenniumSegmentedButton(
         !enabled || pressed -> millenniumBevelBrush(colors, sunken = true)
         else -> millenniumBevelBrush(colors)
     }
-    val resolvedForeground = foreground ?: properties.foreground ?: if (selected) colors.onAccent else colors.text
-    val resolvedBorderColor = borderColor ?: properties.borderColor ?: when {
+    val targetForeground = foreground ?: properties.foreground ?: if (selected) colors.onAccent else colors.text
+    val resolvedForeground by animateColorAsState(
+        targetValue = targetForeground,
+        animationSpec = tween(resolvedMotion.stateChangeMillis),
+    )
+    val targetBorderColor = borderColor ?: properties.borderColor ?: when {
         focused -> colors.accent
         selected -> colors.accentBottom
         else -> colors.border
     }
-    val scale by animateFloatAsState(
-        targetValue = if (enabled && pressed) resolvedMotion.pressedScale else 1f,
+    val resolvedBorderColor by animateColorAsState(
+        targetValue = targetBorderColor,
         animationSpec = tween(resolvedMotion.stateChangeMillis),
+    )
+    val scale by animateFloatAsState(
+        targetValue = when {
+            !enabled -> 1f
+            pressed -> resolvedMotion.pressedScale
+            hovered && !selected -> 1.015f
+            else -> 1f
+        },
+        animationSpec = spring(dampingRatio = 0.65f, stiffness = Spring.StiffnessMedium),
     )
     UnstyledButton(
         onClick = onClick,

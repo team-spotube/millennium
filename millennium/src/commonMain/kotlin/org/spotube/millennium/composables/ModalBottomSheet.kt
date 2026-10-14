@@ -1,5 +1,7 @@
 package org.spotube.millennium.composables
 
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -129,8 +131,8 @@ fun MillenniumModalBottomSheet(
         overlay = {
             Scrim(
                 scrimColor = resolvedScrimColor,
-                enter = fadeIn(animationSpec = tween(resolvedAnimationMillis)),
-                exit = fadeOut(animationSpec = tween(resolvedAnimationMillis)),
+                enter = fadeIn(animationSpec = tween(resolvedAnimationMillis, easing = FastOutSlowInEasing)),
+                exit = fadeOut(animationSpec = tween((resolvedAnimationMillis * 0.8f).toInt().coerceAtLeast(120), easing = FastOutLinearInEasing)),
             )
         },
     ) {

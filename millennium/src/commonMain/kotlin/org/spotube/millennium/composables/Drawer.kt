@@ -1,6 +1,14 @@
 package org.spotube.millennium.composables
 
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -55,6 +63,7 @@ data class MillenniumDrawerThemeProperties(
     val shadowElevation: Dp,
     val innerGlowColor: Color? = null,
     val scrimColor: Color? = null,
+    val animationMillis: Int = 220,
     val alpha: Float,
 )
 
@@ -96,6 +105,11 @@ fun rememberMillenniumDrawerState(): UnstyledDrawerState<MillenniumDrawerValue> 
             MillenniumDrawerValue.Closed at DrawerSnapPoint.Zero
             MillenniumDrawerValue.Open at DrawerSnapPoint.ContentSize
         },
+        animationSpec = spring(
+            dampingRatio = 0.82f,
+            stiffness = Spring.StiffnessMediumLow,
+        ),
+        dismissAnimationSpec = tween(durationMillis = 190, easing = FastOutLinearInEasing),
     )
 }
 
@@ -114,6 +128,7 @@ fun MillenniumDrawer(
     shadowElevation: Dp? = null,
     innerGlowColor: Color? = null,
     scrimColor: Color? = null,
+    animationMillis: Int? = null,
     alpha: Float? = null,
     theme: MillenniumDrawerTheme = MillenniumTheme.drawerTheme,
     content: @Composable ColumnScope.() -> Unit,
@@ -125,13 +140,17 @@ fun MillenniumDrawer(
     val resolvedBorderColor = borderColor ?: properties.borderColor ?: colors.border
     val resolvedGlowColor = innerGlowColor ?: properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f)
     val resolvedScrimColor = scrimColor ?: properties.scrimColor ?: colors.scrim
+    val resolvedAnimationMillis = animationMillis ?: properties.animationMillis
     UnstyledDrawer(
         state = state,
         placement = placement,
         presentation = com.composeunstyled.DrawerPresentation.Modal,
         overlay = {
-            Overlay {
-                androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(resolvedScrimColor))
+            Overlay(
+                enter = fadeIn(tween(resolvedAnimationMillis, easing = FastOutSlowInEasing)),
+                exit = fadeOut(tween((resolvedAnimationMillis * 0.8f).toInt().coerceAtLeast(120), easing = FastOutLinearInEasing)),
+            ) {
+                Box(Modifier.fillMaxSize().background(resolvedScrimColor))
             }
         },
     ) {

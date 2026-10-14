@@ -1,8 +1,13 @@
 package org.spotube.millennium.composables
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -51,6 +56,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
@@ -420,7 +426,10 @@ fun MillenniumSidebar(
     val targetWidth = if (collapsed) collapsedWidth ?: properties.collapsedWidth else width ?: properties.width
     val animatedWidth by animateDpAsState(
         targetValue = targetWidth,
-        animationSpec = tween(stateAnimationMillis ?: properties.stateAnimationMillis),
+        animationSpec = spring(
+            dampingRatio = 0.80f,
+            stiffness = Spring.StiffnessMediumLow,
+        ),
     )
     val scope = remember(collapsed, onCollapsedChange) {
         MillenniumSidebarScope(collapsed = collapsed) { onCollapsedChange(!collapsed) }
@@ -725,7 +734,10 @@ fun MillenniumSidebarGroupLabel(
     }
     val rotation by animateFloatAsState(
         targetValue = if (expanded) 0f else -90f,
-        animationSpec = tween(animationMillis ?: properties.animationMillis),
+        animationSpec = spring(
+            dampingRatio = 0.68f,
+            stiffness = Spring.StiffnessMediumLow,
+        ),
     )
 
     val rowContent: @Composable RowScope.() -> Unit = {
@@ -825,10 +837,17 @@ fun MillenniumSidebarGroupContent(
     if (animate) {
         AnimatedVisibility(
             visible = expanded,
-            enter = expandVertically(animationSpec = tween(resolvedAnimationMillis)) +
-                fadeIn(animationSpec = tween(resolvedAnimationMillis)),
-            exit = shrinkVertically(animationSpec = tween(resolvedAnimationMillis)) +
-                fadeOut(animationSpec = tween(resolvedAnimationMillis)),
+            enter = expandVertically(
+                animationSpec = spring(
+                    dampingRatio = 0.80f,
+                    stiffness = Spring.StiffnessMediumLow,
+                ),
+                expandFrom = Alignment.Top,
+            ) + fadeIn(animationSpec = tween(resolvedAnimationMillis, easing = FastOutSlowInEasing)),
+            exit = shrinkVertically(
+                animationSpec = tween((resolvedAnimationMillis * 0.8f).toInt().coerceAtLeast(100), easing = FastOutLinearInEasing),
+                shrinkTowards = Alignment.Top,
+            ) + fadeOut(animationSpec = tween((resolvedAnimationMillis * 0.7f).toInt().coerceAtLeast(90), easing = FastOutLinearInEasing)),
         ) {
             body()
         }
@@ -1073,9 +1092,18 @@ private fun SidebarItemContainer(
     val resolvedStateAnimationMillis = stateAnimationMillis ?: properties.stateAnimationMillis
     val elevation by animateDpAsState(
         shadowElevation ?: properties.shadowElevation,
-        tween(resolvedStateAnimationMillis),
+        spring(dampingRatio = 0.76f, stiffness = Spring.StiffnessMediumLow),
     )
     val animatedAlpha by animateFloatAsState(alpha ?: properties.alpha, tween(resolvedStateAnimationMillis))
+    val itemScale by animateFloatAsState(
+        targetValue = when {
+            !enabled -> 1f
+            pressed -> 0.97f
+            hovered && !selected -> 1.012f
+            else -> 1f
+        },
+        animationSpec = spring(dampingRatio = 0.70f, stiffness = Spring.StiffnessMedium),
+    )
     val visuals = remember(selected, collapsed, state, resolvedForeground, resolvedIconTint) {
         MillenniumSidebarItemVisuals(selected, collapsed, state, resolvedForeground, resolvedIconTint)
     }
@@ -1087,6 +1115,7 @@ private fun SidebarItemContainer(
         contentPadding = PaddingValues(0.dp),
         modifier = modifier
             .fillMaxWidth()
+            .graphicsLayer { scaleX = itemScale; scaleY = itemScale }
             .alpha(animatedAlpha)
             .millenniumSurface(
                 background = resolvedBackground,
@@ -1216,7 +1245,19 @@ fun MillenniumSidebarTrigger(
     val properties = theme.trigger.resolve(state)
     val rotation by animateFloatAsState(
         targetValue = if (scope?.collapsed == true) 270f else 90f,
-        animationSpec = tween(animationMillis ?: properties.animationMillis),
+        animationSpec = spring(
+            dampingRatio = 0.65f,
+            stiffness = Spring.StiffnessMediumLow,
+        ),
+    )
+    val triggerScale by animateFloatAsState(
+        targetValue = when {
+            scope == null -> 1f
+            pressed -> 0.92f
+            hovered -> 1.05f
+            else -> 1f
+        },
+        animationSpec = spring(dampingRatio = 0.65f, stiffness = Spring.StiffnessMedium),
     )
     val resolvedBackground = background ?: properties.background ?: when (state) {
         MillenniumControlState.Hovered, MillenniumControlState.Focused ->
@@ -1234,6 +1275,7 @@ fun MillenniumSidebarTrigger(
         contentAlignment = Alignment.Center,
         modifier = modifier
             .size(size ?: properties.size)
+            .graphicsLayer { scaleX = triggerScale; scaleY = triggerScale }
             .millenniumSurface(
                 background = resolvedBackground,
                 shape = shape ?: properties.shape,

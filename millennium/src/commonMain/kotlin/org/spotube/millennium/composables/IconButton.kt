@@ -1,7 +1,10 @@
 package org.spotube.millennium.composables
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -315,14 +318,18 @@ private fun IconButtonContainer(
         targetValue = when {
             !enabled -> 1f
             pressed -> resolvedMotion.pressedScale
-            hovered -> resolvedMotion.hoverScale
+            hovered -> maxOf(resolvedMotion.hoverScale, 1.04f)
             else -> 1f
         },
-        animationSpec = tween(resolvedMotion.stateChangeMillis),
+        animationSpec = spring(dampingRatio = 0.62f, stiffness = Spring.StiffnessMedium),
     )
     val elevation by animateDpAsState(
         shadowElevation ?: properties.shadowElevation,
-        tween(resolvedMotion.stateChangeMillis),
+        spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow),
+    )
+    val animatedBorderColor by animateColorAsState(
+        targetValue = resolvedBorderColor,
+        animationSpec = tween(resolvedMotion.stateChangeMillis),
     )
     val semantics = if (contentDescription != null) {
         Modifier.semantics { this.contentDescription = contentDescription }
@@ -344,7 +351,7 @@ private fun IconButtonContainer(
             .millenniumSurface(
                 background = resolvedBackground,
                 shape = shape ?: properties.shape,
-                borderColor = resolvedBorderColor,
+                borderColor = animatedBorderColor,
                 borderWidth = borderWidth ?: properties.borderWidth,
                 shadowElevation = elevation,
                 shadowColors = shadows ?: properties.shadows ?: listOf(Color.Black.copy(alpha = 0.16f)),

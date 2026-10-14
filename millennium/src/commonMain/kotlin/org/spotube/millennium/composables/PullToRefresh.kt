@@ -1,6 +1,16 @@
 package org.spotube.millennium.composables
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -124,7 +134,12 @@ fun MillenniumPullToRefreshBox(
 
             override suspend fun onPreFling(available: Velocity): Velocity {
                 if (pullOffset.value >= thresholdPx) currentOnRefresh()
-                scope.launch { pullOffset.animateTo(0f) }
+                scope.launch {
+                    pullOffset.animateTo(
+                        targetValue = 0f,
+                        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow),
+                    )
+                }
                 return Velocity.Zero
             }
         }
@@ -133,12 +148,25 @@ fun MillenniumPullToRefreshBox(
     Box(modifier = modifier.nestedScroll(connection)) {
         content()
         val showIndicator = isRefreshing || pullOffset.value > 0f
-        if (showIndicator) {
+        AnimatedVisibility(
+            visible = showIndicator,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .offset(y = with(density) { pullOffset.value.toDp() } + if (isRefreshing) resolvedTopPadding else 0.dp)
+                .padding(top = resolvedTopPadding),
+            enter = fadeIn(tween(150, easing = FastOutSlowInEasing)) +
+                scaleIn(
+                    initialScale = 0.85f,
+                    animationSpec = spring(dampingRatio = 0.65f, stiffness = Spring.StiffnessMedium),
+                ),
+            exit = fadeOut(tween(130, easing = FastOutLinearInEasing)) +
+                scaleOut(
+                    targetScale = 0.85f,
+                    animationSpec = tween(130, easing = FastOutLinearInEasing),
+                ),
+        ) {
             Box(
                 Modifier
-                    .align(Alignment.TopCenter)
-                    .offset(y = with(density) { pullOffset.value.toDp() } + if (isRefreshing) resolvedTopPadding else 0.dp)
-                    .padding(top = resolvedTopPadding)
                     .millenniumSurface(
                         background = indicatorBackground ?: properties.indicatorBackground ?: millenniumPanelBrush(colors),
                         shape = indicatorShape ?: properties.indicatorShape,

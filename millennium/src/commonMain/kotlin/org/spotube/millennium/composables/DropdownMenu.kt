@@ -1,7 +1,23 @@
 package org.spotube.millennium.composables
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import org.spotube.millennium.theme.collectIsKeyboardFocusedAsState
@@ -27,10 +43,13 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.composeunstyled.AnchorSide
@@ -65,6 +84,10 @@ data class MillenniumDropdownMenuThemeProperties(
     val itemPadding: PaddingValues,
     val itemSpacing: Dp,
     val stateAnimationMillis: Int,
+    val openAnimationMillis: Int = 180,
+    val closeAnimationMillis: Int = 130,
+    val enterScale: Float = 0.94f,
+    val exitScale: Float = 0.96f,
     val alpha: Float = 1f,
     val itemBorderColor: Color? = null,
     val itemBorderWidth: Dp = 1.dp,
@@ -134,6 +157,10 @@ fun MillenniumDropdownMenu(
     itemGlowColor: Color? = null,
     itemWidth: Dp? = null,
     stateAnimationMillis: Int? = null,
+    openAnimationMillis: Int? = null,
+    closeAnimationMillis: Int? = null,
+    enterScale: Float? = null,
+    exitScale: Float? = null,
     alpha: Float? = null,
     theme: MillenniumDropdownMenuTheme = MillenniumTheme.dropdownMenuTheme,
     anchor: @Composable () -> Unit,
@@ -143,6 +170,64 @@ fun MillenniumDropdownMenu(
     val resolvedPanelBackground = panelBackground ?: panelProperties.panelBackground ?: millenniumPanelBrush(colors)
     val resolvedPanelBorderColor = panelBorderColor ?: panelProperties.panelBorderColor ?: colors.border
     val resolvedPanelGlowColor = panelGlowColor ?: panelProperties.panelGlowColor ?: colors.highlight.copy(alpha = 0.5f)
+    val resolvedOpenMillis = openAnimationMillis ?: panelProperties.openAnimationMillis
+    val resolvedCloseMillis = closeAnimationMillis ?: panelProperties.closeAnimationMillis
+    val resolvedEnterScale = enterScale ?: panelProperties.enterScale
+    val resolvedExitScale = exitScale ?: panelProperties.exitScale
+    val transformOrigin = when (side) {
+        AnchorSide.Bottom -> TransformOrigin(0.5f, 0f)
+        AnchorSide.Top -> TransformOrigin(0.5f, 1f)
+        AnchorSide.Start -> TransformOrigin(1f, 0.5f)
+        AnchorSide.End -> TransformOrigin(0f, 0.5f)
+    }
+    val enterSlide = when (side) {
+        AnchorSide.Bottom -> expandVertically(
+            animationSpec = spring(dampingRatio = 0.80f, stiffness = Spring.StiffnessMediumLow),
+            expandFrom = Alignment.Top,
+        ) + slideInVertically(
+            animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow),
+            initialOffsetY = { -it / 6 },
+        )
+        AnchorSide.Top -> expandVertically(
+            animationSpec = spring(dampingRatio = 0.80f, stiffness = Spring.StiffnessMediumLow),
+            expandFrom = Alignment.Bottom,
+        ) + slideInVertically(
+            animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow),
+            initialOffsetY = { it / 6 },
+        )
+        AnchorSide.Start -> slideInHorizontally(
+            animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow),
+            initialOffsetX = { it / 6 },
+        )
+        AnchorSide.End -> slideInHorizontally(
+            animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow),
+            initialOffsetX = { -it / 6 },
+        )
+    }
+    val exitSlide = when (side) {
+        AnchorSide.Bottom -> shrinkVertically(
+            animationSpec = tween(resolvedCloseMillis, easing = FastOutLinearInEasing),
+            shrinkTowards = Alignment.Top,
+        ) + slideOutVertically(
+            animationSpec = tween(resolvedCloseMillis, easing = FastOutLinearInEasing),
+            targetOffsetY = { -it / 8 },
+        )
+        AnchorSide.Top -> shrinkVertically(
+            animationSpec = tween(resolvedCloseMillis, easing = FastOutLinearInEasing),
+            shrinkTowards = Alignment.Bottom,
+        ) + slideOutVertically(
+            animationSpec = tween(resolvedCloseMillis, easing = FastOutLinearInEasing),
+            targetOffsetY = { it / 8 },
+        )
+        AnchorSide.Start -> slideOutHorizontally(
+            animationSpec = tween(resolvedCloseMillis, easing = FastOutLinearInEasing),
+            targetOffsetX = { it / 8 },
+        )
+        AnchorSide.End -> slideOutHorizontally(
+            animationSpec = tween(resolvedCloseMillis, easing = FastOutLinearInEasing),
+            targetOffsetX = { -it / 8 },
+        )
+    }
     UnstyledDropdownMenu(
         expanded = expanded,
         onExpandedChange = onExpandedChange,
@@ -152,7 +237,7 @@ fun MillenniumDropdownMenu(
         anchor = anchor,
         panel = {
             DropdownMenuPanel(
-                Modifier.widthIn(min = minimumWidth ?: panelProperties.minimumWidth).millenniumSurface(
+                modifier = Modifier.widthIn(min = minimumWidth ?: panelProperties.minimumWidth).millenniumSurface(
                     background = resolvedPanelBackground,
                     shape = panelShape ?: panelProperties.panelShape,
                     borderColor = resolvedPanelBorderColor,
@@ -160,6 +245,21 @@ fun MillenniumDropdownMenu(
                     shadowElevation = panelShadowElevation ?: panelProperties.panelShadowElevation,
                     innerGlowColor = resolvedPanelGlowColor,
                 ).padding(panelPadding ?: panelProperties.panelPadding).alpha(alpha ?: panelProperties.alpha),
+                enter = fadeIn(tween(resolvedOpenMillis, easing = FastOutSlowInEasing)) +
+                    scaleIn(
+                        initialScale = resolvedEnterScale,
+                        transformOrigin = transformOrigin,
+                        animationSpec = spring(
+                            dampingRatio = 0.76f,
+                            stiffness = Spring.StiffnessMediumLow,
+                        ),
+                    ) + enterSlide,
+                exit = fadeOut(tween(resolvedCloseMillis, easing = FastOutLinearInEasing)) +
+                    scaleOut(
+                        targetScale = resolvedExitScale,
+                        transformOrigin = transformOrigin,
+                        animationSpec = tween(resolvedCloseMillis, easing = FastOutLinearInEasing),
+                    ) + exitSlide,
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(itemSpacing ?: panelProperties.itemSpacing)) {
                     items.forEach { item ->
@@ -174,36 +274,70 @@ fun MillenniumDropdownMenu(
                             else -> MillenniumControlState.Default
                         }
                         val properties = theme.states.resolve(state)
+                        val resolvedStateMillis = stateAnimationMillis ?: properties.stateAnimationMillis
+                        val active = hovered || focused || pressed
                         val resolvedItemBackground = itemBackground ?: properties.itemBackground ?: when (state) {
                             MillenniumControlState.Hovered, MillenniumControlState.Focused,
                             MillenniumControlState.Pressed -> millenniumBevelBrush(colors, accent = true)
                             MillenniumControlState.Selected -> millenniumBevelBrush(colors, accent = true)
                             else -> Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
                         }
-                        val resolvedItemForeground = itemForeground ?: properties.itemForeground ?: when (state) {
+                        val targetItemForeground = itemForeground ?: properties.itemForeground ?: when (state) {
                             MillenniumControlState.Disabled -> colors.muted
                             MillenniumControlState.Selected, MillenniumControlState.Hovered,
                             MillenniumControlState.Focused, MillenniumControlState.Pressed -> colors.onAccent
                             else -> colors.text
                         }
-                        val animatedAlpha = animateFloatAsState(
+                        val resolvedItemForeground by animateColorAsState(
+                            targetValue = targetItemForeground,
+                            animationSpec = tween(resolvedStateMillis),
+                        )
+                        val targetBorderColor = itemBorderColor ?: properties.itemBorderColor
+                            ?: if (active) colors.accentBottom else Color.Transparent
+                        val animatedBorderColor by animateColorAsState(
+                            targetValue = targetBorderColor,
+                            animationSpec = tween(resolvedStateMillis),
+                        )
+                        val animatedAlpha by animateFloatAsState(
                             targetValue = alpha ?: properties.alpha,
-                            animationSpec = tween(stateAnimationMillis ?: properties.stateAnimationMillis),
-                        ).value
+                            animationSpec = tween(resolvedStateMillis),
+                        )
+                        val itemScale by animateFloatAsState(
+                            targetValue = when {
+                                pressed -> 0.975f
+                                hovered || focused -> 1.012f
+                                else -> 1f
+                            },
+                            animationSpec = spring(
+                                dampingRatio = 0.72f,
+                                stiffness = Spring.StiffnessMedium,
+                            ),
+                        )
+                        val itemElevation by animateDpAsState(
+                            targetValue = when {
+                                pressed -> 0.dp
+                                active -> 2.dp
+                                else -> 0.dp
+                            },
+                            animationSpec = tween(resolvedStateMillis),
+                        )
                         UnstyledDropdownMenuItem(
                             onClick = { onItemClick(item) },
                             indication = LocalIndication.current,
                             interactionSource = interaction,
                             modifier = Modifier.width(itemWidth ?: properties.itemWidth)
                                 .heightIn(min = itemMinimumHeight ?: properties.itemMinimumHeight)
+                                .graphicsLayer { scaleX = itemScale; scaleY = itemScale }
                                 .alpha(animatedAlpha)
                                 .millenniumSurface(
                                     resolvedItemBackground, itemShape ?: properties.itemShape,
-                                    borderColor = itemBorderColor ?: properties.itemBorderColor
-                                        ?: if (hovered || focused || pressed) colors.accentBottom else null,
-                                    borderWidth = itemBorderWidth ?: properties.itemBorderWidth,
+                                    borderColor = animatedBorderColor,
+                                    borderWidth = if (active || itemBorderColor != null || properties.itemBorderColor != null) {
+                                        itemBorderWidth ?: properties.itemBorderWidth
+                                    } else 0.dp,
+                                    shadowElevation = itemElevation,
                                     innerGlowColor = itemGlowColor ?: properties.itemGlowColor
-                                        ?: if (hovered || focused || pressed) colors.highlight.copy(alpha = 0.35f) else null,
+                                        ?: if (active) colors.highlight.copy(alpha = 0.35f) else null,
                                 ),
                         ) {
                             Box(

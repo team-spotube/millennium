@@ -1,6 +1,10 @@
 package org.spotube.millennium.composables
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -25,6 +29,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
@@ -189,6 +194,10 @@ fun MillenniumSlider(
                 MillenniumControlState.Error -> colors.danger
                 else -> colors.border
             }
+            val animatedThumbBorderColor by animateColorAsState(
+                targetValue = resolvedThumbBorderColor,
+                animationSpec = tween(stateAnimationMillis ?: thumbProperties.stateAnimationMillis),
+            )
             val resolvedThumbGlowColor = thumbGlowColor ?: thumbProperties.thumbGlowColor
                 ?: colors.highlight.copy(alpha = 0.55f)
             val targetSize = if (state.isPressed || state.isDragging) {
@@ -198,16 +207,20 @@ fun MillenniumSlider(
             }
             val animatedSize by animateDpAsState(
                 targetSize,
-                tween(stateAnimationMillis ?: thumbProperties.stateAnimationMillis),
+                spring(dampingRatio = 0.62f, stiffness = Spring.StiffnessMedium),
+            )
+            val animatedElevation by animateDpAsState(
+                thumbElevation ?: thumbProperties.thumbElevation,
+                spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMediumLow),
             )
             Box(Modifier.size(baseThumbSize), contentAlignment = Alignment.Center) {
                 Box(
                     Modifier.size(animatedSize).millenniumSurface(
                         background = resolvedThumbBackground,
                         shape = thumbShape ?: thumbProperties.thumbShape,
-                        borderColor = resolvedThumbBorderColor,
+                        borderColor = animatedThumbBorderColor,
                         borderWidth = thumbBorderWidth ?: thumbProperties.thumbBorderWidth,
-                        shadowElevation = thumbElevation ?: thumbProperties.thumbElevation,
+                        shadowElevation = animatedElevation,
                         innerGlowColor = resolvedThumbGlowColor,
                         bottomRimColor = thumbBottomRimColor ?: thumbProperties.thumbBottomRimColor
                             ?: colors.highlight.copy(alpha = 0.6f),
