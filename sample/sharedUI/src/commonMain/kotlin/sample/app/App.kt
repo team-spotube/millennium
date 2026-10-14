@@ -66,14 +66,20 @@ private fun GalleryApp(onOpenStudy: () -> Unit) {
     var dialog by rememberSaveable { mutableStateOf(false) }
     val drawer = rememberMillenniumDrawerState()
     val modalSheet = rememberModalBottomSheetState(initialDetent = SheetDetent.Hidden)
-    MillenniumTheme(dark, config = org.spotube.millennium.theme.MillenniumThemeConfig(palette = palette)) {
+    MillenniumTheme(
+        dark,
+        config = org.spotube.millennium.theme.MillenniumThemeConfig(palette = palette)
+    ) {
         MillenniumTooltipHost {
             val c = MillenniumTheme.colors
             BoxWithConstraints(Modifier.fillMaxSize().background(c.background)) {
                 val wide = maxWidth >= 900.dp
                 Column(Modifier.fillMaxSize()) {
                     Header(dark, { dark = it }, palette, { palette = it }, wide)
-                    MillenniumButton(onOpenStudy, style = MillenniumButtonStyle.Quiet) { Text("Back to design study") }
+                    MillenniumButton(
+                        onOpenStudy,
+                        style = MillenniumButtonStyle.Quiet
+                    ) { Text("Back to design study") }
                     MillenniumSeparator()
                     Row(Modifier.weight(1f)) {
                         if (wide) Sidebar(category) { category = it }
@@ -312,7 +318,14 @@ private fun Sidebar(category: String, onSelect: (String) -> Unit) {
                                 label = item,
                                 onClick = { onSelect(item) },
                                 selected = category == item,
-                                badge = if (index == 0) "30" else listOf("", "3", "7", "7", "8", "4")[index]
+                                badge = if (index == 0) "30" else listOf(
+                                    "",
+                                    "3",
+                                    "7",
+                                    "7",
+                                    "8",
+                                    "4"
+                                )[index]
                             )
                         }
                     }
@@ -676,11 +689,29 @@ private fun ButtonDemo() {
 @Composable
 private fun IconButtonDemo() {
     var saved by rememberSaveable { mutableStateOf(false) }
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         MillenniumIconButton(MillenniumIcons.Sparkle, "Add to favorites", { saved = !saved })
-        MillenniumIconButton(MillenniumIcons.Music, "Play", {}, style = MillenniumIconButtonStyle.Secondary)
-        MillenniumIconButton(MillenniumIcons.Chevron, "More options", {}, style = MillenniumIconButtonStyle.Quiet)
-        MillenniumIconButton(MillenniumIcons.Check, "Delete", {}, style = MillenniumIconButtonStyle.Danger)
+        MillenniumIconButton(
+            MillenniumIcons.Music,
+            "Play",
+            {},
+            style = MillenniumIconButtonStyle.Secondary
+        )
+        MillenniumIconButton(
+            MillenniumIcons.Chevron,
+            "More options",
+            {},
+            style = MillenniumIconButtonStyle.Quiet
+        )
+        MillenniumIconButton(
+            MillenniumIcons.Check,
+            "Delete",
+            {},
+            style = MillenniumIconButtonStyle.Danger
+        )
         MillenniumIconButton(MillenniumIcons.Sparkle, "Disabled", {}, enabled = false)
     }
     MillenniumText(
@@ -817,7 +848,13 @@ private fun ListTileDemo() {
                 title = { Text(song) },
                 leading = { MillenniumAvatar(artist.take(2).uppercase(), artist) },
                 subtitle = { Text("$artist · remastered") },
-                trailing = { MillenniumText(length, color = MillenniumTheme.colors.muted, size = 11.sp) },
+                trailing = {
+                    MillenniumText(
+                        length,
+                        color = MillenniumTheme.colors.muted,
+                        size = 11.sp
+                    )
+                },
                 selected = selected == artist,
                 onClick = { selected = artist },
                 onRightClick = { offset ->
@@ -910,11 +947,26 @@ private fun TopAppBarDemo() {
         title = { Text("Your library") },
         subtitle = { Text("128 tracks") },
         navigationIcon = {
-            MillenniumIconButton(MillenniumIcons.Sparkle, "Home", {}, style = MillenniumIconButtonStyle.Quiet)
+            MillenniumIconButton(
+                MillenniumIcons.Sparkle,
+                "Home",
+                {},
+                style = MillenniumIconButtonStyle.Quiet
+            )
         },
         actions = {
-            MillenniumIconButton(MillenniumIcons.Music, "Play", {}, style = MillenniumIconButtonStyle.Quiet)
-            MillenniumIconButton(MillenniumIcons.Chevron, "More", {}, style = MillenniumIconButtonStyle.Quiet)
+            MillenniumIconButton(
+                MillenniumIcons.Music,
+                "Play",
+                {},
+                style = MillenniumIconButtonStyle.Quiet
+            )
+            MillenniumIconButton(
+                MillenniumIcons.Chevron,
+                "More",
+                {},
+                style = MillenniumIconButtonStyle.Quiet
+            )
         }
     )
 }
@@ -983,7 +1035,13 @@ private fun AutocompleteDemo() {
         suggestions = suggestions,
         suggestionLabel = { it },
         onSuggestionSelected = { selectedArtist = it },
-        leadingContent = { artist -> MillenniumAvatar(artist.take(2).uppercase(), artist, size = 30.dp) },
+        leadingContent = { artist ->
+            MillenniumAvatar(
+                artist.take(2).uppercase(),
+                artist,
+                size = 30.dp
+            )
+        },
         trailingContent = { artist ->
             MillenniumButton(
                 onClick = {
@@ -995,14 +1053,25 @@ private fun AutocompleteDemo() {
         menuHeader = {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 MillenniumText("MATCHING ARTISTS", size = 10.sp, weight = FontWeight.Bold)
-                MillenniumText("${suggestions.size} found", size = 10.sp, color = MillenniumTheme.colors.muted)
+                MillenniumText(
+                    "${suggestions.size} found",
+                    size = 10.sp,
+                    color = MillenniumTheme.colors.muted
+                )
             }
         },
         menuFooter = {
-            MillenniumText("↑ ↓ move   ·   Enter choose   ·   Esc close", size = 10.sp, color = MillenniumTheme.colors.muted)
+            MillenniumText(
+                "↑ ↓ move   ·   Enter choose   ·   Esc close",
+                size = 10.sp,
+                color = MillenniumTheme.colors.muted
+            )
         },
         emptyContent = {
-            MillenniumText("No artists found. Try another search.", color = MillenniumTheme.colors.muted)
+            MillenniumText(
+                "No artists found. Try another search.",
+                color = MillenniumTheme.colors.muted
+            )
         },
     )
     MillenniumText(
@@ -1034,11 +1103,22 @@ private fun SidebarDemo() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (collapsed) {
-                        MillenniumIcon(MillenniumIcons.Sparkle, tint = MillenniumTheme.colors.accent)
+                        MillenniumIcon(
+                            MillenniumIcons.Sparkle,
+                            tint = MillenniumTheme.colors.accent
+                        )
                     } else {
                         MillenniumText("Millennium", weight = FontWeight.Bold)
                     }
-                    MillenniumSidebarTrigger()
+                    MillenniumSidebarTrigger {
+                        MillenniumIconButton(
+                            MillenniumIcons.Chevron,
+                            style = MillenniumIconButtonStyle.Quiet,
+                            modifier = Modifier.rotate(it.rotation),
+                            contentDescription = "Toggle Sidebar",
+                            onClick = { it.toggle() }
+                        )
+                    }
                 }
             }
             MillenniumSidebarContent {
@@ -1106,7 +1186,10 @@ private fun SidebarDemo() {
                 )
             }
         }
-        Box(Modifier.weight(1f).fillMaxHeight().padding(20.dp), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier.weight(1f).fillMaxHeight().padding(20.dp),
+            contentAlignment = Alignment.Center
+        ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -1206,7 +1289,10 @@ private fun MenuDemo() {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(choice)
-                    MillenniumIcon(MillenniumIcons.Chevron, modifier = Modifier.rotate(chevronRotation))
+                    MillenniumIcon(
+                        MillenniumIcons.Chevron,
+                        modifier = Modifier.rotate(chevronRotation)
+                    )
                 }
             }
         })
