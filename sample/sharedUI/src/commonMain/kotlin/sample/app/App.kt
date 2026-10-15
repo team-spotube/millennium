@@ -1268,6 +1268,13 @@ private fun DisclosureDemo() {
 private fun MenuDemo() {
     var expanded by rememberSaveable { mutableStateOf(false) }
     var choice by rememberSaveable { mutableStateOf("Choose your mood") }
+    val moods = remember {
+        listOf(
+            "Golden hour", "Midnight drive", "Back to 2007", "Rainy window", "Road trip",
+            "Sunday morning", "Late night coding", "Beach bonfire", "Neon city", "Slow dance",
+            "Study session", "Summer festival", "Throwback mixtape", "Quiet focus",
+        )
+    }
     val chevronRotation by animateFloatAsState(
         targetValue = if (expanded) 180f else 0f,
         animationSpec = spring(dampingRatio = 0.68f, stiffness = Spring.StiffnessMediumLow),
@@ -1275,8 +1282,12 @@ private fun MenuDemo() {
     MillenniumDropdownMenu(
         expanded,
         { expanded = it },
-        listOf("Golden hour", "Midnight drive", "Back to 2007"),
+        moods,
         { choice = it },
+        maximumHeight = 220.dp,
+        filterable = true,
+        filterPlaceholder = "Search moods",
+        onFilter = { query -> moods.filter { it.contains(query.trim(), ignoreCase = true) } },
         anchor = {
             MillenniumButton(
                 { expanded = !expanded },
@@ -1297,7 +1308,7 @@ private fun MenuDemo() {
             }
         })
     MillenniumText(
-        "Arrow keys to explore. Enter to choose.",
+        "Scrolls when long · type to filter the moods.",
         color = MillenniumTheme.colors.muted,
         size = 11.sp
     )

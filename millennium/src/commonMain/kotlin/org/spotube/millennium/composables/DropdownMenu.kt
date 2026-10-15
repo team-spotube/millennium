@@ -31,6 +31,11 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -94,6 +99,7 @@ data class MillenniumDropdownMenuThemeProperties(
     val itemBorderWidth: Dp = 1.dp,
     val itemGlowColor: Color? = null,
     val itemWidth: Dp = 192.dp,
+    val maximumHeight: Dp = 320.dp,
 )
 
 @Immutable
@@ -157,6 +163,11 @@ fun MillenniumDropdownMenu(
     itemBorderWidth: Dp? = null,
     itemGlowColor: Color? = null,
     itemWidth: Dp? = null,
+    maximumHeight: Dp? = null,
+    filterable: Boolean = false,
+    onFilter: ((query: String) -> List<String>)? = null,
+    filterPlaceholder: String = "Filter",
+    emptyText: String = "No results",
     stateAnimationMillis: Int? = null,
     openAnimationMillis: Int? = null,
     closeAnimationMillis: Int? = null,
@@ -167,6 +178,14 @@ fun MillenniumDropdownMenu(
     anchor: @Composable () -> Unit,
 ) {
     val colors = MillenniumTheme.colors
+    val filterState = rememberTextFieldState()
+    LaunchedEffect(expanded) { if (!expanded) filterState.clearText() }
+    val query = filterState.text.toString()
+    val visibleItems = when {
+        !filterable || query.isBlank() -> items
+        onFilter != null -> onFilter(query)
+        else -> items.filter { it.contains(query.trim(), ignoreCase = true) }
+    }
     val panelProperties = theme.states.default
     val resolvedPanelBackground = panelBackground ?: panelProperties.panelBackground ?: millenniumPanelBrush(colors)
     val resolvedPanelBorderColor = panelBorderColor ?: panelProperties.panelBorderColor ?: colors.border
@@ -263,7 +282,29 @@ fun MillenniumDropdownMenu(
                     ) + exitSlide,
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(itemSpacing ?: panelProperties.itemSpacing)) {
-                    items.forEach { item ->
+                    if (filterable) {
+                        MillenniumTextField(
+                            state = filterState,
+                            placeholder = filterPlaceholder,
+                            modifier = Modifier.width(itemWidth ?: panelProperties.itemWidth),
+                        )
+                    }
+                    Column(
+                        modifier = Modifier
+                            .heightIn(max = maximumHeight ?: panelProperties.maximumHeight)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(itemSpacing ?: panelProperties.itemSpacing),
+                    ) {
+                    if (visibleItems.isEmpty()) {
+                        Text(
+                            emptyText,
+                            modifier = Modifier.width(itemWidth ?: panelProperties.itemWidth)
+                                .padding(itemPadding ?: panelProperties.itemPadding),
+                            style = itemTextStyle ?: panelProperties.itemTextStyle,
+                            color = colors.muted,
+                        )
+                    }
+                    visibleItems.forEach { item ->
                         val interaction = remember(item) { MutableInteractionSource() }
                         val pressed by interaction.collectIsPressedAsState()
                         val focused by interaction.collectIsKeyboardFocusedAsState()
@@ -356,6 +397,7 @@ fun MillenniumDropdownMenu(
                                 )
                             }
                         }
+                    }
                     }
                 }
             }
