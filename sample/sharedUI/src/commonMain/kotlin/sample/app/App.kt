@@ -7,6 +7,7 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -17,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
@@ -281,20 +283,54 @@ private fun Header(
         MillenniumDropdownMenu(
             expanded = paletteMenuExpanded,
             onExpandedChange = { paletteMenuExpanded = it },
-            items = MillenniumPalette.entries.map { it.name },
-            onItemClick = { selected ->
-                onPaletteChange(MillenniumPalette.valueOf(selected))
-                paletteMenuExpanded = false
-            },
+            width = 200.dp,
+            alignment = AnchorAlignment.End,
             anchor = {
                 MillenniumButton(
                     onClick = { paletteMenuExpanded = !paletteMenuExpanded },
                     style = MillenniumButtonStyle.Secondary,
-                ) { Text("${palette.name} palette") }
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        MillenniumIcon(MillenniumIcons.Sparkle)
+                        Text("${palette.name} palette")
+                    }
+                }
             },
-        )
+        ) {
+            MillenniumDropdownMenuLabel { Text("ACCENT PALETTE") }
+            MillenniumDropdownMenuRadioGroup(palette, onPaletteChange) {
+                MillenniumPalette.entries.forEach { entry ->
+                    MillenniumDropdownMenuRadioItem(
+                        entry,
+                        closeOnClick = true,
+                        description = { Text(paletteBlurb(entry)) },
+                        trailing = {
+                            Box(
+                                Modifier.size(14.dp).clip(CircleShape)
+                                    .background(paletteSwatch(entry))
+                            )
+                        },
+                    ) { Text(entry.name) }
+                }
+            }
+        }
         MillenniumSwitch(dark, onDarkChange, if (dark) "Dark" else "Light")
     }
+}
+
+private fun paletteBlurb(palette: MillenniumPalette): String = when (palette) {
+    MillenniumPalette.Blue -> "Classic Aqua gel"
+    MillenniumPalette.Orange -> "Warm apricot glow"
+    MillenniumPalette.Lime -> "Fresh citron shine"
+}
+
+private fun paletteSwatch(palette: MillenniumPalette): Color = when (palette) {
+    MillenniumPalette.Blue -> Color(0xFF2F7DE1)
+    MillenniumPalette.Orange -> Color(0xFFF08A24)
+    MillenniumPalette.Lime -> Color(0xFF7BC62D)
 }
 
 @Composable
@@ -587,7 +623,7 @@ private fun Gallery(
                 "Feedback",
                 "09–10",
                 "Avatars & icons",
-                "A familiar face. A recognizable sign."
+                "A familiar face, plus the full icon set in tints and sizes."
             ) { IdentityDemo() }
             Card(
                 "Feedback",
@@ -1218,19 +1254,67 @@ private fun IdentityDemo() {
         MillenniumAvatar("MK", "Morgan Kim")
         MillenniumAvatar("YOU", "Your profile", size = 60.dp)
     }
+    MillenniumSeparator()
+    MillenniumText("Icon set", size = 12.sp, weight = FontWeight.SemiBold)
+    val icons = listOf(
+        "Sparkle" to MillenniumIcons.Sparkle,
+        "Music" to MillenniumIcons.Music,
+        "Check" to MillenniumIcons.Check,
+        "Chevron" to MillenniumIcons.Chevron,
+    )
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        icons.forEach { (name, icon) ->
+            Column(
+                Modifier.width(68.dp).clip(RoundedCornerShape(10.dp))
+                    .background(MillenniumTheme.colors.inset)
+                    .padding(vertical = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                MillenniumIcon(icon, name, size = 26.dp)
+                MillenniumText(name, size = 10.sp, color = MillenniumTheme.colors.muted)
+            }
+        }
+    }
+    MillenniumText("Tints", size = 12.sp, weight = FontWeight.SemiBold)
+    val c = MillenniumTheme.colors
     Row(
-        horizontalArrangement = Arrangement.spacedBy(18.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        MillenniumIcon(MillenniumIcons.Sparkle, "Sparkle", tint = MillenniumTheme.colors.accent)
-        MillenniumIcon(MillenniumIcons.Music, "Music")
-        MillenniumIcon(MillenniumIcons.Check, "Check", tint = MillenniumTheme.colors.success)
-        MillenniumText(
-            "Vector sharp. Any screen.",
-            size = 11.sp,
-            color = MillenniumTheme.colors.muted
-        )
+        MillenniumIcon(MillenniumIcons.Sparkle, "Accent", tint = c.accent)
+        MillenniumIcon(MillenniumIcons.Check, "Success", tint = c.success)
+        MillenniumIcon(MillenniumIcons.Music, "Danger", tint = c.danger)
+        MillenniumIcon(MillenniumIcons.Chevron, "Muted", tint = c.muted)
     }
+    MillenniumText("Sizes", size = 12.sp, weight = FontWeight.SemiBold)
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.Bottom
+    ) {
+        listOf(14.dp, 20.dp, 28.dp, 40.dp).forEach {
+            MillenniumIcon(MillenniumIcons.Music, "${it.value.toInt()}dp", size = it, tint = c.accent)
+        }
+    }
+    MillenniumText("In buttons", size = 12.sp, weight = FontWeight.SemiBold)
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        MillenniumButton({}) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                MillenniumIcon(MillenniumIcons.Music, tint = Color.White)
+                Text("Play")
+            }
+        }
+        MillenniumIconButton(MillenniumIcons.Sparkle, "Favorite", {}, style = MillenniumIconButtonStyle.Secondary)
+        MillenniumIconButton(MillenniumIcons.Check, "Done", {}, style = MillenniumIconButtonStyle.Quiet)
+    }
+    MillenniumText(
+        "Vector sharp. Any screen.",
+        size = 11.sp,
+        color = MillenniumTheme.colors.muted
+    )
 }
 
 @Composable
@@ -1264,30 +1348,40 @@ private fun DisclosureDemo() {
     }
 }
 
+private data class Mood(val name: String, val hint: String, val icon: ImageVector)
+
 @Composable
 private fun MenuDemo() {
     var expanded by rememberSaveable { mutableStateOf(false) }
-    var choice by rememberSaveable { mutableStateOf("Choose your mood") }
+    var choice by rememberSaveable { mutableStateOf("") }
+    var lyrics by rememberSaveable { mutableStateOf(true) }
+    var crossfade by rememberSaveable { mutableStateOf(false) }
+    var quality by rememberSaveable { mutableStateOf("Lossless") }
+    val filter = rememberTextFieldState()
+    LaunchedEffect(expanded) { if (!expanded) filter.clearText() }
     val moods = remember {
         listOf(
-            "Golden hour", "Midnight drive", "Back to 2007", "Rainy window", "Road trip",
-            "Sunday morning", "Late night coding", "Beach bonfire", "Neon city", "Slow dance",
-            "Study session", "Summer festival", "Throwback mixtape", "Quiet focus",
+            Mood("Golden hour", "Warm, unhurried", MillenniumIcons.Sparkle),
+            Mood("Midnight drive", "Neon and asphalt", MillenniumIcons.Music),
+            Mood("Back to 2007", "Glossy nostalgia", MillenniumIcons.Sparkle),
+            Mood("Rainy window", "Slow and soft", MillenniumIcons.Music),
+            Mood("Road trip", "Windows down", MillenniumIcons.Sparkle),
+            Mood("Sunday morning", "Coffee and vinyl", MillenniumIcons.Music),
+            Mood("Late night coding", "Quiet focus", MillenniumIcons.Sparkle),
+            Mood("Beach bonfire", "Acoustic embers", MillenniumIcons.Music),
         )
     }
+    val query = filter.text.toString().trim()
+    val visible = moods.filter { it.name.contains(query, ignoreCase = true) }
+    val current = moods.firstOrNull { it.name == choice }
     val chevronRotation by animateFloatAsState(
         targetValue = if (expanded) 180f else 0f,
         animationSpec = spring(dampingRatio = 0.68f, stiffness = Spring.StiffnessMediumLow),
     )
     MillenniumDropdownMenu(
-        expanded,
-        { expanded = it },
-        moods,
-        { choice = it },
-        maximumHeight = 220.dp,
-        filterable = true,
-        filterPlaceholder = "Search moods",
-        onFilter = { query -> moods.filter { it.contains(query.trim(), ignoreCase = true) } },
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        width = 248.dp,
         anchor = {
             MillenniumButton(
                 { expanded = !expanded },
@@ -1299,16 +1393,88 @@ private fun MenuDemo() {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(choice)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        MillenniumIcon(current?.icon ?: MillenniumIcons.Music)
+                        Text(current?.name ?: "Choose your mood")
+                    }
                     MillenniumIcon(
                         MillenniumIcons.Chevron,
                         modifier = Modifier.rotate(chevronRotation)
                     )
                 }
             }
-        })
+        },
+    ) {
+        MillenniumDropdownMenuHeader {
+            MillenniumDropdownMenuFilter(filter, placeholder = "Search moods")
+        }
+        MillenniumDropdownMenuContent(maximumHeight = 280.dp) {
+            MillenniumDropdownMenuGroup {
+                MillenniumDropdownMenuLabel {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("MOODS")
+                        Text("${visible.size}")
+                    }
+                }
+                if (visible.isEmpty()) {
+                    MillenniumDropdownMenuEmpty { Text("No mood matches “$query”") }
+                }
+                visible.forEach { mood ->
+                    MillenniumDropdownMenuItem(
+                        label = mood.name,
+                        onClick = { choice = mood.name },
+                        icon = mood.icon,
+                        description = mood.hint,
+                        selected = choice == mood.name,
+                    )
+                }
+            }
+            MillenniumDropdownMenuSeparator()
+            MillenniumDropdownMenuGroup {
+                MillenniumDropdownMenuLabel("PLAYBACK")
+                MillenniumDropdownMenuCheckboxItem(
+                    lyrics, { lyrics = it },
+                    shortcut = { Text("L") },
+                ) { Text("Show lyrics") }
+                MillenniumDropdownMenuCheckboxItem(
+                    crossfade, { crossfade = it },
+                    description = { Text("Blend tracks for 6 seconds") },
+                ) { Text("Crossfade") }
+            }
+            MillenniumDropdownMenuSeparator()
+            MillenniumDropdownMenuRadioGroup(quality, { quality = it }) {
+                MillenniumDropdownMenuLabel("STREAMING QUALITY")
+                listOf("Standard", "High", "Lossless").forEach { level ->
+                    MillenniumDropdownMenuRadioItem(
+                        level,
+                        trailing = if (level == "Lossless") {
+                            { MillenniumSidebarBadge("HD", highlighted = quality == level) }
+                        } else null,
+                    ) { Text(level) }
+                }
+            }
+            MillenniumDropdownMenuSeparator()
+            MillenniumDropdownMenuItem(
+                label = "Clear mood",
+                onClick = { choice = "" },
+                icon = MillenniumIcons.Check,
+                destructive = true,
+                enabled = choice.isNotEmpty(),
+            )
+        }
+        MillenniumDropdownMenuFooter {
+            MillenniumText(
+                "${if (lyrics) "Lyrics on" else "Lyrics off"} · $quality",
+                color = MillenniumTheme.colors.muted,
+                size = 11.sp
+            )
+        }
+    }
     MillenniumText(
-        "Scrolls when long · type to filter the moods.",
+        "Header, scrolling body, footer · icons, toggles, radios and a destructive row.",
         color = MillenniumTheme.colors.muted,
         size = 11.sp
     )
