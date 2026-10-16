@@ -1,5 +1,7 @@
 package org.spotube.millennium.composables
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -57,7 +59,44 @@ import org.spotube.millennium.theme.millenniumSelectedGelBrush
 import org.spotube.millennium.theme.millenniumSurface
 import org.spotube.millennium.theme.millenniumInteractionSurface
 
-/** Complete, state-specific list-tile appearance and layout configuration. */
+/**
+ * Complete, state-specific list-tile appearance and layout configuration.
+ *
+ * One instance describes the tile in a single [MillenniumControlState]; [MillenniumListTileTheme]
+ * maps states to instances. Nullable colors and brushes derive from the active palette when `null`.
+ *
+ * @property titleStyle Ambient text style of the title slot (default 14sp medium).
+ * @property subtitleStyle Text style of the subtitle slot (default 12sp normal).
+ * @property titleForeground Title color when not selected; `null` uses palette text (muted when
+ *   disabled).
+ * @property subtitleForeground Subtitle color when not selected; `null` uses the palette muted color.
+ * @property selectedTitleForeground Title color when selected; `null` falls back to
+ *   [titleForeground], then the palette text color.
+ * @property selectedSubtitleForeground Subtitle color when selected; `null` falls back to
+ *   [subtitleForeground], then palette text at 82 percent alpha.
+ * @property background Fill override for non-selected states; `null` derives accent washes (hover,
+ *   focus, press), a danger wash (error) or transparency.
+ * @property selectedBackground Fill override while selected; `null` uses the surface-blended gel
+ *   from [selectedGelStrength].
+ * @property selectedGelStrength How strongly the selected fill blends the gel toward the row surface
+ *   (0 is the surface, 1 the full gel; default 0.35). Hover and focus add 0.08, press adds 0.15 and
+ *   disabled scales it by 0.6.
+ * @property shape Tile shape (default 10dp rounded corners).
+ * @property contentPadding Padding inside the tile (default 14dp horizontal, 10dp vertical).
+ * @property minimumHeight Minimum tile height (default 56dp, above the 44dp target size).
+ * @property leadingSpacing Gap between the leading slot and the text column.
+ * @property trailingSpacing Gap between the text column and the trailing slot.
+ * @property titleSpacing Vertical gap between title and subtitle.
+ * @property borderWidth Border width (default 0dp; the default theme uses 2dp for focused and error).
+ * @property borderColor Border color; `null` uses danger for error, accent for focus, a 45 percent
+ *   accent for selected, the palette border for hover or press, otherwise none.
+ * @property innerGlowColor Inner glow; `null` uses a 25 percent palette highlight when selected,
+ *   hovered or focused, otherwise none.
+ * @property alpha Overall opacity (the default theme dims disabled tiles to 0.45).
+ * @property stateAnimationMillis Duration in milliseconds of the alpha and interaction-lighting
+ *   animations (default 140).
+ * @see MillenniumListTile
+ */
 @Immutable
 data class MillenniumListTileThemeProperties(
     val titleStyle: TextStyle,
@@ -83,11 +122,34 @@ data class MillenniumListTileThemeProperties(
     val stateAnimationMillis: Int = 140,
 )
 
+/**
+ * Theme for [MillenniumListTile], exposed as [MillenniumTheme.listTileTheme].
+ *
+ * ```kotlin
+ * val base = defaultMillenniumListTileTheme()
+ * val roomy = base.copy(
+ *     states = MillenniumControlStateProperty.all(
+ *         base.states.default.copy(minimumHeight = 72.dp),
+ *     ),
+ * )
+ * MillenniumListTile(title = { Text("Roomy") }, theme = roomy)
+ * ```
+ *
+ * @property states Tile properties per control state: default, hovered, focused, pressed, disabled,
+ *   selected and error.
+ */
 @Immutable
 data class MillenniumListTileTheme(
     val states: MillenniumControlStateProperty<MillenniumListTileThemeProperties>,
 )
 
+/**
+ * Builds the default [MillenniumListTileTheme].
+ *
+ * All states share the same geometry and typography; only focused and error widen the border to
+ * 2dp and disabled fades to 0.45 alpha. Colors are left `null` so they follow the active palette.
+ * Customise with `copy` on the state properties.
+ */
 fun defaultMillenniumListTileTheme(): MillenniumListTileTheme {
     val base = MillenniumListTileThemeProperties(
         titleStyle = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium),
@@ -113,7 +175,12 @@ fun defaultMillenniumListTileTheme(): MillenniumListTileTheme {
     )
 }
 
-/** Resolves the visual state of a list tile from its interaction inputs. */
+/**
+ * Resolves the visual state of a list tile from its interaction inputs.
+ *
+ * Priority: disabled, pressed, focused, hovered (the last three only when [clickable]), selected,
+ * default. Non-interactive tiles therefore never show interaction states.
+ */
 internal fun listTileControlState(
     enabled: Boolean,
     clickable: Boolean,
@@ -130,7 +197,13 @@ internal fun listTileControlState(
     else -> MillenniumControlState.Default
 }
 
-/** Surface for a list tile; selected rows use a quieter, surface-blended gel. */
+/**
+ * Surface for a list tile; selected rows use a quieter, surface-blended gel.
+ *
+ * Selected rows blend the gel by [selectedGelStrength], raised for pressed/hover/focus and lowered
+ * when disabled. Unselected rows get translucent accent washes for hover, focus and press, a danger
+ * wash for error, and are transparent otherwise.
+ */
 internal fun listTileBackground(
     colors: MillenniumColors,
     selected: Boolean,
@@ -170,6 +243,78 @@ internal fun listTileBackground(
  * and shows a [selected] state whose fill is a lighter, surface-blended gel rather than
  * a primary button's full-strength surface. [onRightClick] (desktop/pointer) receives the
  * position of a secondary click measured relative to the tile.
+ *
+ * Layout is a full-width row: optional [leading], a weighted column with [title] and optional
+ * [subtitle], and optional [trailing], at least 56dp tall by default. Three modes exist: with
+ * [onClick] the tile is an `UnstyledButton` (Role.Button semantics, Tab focus, Space/Enter activation,
+ * action cursor); with only [onRightClick] it is a pointer-only surface that still shows hover and
+ * press feedback; with neither it is a static surface with no interaction states. Interaction
+ * feedback comes from Millennium's surface (accent washes, interaction lighting, a spring scale on
+ * hover and press) rather than a ripple. The focus border appears only for keyboard focus
+ * (pointer clicks do not draw a ring). Selection is signalled by the gel fill plus an accent border;
+ * the tile also exposes `selected` semantics so assistive technology announces the state. Disabled tiles are dimmed
+ * and suppress both click callbacks. Text slots inherit the themed style, so plain text composables
+ * pick up the right color and size, and the subtitle slot uses the subtitle style.
+ *
+ * ```kotlin
+ * var selectedId by remember { mutableStateOf<Int?>(null) }
+ * Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+ *     tracks.forEach { track ->
+ *         MillenniumListTile(
+ *             selected = selectedId == track.id,
+ *             onClick = { selectedId = track.id },
+ *             onRightClick = { offset -> menu.openAt(track, offset) },
+ *             leading = { MillenniumAvatar("MC", track.title) },
+ *             title = { Text(track.title) },
+ *             subtitle = { Text(track.artist) },
+ *             trailing = { MillenniumText(track.duration) },
+ *         )
+ *     }
+ * }
+ * ```
+ *
+ * @param title The primary text slot; inherits the themed title style and color.
+ * @param modifier Modifier applied to the tile surface.
+ * @param leading Optional leading content (avatar, icon); `null` omits it and its spacing.
+ * @param subtitle Optional secondary line under the title.
+ * @param trailing Optional trailing content (duration, chevron, switch).
+ * @param selected Whether the tile is the current selection (caller-owned).
+ * @param enabled Whether the tile accepts input; disabled tiles are dimmed and inert.
+ * @param onClick Primary action; non-null makes the tile an accessible button. `null` leaves it
+ *   non-clickable unless [onRightClick] is set.
+ * @param onRightClick Called on a secondary press with the pointer position relative to the tile;
+ *   the event is consumed. Suppressed while disabled.
+ * @param titleStyle Overrides the theme title style; `null` uses the theme.
+ * @param subtitleStyle Overrides the theme subtitle style; `null` uses the theme.
+ * @param titleForeground Overrides the title color when not selected; `null` falls back to the theme,
+ *   then the palette text color.
+ * @param subtitleForeground Overrides the subtitle color when not selected; `null` falls back to the
+ *   theme, then the palette muted color.
+ * @param selectedTitleForeground Overrides the title color when selected; `null` falls back to the
+ *   theme, then the unselected title color.
+ * @param selectedSubtitleForeground Overrides the subtitle color when selected; `null` falls back to
+ *   the theme, then the unselected subtitle color, then palette text at 82 percent alpha.
+ * @param background Overrides the fill for every state; `null` falls back to the state-derived brush.
+ * @param selectedBackground Overrides the fill while selected; `null` falls back to the theme, then
+ *   the surface-blended gel.
+ * @param selectedGelStrength Overrides how strongly the selected gel is applied; `null` uses the theme.
+ * @param shape Overrides the tile shape; `null` uses the theme.
+ * @param contentPadding Overrides the inner padding; `null` uses the theme.
+ * @param minimumHeight Overrides the minimum height; `null` uses the theme.
+ * @param leadingSpacing Overrides the leading gap; `null` uses the theme.
+ * @param trailingSpacing Overrides the trailing gap; `null` uses the theme.
+ * @param titleSpacing Overrides the title/subtitle gap; `null` uses the theme.
+ * @param borderWidth Overrides the border width; `null` uses the theme.
+ * @param borderColor Overrides the border color; `null` falls back to the theme, then a state-derived
+ *   color (or none).
+ * @param innerGlowColor Overrides the inner glow; `null` falls back to the theme, then a palette
+ *   highlight for selected/hovered/focused.
+ * @param alpha Overrides the overall opacity; `null` uses the theme.
+ * @param stateAnimationMillis Overrides the animation duration in milliseconds; `null` uses the theme.
+ * @param theme Theme supplying defaults for every nullable override. Defaults to
+ *   [MillenniumTheme.listTileTheme].
+ * @see MillenniumSidebarItem
+ * @see MillenniumListTileTheme
  */
 @Composable
 fun MillenniumListTile(
@@ -272,6 +417,7 @@ fun MillenniumListTile(
         animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMedium),
     )
     val surfaceModifier = modifier
+        .semantics { this.selected = selected }
         .millenniumActionPointer(enabled && (hasOnClick || onRightClick != null))
         .hoverable(interaction, enabled = clickable && !hasOnClick)
         .fillMaxWidth()
@@ -316,6 +462,11 @@ fun MillenniumListTile(
     }
 }
 
+/**
+ * Pointer-only modifier that reports secondary presses through [onRightClick] and mirrors them as
+ * press interactions on [interaction] so the tile shows press feedback. Returns an empty modifier
+ * when [onRightClick] is `null`.
+ */
 @Composable
 private fun secondaryClickModifier(onRightClick: ((Offset) -> Unit)?, interaction: MutableInteractionSource): Modifier {
     if (onRightClick == null) return Modifier
@@ -344,6 +495,7 @@ private fun secondaryClickModifier(onRightClick: ((Offset) -> Unit)?, interactio
     }
 }
 
+/** Lays out the leading, title/subtitle column and trailing slots inside a styled-content scope. */
 @Composable
 private fun ListTileRow(
     properties: MillenniumListTileThemeProperties,
@@ -383,6 +535,7 @@ private fun ListTileRow(
     }
 }
 
+/** Design-time preview with a static tile and a selected, clickable tile. */
 @Preview
 @Composable
 private fun MillenniumListTilePreview() = MillenniumPreview {

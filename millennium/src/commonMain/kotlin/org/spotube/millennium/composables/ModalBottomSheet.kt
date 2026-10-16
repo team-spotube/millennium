@@ -53,6 +53,29 @@ import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
 import org.spotube.millennium.theme.millenniumPanelBrush
 
+/**
+ * Appearance of one control state of [MillenniumModalBottomSheet].
+ *
+ * Normally produced by [defaultMillenniumModalBottomSheetTheme] and customised with `copy`. The composable
+ * resolves only [MillenniumControlState.Default] from the owning [MillenniumModalBottomSheetTheme].
+ *
+ * @property background Brush of the sheet; `null` derives the palette panel brush (pearl/smoke glass).
+ * @property foreground Default content colour; `null` uses the palette text colour.
+ * @property shape Shape of the sheet; the default rounds only the top corners.
+ * @property maximumWidth Maximum sheet width in dp; the sheet is centered horizontally.
+ * @property contentPadding Padding inside the sheet around the handle and content.
+ * @property contentSpacing Vertical gap in dp between the drag handle and the content, and between content
+ * children.
+ * @property handleSize Width and height of the drag handle pill.
+ * @property handleColor Handle colour; `null` uses the palette muted colour.
+ * @property borderColor Hairline colour; `null` uses the palette border colour.
+ * @property borderWidth Hairline thickness in dp.
+ * @property shadowElevation Shadow elevation in dp.
+ * @property innerGlowColor Inner highlight colour; `null` uses the palette highlight at 55% alpha.
+ * @property scrimColor Colour of the dimming scrim behind the sheet; `null` uses the palette scrim colour.
+ * @property animationMillis Scrim fade-in duration in ms; the fade-out uses 80% of it (minimum 120 ms).
+ * @property alpha Overall opacity multiplier (1 = opaque).
+ */
 @Immutable
 data class MillenniumModalBottomSheetThemeProperties(
     val background: Brush? = null,
@@ -72,11 +95,31 @@ data class MillenniumModalBottomSheetThemeProperties(
     val alpha: Float,
 )
 
+/**
+ * Theme for [MillenniumModalBottomSheet], grouping [MillenniumModalBottomSheetThemeProperties] per control
+ * state and installed as [MillenniumTheme.modalBottomSheetTheme].
+ *
+ * @property states State-resolved properties; the sheet resolves [MillenniumControlState.Default].
+ * @see defaultMillenniumModalBottomSheetTheme
+ */
 @Immutable
 data class MillenniumModalBottomSheetTheme(
     val states: MillenniumControlStateProperty<MillenniumModalBottomSheetThemeProperties>,
 )
 
+/**
+ * Creates the default modal bottom-sheet theme: 18dp top-rounded pearl/smoke glass, at most 640dp wide,
+ * 24dp padding, 16dp spacing, a 40x5dp handle, a 1dp hairline, a 12dp shadow and a 220ms scrim fade. Focused
+ * and error states use a 2dp border, pressed lowers the shadow to 8dp and disabled fades to 55%.
+ *
+ * Customise with `copy`:
+ * ```kotlin
+ * val base = defaultMillenniumModalBottomSheetTheme()
+ * val theme = base.copy(states = base.states.copy(default = base.states.default.copy(animationMillis = 300)))
+ * ```
+ *
+ * @return A new [MillenniumModalBottomSheetTheme].
+ */
 fun defaultMillenniumModalBottomSheetTheme(): MillenniumModalBottomSheetTheme {
     val base = MillenniumModalBottomSheetThemeProperties(
         shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
@@ -102,6 +145,53 @@ fun defaultMillenniumModalBottomSheetTheme(): MillenniumModalBottomSheetTheme {
     )
 }
 
+/**
+ * A modal, draggable bottom sheet in pearl/smoke glass over a dimming scrim.
+ *
+ * Use it for focused tasks or choices that should block the page behind them (share, filters, confirmations).
+ * For a non-blocking sheet use [MillenniumBottomSheet].
+ *
+ * Behaviour: wraps Compose Unstyled's `UnstyledModalBottomSheet`, which presents the sheet as a modal
+ * overlay and owns detents, dragging, scrim dismissal and the modal semantics; showing and hiding is driven
+ * by the caller-owned [state]. The scrim is a Compose Unstyled `Scrim` with the action cursor, fading in over
+ * [animationMillis] and out over 80% of it (minimum 120 ms). The panel is capped at [maximumWidth],
+ * centered, and padded with the navigation bars. The handle is a `DragIndication` with hover and press
+ * feedback. No dismissal properties are passed, so Compose Unstyled's defaults apply: tapping the scrim
+ * (click outside) and pressing Escape or Back dismiss the sheet.
+ *
+ * ```kotlin
+ * val sheetState = rememberModalBottomSheetState(initialDetent = SheetDetent.Hidden)
+ * MillenniumButton(onClick = { sheetState.targetDetent = SheetDetent.FullyExpanded }) {
+ *     MillenniumText("Share")
+ * }
+ * MillenniumModalBottomSheet(sheetState) {
+ *     MillenniumText("Share this playlist", weight = FontWeight.SemiBold)
+ *     MillenniumButton(onClick = { sheetState.targetDetent = SheetDetent.Hidden }) { MillenniumText("Done") }
+ * }
+ * ```
+ *
+ * @param state Caller-owned Compose Unstyled modal-sheet state (create with `rememberModalBottomSheetState`).
+ * @param modifier Applied to the sheet panel itself (before the width cap, surface and padding).
+ * @param contentPadding Overrides the inner padding; `null` falls back to the theme.
+ * @param background Overrides the sheet brush; `null` falls back to the theme, then the panel brush.
+ * @param foreground Overrides the content colour; `null` falls back to the theme, then the palette text colour.
+ * @param shape Overrides the sheet shape; `null` falls back to the theme.
+ * @param maximumWidth Overrides the maximum sheet width; `null` falls back to the theme.
+ * @param contentSpacing Overrides the vertical spacing; `null` falls back to the theme.
+ * @param handleSize Overrides the handle size; `null` falls back to the theme.
+ * @param handleColor Overrides the handle colour; `null` falls back to the theme, then the palette muted colour.
+ * @param borderColor Overrides the hairline colour; `null` falls back to the theme, then the palette border.
+ * @param borderWidth Overrides the hairline thickness; `null` falls back to the theme.
+ * @param shadowElevation Overrides the shadow elevation; `null` falls back to the theme.
+ * @param innerGlowColor Overrides the inner glow; `null` falls back to the theme, then the palette highlight.
+ * @param scrimColor Overrides the scrim colour; `null` falls back to the theme, then the palette scrim colour.
+ * @param animationMillis Overrides the scrim fade-in duration in ms; `null` falls back to the theme.
+ * @param alpha Overrides the overall opacity; `null` falls back to the theme.
+ * @param theme Theme supplying defaults; defaults to [MillenniumTheme.modalBottomSheetTheme].
+ * @param content Sheet content, laid out in a centered [ColumnScope] below the handle.
+ * @see MillenniumBottomSheet
+ * @see MillenniumModalBottomSheetTheme
+ */
 @Composable
 fun MillenniumModalBottomSheet(
     state: ModalBottomSheetState,
@@ -154,7 +244,7 @@ fun MillenniumModalBottomSheet(
     ) {
         Box(Modifier.fillMaxWidth(), contentAlignment = androidx.compose.ui.Alignment.TopCenter) {
             Sheet(
-                Modifier.widthIn(max = maximumWidth ?: properties.maximumWidth).fillMaxWidth().millenniumSurface(
+                modifier.widthIn(max = maximumWidth ?: properties.maximumWidth).fillMaxWidth().millenniumSurface(
                     background = resolvedBackground,
                     shape = shape ?: properties.shape,
                     borderColor = resolvedBorderColor,
@@ -184,6 +274,7 @@ fun MillenniumModalBottomSheet(
     }
 }
 
+/** Preview of a fully expanded modal bottom sheet. */
 @Preview
 @Composable
 private fun MillenniumModalBottomSheetPreview() = MillenniumPreview {

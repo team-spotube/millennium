@@ -76,6 +76,46 @@ import org.spotube.millennium.theme.millenniumInteractionSurface
 import org.spotube.millennium.theme.millenniumPanelBrush
 import org.spotube.millennium.theme.millenniumSurface
 
+/**
+ * Resolved visual and layout properties for [MillenniumDialog] and its bricks.
+ *
+ * The dialog and its bricks read the `default` state of [MillenniumDialogTheme.states]. Nullable colours
+ * and brushes are derived from the active palette when null.
+ *
+ * @property panelBackground Panel fill. Null uses `millenniumPanelBrush(colors)`.
+ * @property shape Corner shape of the panel.
+ * @property foreground Default text colour inside the dialog. Null uses `colors.text`.
+ * @property titleStyle Typography of [MillenniumDialogTitle].
+ * @property panelBorderColor Panel hairline colour. Null uses `colors.border`.
+ * @property panelBorderWidth Panel hairline thickness.
+ * @property panelShadowElevation Drop-shadow elevation under the panel.
+ * @property panelGlowColor Inner top glow of the panel. Null uses `colors.highlight` at 60% alpha.
+ * @property panelMaxWidth Maximum panel width.
+ * @property overlayPadding Margin between the panel and the window edges.
+ * @property contentPadding Padding of [MillenniumDialogBody].
+ * @property contentSpacing Spacing between children of [MillenniumDialogBody].
+ * @property scrimColor Colour of the backdrop. Null uses `colors.scrim`.
+ * @property enterScale Initial scale of the panel when entering.
+ * @property exitScale Target scale of the panel when exiting.
+ * @property animationMillis Duration of the scrim and panel fade-in.
+ * @property closeAnimationMillis Duration of the exit transition.
+ * @property alpha Overall panel opacity.
+ * @property titleBarBackground Optional fill behind the header; null leaves it transparent.
+ * @property titleBarForeground Header text colour. Null falls back to [foreground], then `colors.text`.
+ * @property titleBarHeight Minimum height of [MillenniumDialogHeader].
+ * @property titleBarPadding Padding of the header row.
+ * @property titleBarBorderColor Header divider colour. Null uses `colors.border`.
+ * @property descriptionStyle Typography of [MillenniumDialogDescription].
+ * @property footerBackground Optional fill behind the footer; null leaves it transparent.
+ * @property footerPadding Padding of the footer row.
+ * @property footerSpacing Gap between footer actions.
+ * @property footerBorderColor Footer divider colour. Null uses `colors.border`.
+ * @property closeTargetSize Touch target of [MillenniumDialogClose] (44dp).
+ * @property closeCapSize Visible size of the red close cap.
+ *
+ * @see MillenniumDialogTheme
+ * @see defaultMillenniumDialogTheme
+ */
 @Immutable
 data class MillenniumDialogThemeProperties(
     val panelBackground: Brush? = null,
@@ -110,11 +150,32 @@ data class MillenniumDialogThemeProperties(
     val closeCapSize: Dp = 28.dp,
 )
 
+/**
+ * Theme of [MillenniumDialog] and its bricks, resolved per control state.
+ *
+ * Installed as `MillenniumTheme.dialogTheme`; every dialog brick accepts a `theme` parameter that
+ * defaults to it, so one dialog can be restyled without touching the global theme.
+ *
+ * @property states State-dependent [MillenniumDialogThemeProperties]. Dialogs use `default`.
+ *
+ * @see defaultMillenniumDialogTheme
+ */
 @Immutable
 data class MillenniumDialogTheme(
     val states: MillenniumControlStateProperty<MillenniumDialogThemeProperties>,
 )
 
+/**
+ * Builds the stock dialog theme: a 10dp rounded pearl/smoke glass panel (480dp max width, 12dp shadow,
+ * 24dp padding and overlay margin), 22sp semibold titles, a 46dp title bar, 44dp close target with a
+ * 28dp red cap, and spring-based motion (220ms scrim/fade in, 150ms out, enter scale 0.92, exit 0.94).
+ *
+ * Customise by copying: `defaultMillenniumDialogTheme().let { t -> t.copy(states =
+ * t.states.copy(default = t.states.default.copy(panelMaxWidth = 560.dp))) }`.
+ *
+ * @return A fresh [MillenniumDialogTheme] with palette-derived colours left null.
+ * @see MillenniumDialogThemeProperties
+ */
 fun defaultMillenniumDialogTheme(): MillenniumDialogTheme {
     val base = MillenniumDialogThemeProperties(
         shape = RoundedCornerShape(10.dp),
@@ -145,33 +206,85 @@ fun defaultMillenniumDialogTheme(): MillenniumDialogTheme {
 // Root
 // ---------------------------------------------------------------------------
 
-/** Read by dialog bricks (e.g. [MillenniumDialogClose]) to dismiss the enclosing dialog. */
+/**
+ * Handle that lets bricks inside a [MillenniumDialog] dismiss the enclosing dialog.
+ *
+ * Created by [MillenniumDialog] (one per `onDismissRequest` instance) and published through
+ * [LocalMillenniumDialog]. Callers do not construct it; [MillenniumDialogClose] reads it. Its
+ * [dismiss] simply invokes the dialog's `onDismissRequest`; the caller still owns `visible`.
+ *
+ * @property dismiss Invokes the dialog's dismiss request.
+ */
 @Stable
 class MillenniumDialogScope internal constructor(val dismiss: () -> Unit)
 
+/**
+ * The enclosing dialog's [MillenniumDialogScope], or null outside a [MillenniumDialog].
+ *
+ * Provided by [MillenniumDialog] around its content. Read it from custom bricks to dismiss the dialog:
+ *
+ * ```kotlin
+ * val dialog = LocalMillenniumDialog.current
+ * MillenniumButton(onClick = { dialog?.dismiss?.invoke() }) { Text("Done") }
+ * ```
+ */
 val LocalMillenniumDialog = staticCompositionLocalOf<MillenniumDialogScope?> { null }
 
 /**
- * A themed, caller-owned modal dialog. Compose the panel from lego bricks:
+ * A themed, caller-owned modal dialog. Compose the panel from lego bricks.
  *
- * ```
- * MillenniumDialog(visible, onDismissRequest) {
+ * Built on Compose Unstyled's `UnstyledDialog`, so modal behaviour, focus handling and dismissal
+ * (Escape / back, scrim click) come from that primitive and surface as [onDismissRequest]. The scrim
+ * fades in and the panel springs in (scale plus a small upward slide); exit is a crisp fade, scale and
+ * slide. [paneTitle] is the accessible name of the dialog pane. State is caller-owned: keep [visible]
+ * in your own state and clear it in [onDismissRequest].
+ *
+ * ```kotlin
+ * var visible by remember { mutableStateOf(false) }
+ * MillenniumDialog(visible, onDismissRequest = { visible = false }) {
  *     MillenniumDialogHeader {              // fixed
  *         MillenniumDialogTitle { Text("Share playlist") }
  *         MillenniumDialogClose()
  *     }
  *     MillenniumDialogBody {                // scrolls when tall
  *         MillenniumDialogDescription { Text("Anyone with the link can listen.") }
- *         MillenniumTextField(...)
+ *         MillenniumTextField(state = linkState)
  *     }
  *     MillenniumDialogFooter {              // fixed, end-aligned actions
- *         MillenniumButton(onDismissRequest, style = Secondary) { Text("Cancel") }
- *         MillenniumButton(onShare) { Text("Share") }
+ *         MillenniumButton(onClick = { visible = false }, style = MillenniumButtonStyle.Secondary) { Text("Cancel") }
+ *         MillenniumButton(onClick = { share(); visible = false }) { Text("Share") }
  *     }
  * }
  * ```
  *
- * Every brick is optional, and any composable may sit between them.
+ * Every brick is optional, and any composable may sit between them. [MillenniumDialogBody] must be a
+ * direct child because it uses the column's weight.
+ *
+ * @param visible Whether the dialog is shown. Caller-owned.
+ * @param onDismissRequest Called when the user asks to dismiss (Escape, scrim click, close button).
+ * @param modifier Modifier applied to the dialog panel.
+ * @param paneTitle Accessible title of the dialog pane announced by assistive technology.
+ * @param panelBackground Panel fill override; null falls back to the theme, then `millenniumPanelBrush`.
+ * @param shape Panel shape override; null falls back to the theme.
+ * @param foreground Default content colour override; null falls back to the theme, then `colors.text`.
+ * @param panelBorderColor Panel border colour override; null falls back to the theme.
+ * @param panelBorderWidth Panel border thickness override; null falls back to the theme.
+ * @param panelShadowElevation Panel shadow override; null falls back to the theme.
+ * @param panelGlowColor Panel inner glow override; null falls back to the theme.
+ * @param panelMaxWidth Maximum panel width override; null falls back to the theme.
+ * @param overlayPadding Window-edge margin override; null falls back to the theme.
+ * @param scrimColor Backdrop colour override; null falls back to the theme, then `colors.scrim`.
+ * @param enterScale Initial scale when entering; null falls back to the theme.
+ * @param exitScale Target scale when exiting; null falls back to the theme.
+ * @param animationMillis Scrim/panel fade-in duration; null falls back to the theme.
+ * @param closeAnimationMillis Exit duration; null falls back to the theme.
+ * @param alpha Panel opacity; null falls back to the theme.
+ * @param theme Component theme; defaults to `MillenniumTheme.dialogTheme`.
+ * @param content Panel body in a [ColumnScope], composed from the `MillenniumDialog*` bricks.
+ * @see MillenniumAlertDialog
+ * @see MillenniumDialogHeader
+ * @see MillenniumDialogBody
+ * @see MillenniumDialogFooter
  */
 @Composable
 fun MillenniumDialog(
@@ -265,8 +378,47 @@ fun MillenniumDialog(
 }
 
 /**
- * Convenience dialog with a title bar, close cap and scrolling body, built from the
- * same bricks as the composable overload.
+ * Convenience dialog with a title bar, close cap and scrolling body, built from the same bricks as the
+ * lego overload.
+ *
+ * [title] is used both as the visible heading and as the accessible pane title.
+ *
+ * ```kotlin
+ * MillenniumDialog(visible, { visible = false }, title = "About") {
+ *     MillenniumDialogDescription("Millennium: Aero for 2026.")
+ * }
+ * ```
+ *
+ * @param visible Whether the dialog is shown. Caller-owned.
+ * @param onDismissRequest Called when the user asks to dismiss.
+ * @param title Heading text and accessible pane title.
+ * @param modifier Modifier applied to the dialog panel.
+ * @param panelBackground Panel fill override; null falls back to the theme.
+ * @param shape Panel shape override; null falls back to the theme.
+ * @param foreground Default content colour override; null falls back to the theme.
+ * @param titleStyle Title typography override; null falls back to the theme.
+ * @param panelBorderColor Panel border colour override; null falls back to the theme.
+ * @param panelBorderWidth Panel border thickness override; null falls back to the theme.
+ * @param panelShadowElevation Panel shadow override; null falls back to the theme.
+ * @param panelGlowColor Panel inner glow override; null falls back to the theme.
+ * @param panelMaxWidth Maximum panel width override; null falls back to the theme.
+ * @param overlayPadding Window-edge margin override; null falls back to the theme.
+ * @param contentPadding Body padding (all sides) override; null falls back to the theme.
+ * @param contentSpacing Spacing between body children; null falls back to the theme.
+ * @param scrimColor Backdrop colour override; null falls back to the theme.
+ * @param enterScale Initial scale when entering; null falls back to the theme.
+ * @param exitScale Target scale when exiting; null falls back to the theme.
+ * @param animationMillis Fade-in duration; null falls back to the theme.
+ * @param closeAnimationMillis Exit duration; null falls back to the theme.
+ * @param alpha Panel opacity; null falls back to the theme.
+ * @param titleBarBackground Header fill override; null falls back to the theme.
+ * @param titleBarForeground Header text colour override; null falls back to the theme.
+ * @param titleBarHeight Minimum header height override; null falls back to the theme.
+ * @param titleBarPadding Header padding override; null falls back to the theme.
+ * @param titleBarBorderColor Header divider colour override; null falls back to the theme.
+ * @param theme Component theme; defaults to `MillenniumTheme.dialogTheme`.
+ * @param content Body content inside a scrolling [MillenniumDialogBody].
+ * @see MillenniumDialog
  */
 @Composable
 fun MillenniumDialog(
@@ -343,9 +495,37 @@ fun MillenniumDialog(
 }
 
 /**
- * A ready-made confirmation dialog: optional [icon], [title], [description], an
- * optional custom [content] body and caller-supplied [actions] in the footer.
- * Every part is a slot.
+ * A ready-made confirmation dialog: optional [icon], [title], [description], an optional custom
+ * [content] body and caller-supplied [actions] in the footer. Every part is a slot.
+ *
+ * The body is only emitted when a [description] or [content] is present. The header close cap can be
+ * hidden with [showClose], but Escape and scrim dismissal still go through [onDismissRequest].
+ *
+ * ```kotlin
+ * MillenniumAlertDialog(
+ *     visible = confirmDelete,
+ *     onDismissRequest = { confirmDelete = false },
+ *     title = { Text("Delete playlist?") },
+ *     description = { Text("This cannot be undone.") },
+ *     icon = { MillenniumIcon(MillenniumIcons.Sparkle, contentDescription = null) },
+ * ) {
+ *     MillenniumButton(onClick = { confirmDelete = false }, style = MillenniumButtonStyle.Secondary) { Text("Cancel") }
+ *     MillenniumButton(onClick = { delete(); confirmDelete = false }, style = MillenniumButtonStyle.Danger) { Text("Delete") }
+ * }
+ * ```
+ *
+ * @param visible Whether the dialog is shown. Caller-owned.
+ * @param onDismissRequest Called when the user asks to dismiss.
+ * @param title Title slot, placed in the header.
+ * @param modifier Modifier applied to the dialog panel.
+ * @param icon Optional leading header content.
+ * @param description Optional supporting text slot, shown in the body.
+ * @param paneTitle Accessible pane title; defaults to "Alert".
+ * @param showClose Whether to show the [MillenniumDialogClose] cap in the header.
+ * @param theme Component theme; defaults to `MillenniumTheme.dialogTheme`.
+ * @param content Optional extra body content in a [ColumnScope], after the description.
+ * @param actions Footer actions in a [RowScope], end-aligned.
+ * @see MillenniumDialog
  */
 @Composable
 fun MillenniumAlertDialog(
@@ -381,7 +561,31 @@ fun MillenniumAlertDialog(
 // Header, title, close
 // ---------------------------------------------------------------------------
 
-/** Fixed title bar. Place [MillenniumDialogTitle], icons and a [MillenniumDialogClose] inside. */
+/**
+ * Fixed title bar. Place [MillenniumDialogTitle], icons and a [MillenniumDialogClose] inside.
+ *
+ * Children are laid out in a centred row with [contentSpacing]; a hairline divider closes the bar.
+ * Optionally filled with the theme's title-bar brush (transparent by default).
+ *
+ * ```kotlin
+ * MillenniumDialogHeader {
+ *     MillenniumDialogTitle("Settings")
+ *     MillenniumDialogClose()
+ * }
+ * ```
+ *
+ * @param modifier Modifier for the header column.
+ * @param background Fill override; null falls back to the theme (transparent when none).
+ * @param foreground Text colour override; null falls back to the theme, then `colors.text`.
+ * @param minimumHeight Minimum bar height; null uses the theme (46dp).
+ * @param contentPadding Row padding; null uses the theme.
+ * @param contentSpacing Gap between children.
+ * @param showDivider Draw the 1dp divider below the bar.
+ * @param dividerColor Divider colour override; null falls back to the theme, then `colors.border`.
+ * @param theme Component theme; defaults to `MillenniumTheme.dialogTheme`.
+ * @param content Header content in a [RowScope].
+ * @see MillenniumDialogFooter
+ */
 @Composable
 fun MillenniumDialogHeader(
     modifier: Modifier = Modifier,
@@ -419,7 +623,21 @@ fun MillenniumDialogHeader(
     }
 }
 
-/** The title; takes the remaining header width so trailing items sit at the end. */
+/**
+ * The title; takes the remaining header width so trailing items sit at the end.
+ *
+ * Must be used inside a [MillenniumDialogHeader] (it relies on the row's weight).
+ *
+ * ```kotlin
+ * MillenniumDialogHeader { MillenniumDialogTitle { Text("Share playlist") } }
+ * ```
+ *
+ * @param modifier Modifier for the title box.
+ * @param textStyle Typography override; null uses [MillenniumDialogThemeProperties.titleStyle].
+ * @param foreground Colour override; null falls back to the theme's title bar/foreground colours.
+ * @param theme Component theme; defaults to `MillenniumTheme.dialogTheme`.
+ * @param content Title content.
+ */
 @Composable
 fun RowScope.MillenniumDialogTitle(
     modifier: Modifier = Modifier,
@@ -438,6 +656,15 @@ fun RowScope.MillenniumDialogTitle(
     }
 }
 
+/**
+ * String convenience overload of [MillenniumDialogTitle].
+ *
+ * @param text Title text.
+ * @param modifier Modifier for the title box.
+ * @param textStyle Typography override; null falls back to the theme.
+ * @param foreground Colour override; null falls back to the theme.
+ * @param theme Component theme; defaults to `MillenniumTheme.dialogTheme`.
+ */
 @Composable
 fun RowScope.MillenniumDialogTitle(
     text: String,
@@ -450,9 +677,28 @@ fun RowScope.MillenniumDialogTitle(
 }
 
 /**
- * A 44dp close target. By default it dismisses the enclosing dialog and draws the red
- * glass cap; pass [content] to draw anything else. The content gets the spring
- * press/hover scale and receives the resolved control state.
+ * A 44dp close target. By default it dismisses the enclosing dialog and draws the red glass cap; pass
+ * [content] to draw anything else.
+ *
+ * Accessible as a button with [contentDescription]. Hover and keyboard focus grow it slightly and press
+ * shrinks it with a spring; the focus look is keyboard-only. [content] receives the resolved
+ * [MillenniumControlState]. With no [onClick] it calls [LocalMillenniumDialog]'s dismiss; outside a
+ * dialog and without [onClick] it does nothing.
+ *
+ * ```kotlin
+ * MillenniumDialogHeader {
+ *     MillenniumDialogTitle("Share")
+ *     MillenniumDialogClose(contentDescription = "Close share dialog")
+ * }
+ * ```
+ *
+ * @param modifier Modifier applied to the target.
+ * @param onClick Custom click handler; null dismisses the enclosing dialog.
+ * @param contentDescription Accessibility label announced for the button.
+ * @param targetSize Touch target size; null uses [MillenniumDialogThemeProperties.closeTargetSize] (44dp).
+ * @param theme Component theme; defaults to `MillenniumTheme.dialogTheme`.
+ * @param content Visual drawn inside the target, given the current state; defaults to [MillenniumDialogCloseCap].
+ * @see MillenniumDialogCloseCap
  */
 @Composable
 fun MillenniumDialogClose(
@@ -497,7 +743,22 @@ fun MillenniumDialogClose(
     }
 }
 
-/** The default red glass close cap; reusable inside a custom [MillenniumDialogClose]. */
+/**
+ * The default red glass close cap; reusable inside a custom [MillenniumDialogClose].
+ *
+ * Purely visual (no click handling or semantics). Elevation and border react to [state]: raised on
+ * hover/focus, flat on press, accent border when focused.
+ *
+ * ```kotlin
+ * MillenniumDialogClose { state -> MillenniumDialogCloseCap(state, size = 32.dp) }
+ * ```
+ *
+ * @param state Current control state, usually supplied by [MillenniumDialogClose].
+ * @param modifier Modifier for the cap.
+ * @param size Cap size; null uses [MillenniumDialogThemeProperties.closeCapSize].
+ * @param theme Component theme; defaults to `MillenniumTheme.dialogTheme`.
+ * @param content Glyph drawn in the cap; defaults to a multiplication sign in the surface colour.
+ */
 @Composable
 fun MillenniumDialogCloseCap(
     state: MillenniumControlState = MillenniumControlState.Default,
@@ -542,8 +803,26 @@ fun MillenniumDialogCloseCap(
 // ---------------------------------------------------------------------------
 
 /**
- * The main region. Scrolls when the dialog is taller than the screen, so the header
- * and footer stay put. Must be placed directly inside [MillenniumDialog].
+ * The main region. Scrolls when the dialog is taller than the screen, so the header and footer stay put.
+ * Must be placed directly inside [MillenniumDialog].
+ *
+ * It takes the remaining height via the column's `weight` (non-filling), which is why it is a
+ * [ColumnScope] extension.
+ *
+ * ```kotlin
+ * MillenniumDialogBody(scrollable = true) {
+ *     MillenniumDialogDescription("Pick a quality.")
+ *     MillenniumRadioGroup(...)
+ * }
+ * ```
+ *
+ * @param modifier Modifier for the body column.
+ * @param scrollable Whether the body scrolls vertically when it overflows.
+ * @param contentPadding Padding override; null uses the theme's uniform content padding.
+ * @param contentSpacing Spacing between children; null uses the theme.
+ * @param theme Component theme; defaults to `MillenniumTheme.dialogTheme`.
+ * @param content Body content in a [ColumnScope].
+ * @see MillenniumDialogHeader
  */
 @Composable
 fun ColumnScope.MillenniumDialogBody(
@@ -563,7 +842,19 @@ fun ColumnScope.MillenniumDialogBody(
     ) { content() }
 }
 
-/** Muted supporting text for a dialog body; any composable may go inside. */
+/**
+ * Muted supporting text for a dialog body; any composable may go inside.
+ *
+ * ```kotlin
+ * MillenniumDialogDescription { Text("Anyone with the link can listen.") }
+ * ```
+ *
+ * @param modifier Modifier for the description box.
+ * @param textStyle Typography override; null uses [MillenniumDialogThemeProperties.descriptionStyle].
+ * @param foreground Colour override; null uses `colors.muted`.
+ * @param theme Component theme; defaults to `MillenniumTheme.dialogTheme`.
+ * @param content Description content.
+ */
 @Composable
 fun MillenniumDialogDescription(
     modifier: Modifier = Modifier,
@@ -581,6 +872,15 @@ fun MillenniumDialogDescription(
     }
 }
 
+/**
+ * String convenience overload of [MillenniumDialogDescription].
+ *
+ * @param text Description text.
+ * @param modifier Modifier for the description box.
+ * @param textStyle Typography override; null falls back to the theme.
+ * @param foreground Colour override; null uses `colors.muted`.
+ * @param theme Component theme; defaults to `MillenniumTheme.dialogTheme`.
+ */
 @Composable
 fun MillenniumDialogDescription(
     text: String,
@@ -592,7 +892,28 @@ fun MillenniumDialogDescription(
     MillenniumDialogDescription(modifier, textStyle, foreground, theme) { Text(text) }
 }
 
-/** Fixed action row, end-aligned by default. */
+/**
+ * Fixed action row, end-aligned by default.
+ *
+ * A divider is drawn above the row. Order actions with the safest first and the primary last.
+ *
+ * ```kotlin
+ * MillenniumDialogFooter {
+ *     MillenniumButton(onClick = onCancel, style = MillenniumButtonStyle.Secondary) { Text("Cancel") }
+ *     MillenniumButton(onClick = onConfirm) { Text("Confirm") }
+ * }
+ * ```
+ *
+ * @param modifier Modifier for the footer column.
+ * @param horizontalArrangement Custom arrangement; null spaces actions by the theme's footer spacing, end-aligned.
+ * @param background Fill override; null falls back to the theme (transparent when none).
+ * @param contentPadding Row padding override; null falls back to the theme.
+ * @param showDivider Draw the 1dp divider above the row.
+ * @param dividerColor Divider colour override; null falls back to the theme, then `colors.border`.
+ * @param theme Component theme; defaults to `MillenniumTheme.dialogTheme`.
+ * @param content Actions in a [RowScope].
+ * @see MillenniumDialogHeader
+ */
 @Composable
 fun MillenniumDialogFooter(
     modifier: Modifier = Modifier,
@@ -625,6 +946,9 @@ fun MillenniumDialogFooter(
     }
 }
 
+/**
+ * Preview of a dialog composed from header, body and footer bricks.
+ */
 @Preview
 @Composable
 private fun MillenniumDialogPreview() = MillenniumPreview {

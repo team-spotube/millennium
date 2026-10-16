@@ -55,6 +55,29 @@ import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
 import org.spotube.millennium.theme.millenniumInteractionSurface
 
+/**
+ * Visual, layout and motion properties of a [MillenniumDisclosure].
+ *
+ * @property background Surface fill; null uses the palette bevel brush.
+ * @property foreground Colour of title, chevron and content text; null uses the palette text colour.
+ * @property shape Corner shape of the whole disclosure (12dp rounded).
+ * @property borderColor Border colour; null picks accent for hovered, focused and selected (expanded), danger for
+ * error and the palette border colour otherwise. Colour changes animate over [animationMillis].
+ * @property borderWidth Border thickness (1dp, 2dp when focused or in error).
+ * @property shadowElevation Drop shadow depth (0dp, 2dp while pressed); changes animate.
+ * @property innerGlowColor Inner highlight; null uses the palette highlight at 50%.
+ * @property titleStyle Style of the header title (15sp SemiBold).
+ * @property contentStyle Default text style supplied to the body content (14sp).
+ * @property minimumHeaderHeight Minimum header height (48dp, above the 44dp target size).
+ * @property headerPadding Padding around the header row (12dp).
+ * @property contentPadding Padding around the expanded body (16dp).
+ * @property headerContentSpacing Horizontal gap between the title and the chevron in the header (12dp).
+ * @property contentSpacing Vertical spacing between body children (12dp).
+ * @property animationMillis Base duration in milliseconds for colour, elevation and fade transitions (180).
+ * @property alpha Whole-disclosure opacity (0.45 in the default disabled bag).
+ * @see MillenniumDisclosureTheme
+ * @see defaultMillenniumDisclosureTheme
+ */
 @Immutable
 data class MillenniumDisclosureThemeProperties(
     val background: Brush? = null,
@@ -75,11 +98,25 @@ data class MillenniumDisclosureThemeProperties(
     val alpha: Float = 1f,
 )
 
+/**
+ * Per-state theme of [MillenniumDisclosure].
+ *
+ * @property states Properties per [MillenniumControlState]. [MillenniumDisclosure] resolves Pressed, keyboard
+ * Focused, Hovered, Selected (expanded) or Default.
+ */
 @Immutable
 data class MillenniumDisclosureTheme(
     val states: MillenniumControlStateProperty<MillenniumDisclosureThemeProperties>,
 )
 
+/**
+ * Creates the default [MillenniumDisclosureTheme] installed as `MillenniumTheme.disclosureTheme`.
+ *
+ * Defaults: a 12dp rounded bevelled surface with a 48dp header, SemiBold 15sp title, 16dp body padding, a 180ms
+ * base animation, a flat resting shadow that deepens slightly while pressed, and a thicker border when focused.
+ *
+ * @return A fresh theme instance.
+ */
 fun defaultMillenniumDisclosureTheme(): MillenniumDisclosureTheme {
     val base = MillenniumDisclosureThemeProperties(
         shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
@@ -107,6 +144,54 @@ fun defaultMillenniumDisclosureTheme(): MillenniumDisclosureTheme {
     )
 }
 
+/**
+ * A collapsible section with a clickable title header and an animated chevron.
+ *
+ * Built on Compose Unstyled's `UnstyledDisclosure`, which supplies the button semantics, keyboard activation and
+ * expanded/collapsed accessibility state. Use it for FAQs, advanced settings and any content worth hiding by default.
+ * The expanded state is owned by the caller.
+ *
+ * Behaviour: the header is at least 48dp tall and shows the hand cursor; the whole surface presses in slightly; the
+ * chevron rotates with a spring; the body expands/collapses vertically with a fade. The focus border appears only for
+ * keyboard focus. The border highlights in accent when hovered, focused or expanded. Body children inherit
+ * `contentStyle` and the foreground colour.
+ *
+ * Example:
+ * ```kotlin
+ * var expanded by remember { mutableStateOf(false) }
+ * MillenniumDisclosure(
+ *     expanded = expanded,
+ *     onExpandedChange = { expanded = it },
+ *     title = "Why the glossy details?",
+ * ) {
+ *     MillenniumText("Familiar depth and a little shine, with modern accessibility.")
+ * }
+ * ```
+ *
+ * @param expanded Whether the body is visible (caller-owned).
+ * @param onExpandedChange Called with the requested new state when the header is activated.
+ * @param title Header text.
+ * @param modifier Modifier applied to the whole disclosure surface.
+ * @param background Overrides the fill; null uses the theme, then the palette bevel brush.
+ * @param foreground Overrides title, chevron and body colour; null uses the theme, then the palette text colour.
+ * @param shape Overrides the corner shape; null uses the theme.
+ * @param borderColor Overrides the border colour in every state; null lets the state decide.
+ * @param borderWidth Overrides the border thickness; null uses the state's theme value.
+ * @param shadowElevation Overrides the shadow depth; null uses the state's theme value.
+ * @param innerGlowColor Overrides the inner highlight; null uses the theme, then the palette highlight.
+ * @param titleStyle Overrides the title style; null uses the theme.
+ * @param contentStyle Overrides the body text style; null uses the theme.
+ * @param minimumHeaderHeight Overrides the minimum header height; null uses the theme (48dp).
+ * @param headerPadding Overrides the header padding; null uses the theme.
+ * @param contentPadding Overrides the body padding; null uses the theme.
+ * @param contentSpacing Overrides the vertical spacing between body children; null uses the theme.
+ * @param animationMillis Overrides the base animation duration; null uses the theme.
+ * @param alpha Overrides the opacity; null uses the state's theme value.
+ * @param theme Per-state theme; defaults to `MillenniumTheme.disclosureTheme`.
+ * @param content Body content, shown when [expanded] is true.
+ * @see MillenniumDisclosureTheme
+ * @see MillenniumIcons.Chevron
+ */
 @Composable
 fun MillenniumDisclosure(
     expanded: Boolean,
@@ -194,7 +279,11 @@ fun MillenniumDisclosure(
                 indication = null,
                 interactionSource = interaction,
             ) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(properties.headerContentSpacing),
+                ) {
                     Text(title, modifier = Modifier.weight(1f), style = titleStyle ?: properties.titleStyle, color = resolvedForeground)
                     MillenniumIcon(
                         MillenniumIcons.Chevron,

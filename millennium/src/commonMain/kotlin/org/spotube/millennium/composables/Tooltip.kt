@@ -40,6 +40,29 @@ import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
 import org.spotube.millennium.theme.millenniumPanelBrush
 
+/**
+ * Visual, layout and motion properties of a [MillenniumTooltip].
+ *
+ * @property background Panel fill; null uses the palette panel brush.
+ * @property shape Corner shape of the tooltip bubble (10dp rounded by default).
+ * @property foreground Text colour; null uses the palette text colour.
+ * @property textStyle Style of the tooltip text (12sp with 17sp leading by default).
+ * @property maxWidth Maximum bubble width (280dp); longer text wraps.
+ * @property padding Padding inside the bubble (12dp).
+ * @property borderColor Hairline border colour; null uses the palette border colour.
+ * @property borderWidth Border thickness (1dp).
+ * @property shadowElevation Drop shadow depth (6dp).
+ * @property innerGlowColor Inner highlight; null uses the palette highlight at 50%.
+ * @property hoverDelayMillis Delay in milliseconds before the tooltip appears (350 by default).
+ * @property sideOffset Gap between the anchor and the bubble (8dp).
+ * @property openAnimationMillis Duration of the enter fade in milliseconds (150); the scale and slide use springs.
+ * @property closeAnimationMillis Duration of the exit fade, scale and slide in milliseconds (110).
+ * @property enterScale Initial scale the bubble grows from when appearing (0.90).
+ * @property exitScale Target scale the bubble shrinks to when disappearing (0.94).
+ * @property alpha Whole-bubble opacity.
+ * @see MillenniumTooltipTheme
+ * @see defaultMillenniumTooltipTheme
+ */
 @Immutable
 data class MillenniumTooltipThemeProperties(
     val background: Brush? = null,
@@ -61,11 +84,24 @@ data class MillenniumTooltipThemeProperties(
     val alpha: Float,
 )
 
+/**
+ * Per-state theme of [MillenniumTooltip].
+ *
+ * @property states Properties per [MillenniumControlState]. [MillenniumTooltip] always reads the default state.
+ */
 @Immutable
 data class MillenniumTooltipTheme(
     val states: MillenniumControlStateProperty<MillenniumTooltipThemeProperties>,
 )
 
+/**
+ * Creates the default [MillenniumTooltipTheme] installed as `MillenniumTheme.tooltipTheme`.
+ *
+ * Defaults: a 10dp rounded glass bubble up to 280dp wide, 12dp padding, 6dp shadow, a 350ms hover delay, an 8dp
+ * offset from the anchor, and a spring-scaled enter with a brisk fade-out exit. Colours come from the palette.
+ *
+ * @return A fresh theme instance.
+ */
 fun defaultMillenniumTooltipTheme(): MillenniumTooltipTheme {
     val base = MillenniumTooltipThemeProperties(
         shape = RoundedCornerShape(10.dp),
@@ -91,11 +127,70 @@ fun defaultMillenniumTooltipTheme(): MillenniumTooltipTheme {
     )
 }
 
-/** Install once above content that contains [MillenniumTooltip] anchors. */
+/**
+ * Installs the overlay host that tooltips render into.
+ *
+ * Place it once above all content that contains [MillenniumTooltip] anchors, typically near the root of the app.
+ * It is a thin wrapper around Compose Unstyled's `TooltipHost`; it adds no visuals of its own. A tooltip outside of
+ * a host has nowhere to draw its panel.
+ *
+ * Example:
+ * ```kotlin
+ * MillenniumTooltipHost(Modifier.fillMaxSize()) {
+ *     MillenniumTooltip("Play the next track") {
+ *         MillenniumIconButton(MillenniumIcons.Music, contentDescription = "Next", onClick = { })
+ *     }
+ * }
+ * ```
+ *
+ * @param modifier Modifier applied to the host container.
+ * @param content The app content that may contain tooltips.
+ * @see MillenniumTooltip
+ */
 @Composable
 fun MillenniumTooltipHost(modifier: Modifier = Modifier, content: @Composable () -> Unit) =
     TooltipHost(modifier, content)
 
+/**
+ * A glass hint bubble attached to an anchor composable.
+ *
+ * Wraps Compose Unstyled's `UnstyledTooltip`, which owns when the tooltip appears (pointer hover after
+ * `hoverDelayMillis`, and keyboard focus) and where it is placed relative to the anchor. Millennium styles the panel:
+ * a pearl/smoked glass surface with border, glow and shadow, entering with a spring scale and slide and leaving with
+ * a brisk fade. Use it for short, supplementary text; do not hide essential information in it.
+ *
+ * Requires a [MillenniumTooltipHost] higher in the composition. Only the default theme state is used.
+ *
+ * Example:
+ * ```kotlin
+ * MillenniumTooltip(text = "Save to your library") {
+ *     MillenniumButton(onClick = { }) { Text("Save") }
+ * }
+ * ```
+ *
+ * @param text Plain text shown in the bubble.
+ * @param background Overrides the bubble fill; null uses the theme, then the palette panel brush.
+ * @param shape Overrides the bubble shape; null uses the theme.
+ * @param foreground Overrides the text colour; null uses the theme, then the palette text colour.
+ * @param textStyle Overrides the text style; null uses the theme.
+ * @param maxWidth Overrides the maximum bubble width; null uses the theme.
+ * @param padding Overrides the bubble padding; null uses the theme.
+ * @param borderColor Overrides the border colour; null uses the theme, then the palette border colour.
+ * @param borderWidth Overrides the border thickness; null uses the theme.
+ * @param shadowElevation Overrides the shadow depth; null uses the theme.
+ * @param innerGlowColor Overrides the inner highlight; null uses the theme, then the palette highlight.
+ * @param hoverDelayMillis Overrides the hover delay in milliseconds; null uses the theme.
+ * @param sideOffset Overrides the anchor gap; null uses the theme.
+ * @param openAnimationMillis Overrides the enter fade duration; null uses the theme.
+ * @param closeAnimationMillis Overrides the exit animation duration; null uses the theme.
+ * @param enterScale Overrides the initial enter scale; null uses the theme.
+ * @param exitScale Overrides the exit target scale; null uses the theme.
+ * @param alpha Overrides the bubble opacity; null uses the theme.
+ * @param theme Per-state theme; defaults to `MillenniumTheme.tooltipTheme`.
+ * @param anchor The composable the tooltip describes; hovering or focusing it shows the tooltip.
+ * @see MillenniumTooltipHost
+ * @see MillenniumTooltipTheme
+ */
 @Composable
 fun MillenniumTooltip(
     text: String,

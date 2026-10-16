@@ -60,6 +60,30 @@ import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
 import org.spotube.millennium.theme.millenniumInteractionSurface
 
+/**
+ * State-specific appearance and layout of each option in a [MillenniumRadioGroup].
+ *
+ * @property indicatorBackground Unselected indicator brush; `null` = sunken bevel.
+ * @property selectedIndicatorBackground Selected indicator brush; `null` = accent gel.
+ * @property indicatorShape Indicator outline; default fully rounded (50%).
+ * @property indicatorSize Indicator width and height; default 22 x 22dp.
+ * @property dotSize Diameter of the inner selection dot; default `8.dp`.
+ * @property dotColor Selection dot colour; `null` = on-accent.
+ * @property indicatorBorderColor Indicator border; `null` = accent when focused/hovered/pressed/selected,
+ * danger in error, otherwise the palette border.
+ * @property indicatorBorderWidth Indicator border thickness; `1.dp`, `2.dp` when focused or in error.
+ * @property minimumTouchHeight Minimum height of each option row; default `44.dp`.
+ * @property optionPadding Padding around each option's content.
+ * @property optionSpacing Gap between indicator and label; default `12.dp`.
+ * @property groupSpacing Vertical gap between options; default `4.dp`. Read from the default state only.
+ * @property labelStyle Option label typography; default 14sp / 20sp normal.
+ * @property labelColor Label colour; `null` = text colour.
+ * @property selectedLabelColor Label colour of the selected option; `null` = text colour.
+ * @property stateAnimationMillis Duration in ms of border, label and alpha tweens and the dot's pop-in. Default `120`.
+ * @property alpha Opacity of the option; default `1f` (the default disabled state uses `0.45f`).
+ * @property indicatorGlowColor Indicator inner highlight; `null` = palette highlight at 32% when selected, none otherwise.
+ * @property indicatorElevation Indicator drop-shadow elevation; default `0.dp`.
+ */
 @Immutable
 data class MillenniumRadioGroupThemeProperties(
     val indicatorBackground: Brush? = null,
@@ -83,11 +107,33 @@ data class MillenniumRadioGroupThemeProperties(
     val indicatorElevation: Dp = 0.dp,
 )
 
+/**
+ * Theme for [MillenniumRadioGroup]: one [MillenniumRadioGroupThemeProperties] per control state.
+ * Installed as [MillenniumTheme.radioGroupTheme].
+ *
+ * @property states Properties for each control state (default, hovered, focused, pressed, disabled,
+ * selected, error).
+ * @see defaultMillenniumRadioGroupTheme
+ */
 @Immutable
 data class MillenniumRadioGroupTheme(
     val states: MillenniumControlStateProperty<MillenniumRadioGroupThemeProperties>,
 )
 
+/**
+ * Creates the default [MillenniumRadioGroupTheme].
+ *
+ * 22dp round indicators with an 8dp dot, 1dp border (2dp focused or in error), 12dp indicator-label
+ * spacing, 4dp between options, 44dp minimum option height, 14sp label and 120ms tweens. Disabled uses
+ * `alpha = 0.45f`. Colours are `null` and follow the palette. Customise with `copy`:
+ *
+ * ```kotlin
+ * val base = defaultMillenniumRadioGroupTheme()
+ * val roomy = base.copy(states = base.states.copy(default = base.states.default.copy(groupSpacing = 12.dp)))
+ * ```
+ *
+ * @return A new default theme.
+ */
 fun defaultMillenniumRadioGroupTheme(): MillenniumRadioGroupTheme {
     val base = MillenniumRadioGroupThemeProperties(
         indicatorShape = RoundedCornerShape(50),
@@ -118,6 +164,66 @@ fun defaultMillenniumRadioGroupTheme(): MillenniumRadioGroupTheme {
     )
 }
 
+/**
+ * A vertical group of mutually exclusive options rendered as beveled radio buttons.
+ *
+ * Use it to pick exactly one value from a short list. Selection is caller-owned: pass the current
+ * [value], update it in [onValueChange] and supply [options] of any type [T].
+ *
+ * Built on Compose Unstyled `UnstyledRadioGroup` and `RadioButton`, which provide the radio-group
+ * semantics, per-option selection, [label] as the group's accessibility label and arrow-key
+ * navigation behaviour of the primitive. Each option row has a 44dp default minimum height. Option
+ * state resolves as pressed, keyboard-focused (`collectIsKeyboardFocusedAsState`, no ring after pointer
+ * presses), hovered, selected, default. Feedback stays on the small indicator (spring scale, border
+ * colour, interaction lighting) instead of washing the row; the selection dot pops in with a spring.
+ * The hand cursor is shown over options.
+ *
+ * [label] names the group for accessibility; option labels are always drawn. Pass `enabled = false` to dim
+ * and disable every option.
+ *
+ * Nullable parameters override single theme properties (`param ?: themeValue ?: fallback`).
+ *
+ * ```kotlin
+ * var quality by remember { mutableStateOf("Original") }
+ * MillenniumRadioGroup(
+ *     value = quality,
+ *     onValueChange = { quality = it },
+ *     options = listOf("Original", "Remastered", "Hi-fi"),
+ *     label = "Playback quality",
+ * )
+ * ```
+ *
+ * @param T Option type; compared with `==` against [value] to determine the selection.
+ * @param value The currently selected option; caller-owned.
+ * @param onValueChange Called with the option the user selects.
+ * @param options The options, shown top to bottom in order.
+ * @param label Accessibility label of the group; also required for option labels to be rendered (see note).
+ * @param modifier Modifier applied to the group container.
+ * @param optionLabel Maps an option to its display text; defaults to `toString()`.
+ * @param indicatorBackground Overrides the unselected indicator brush; `null` falls back to the theme or sunken bevel.
+ * @param selectedIndicatorBackground Overrides the selected indicator brush; `null` falls back to the theme or accent gel.
+ * @param indicatorShape Overrides the indicator outline; `null` falls back to the theme.
+ * @param indicatorSize Overrides the indicator size; `null` falls back to the theme (22dp).
+ * @param dotSize Overrides the selection dot size; `null` falls back to the theme (8dp).
+ * @param dotColor Overrides the selection dot colour; `null` falls back to the theme or on-accent.
+ * @param indicatorBorderColor Overrides the border colour; `null` falls back to the theme or palette.
+ * @param indicatorBorderWidth Overrides the border thickness; `null` falls back to the state's value.
+ * @param indicatorGlowColor Overrides the indicator inner highlight; `null` falls back to the theme or palette.
+ * @param indicatorElevation Overrides the indicator shadow elevation; `null` falls back to the theme.
+ * @param minimumTouchHeight Overrides the minimum option height; `null` falls back to the theme (44dp).
+ * @param optionPadding Overrides the padding around each option; `null` falls back to the theme.
+ * @param optionSpacing Overrides the gap between indicator and label; `null` falls back to the theme.
+ * @param groupSpacing Overrides the vertical gap between options; `null` falls back to the theme's default state.
+ * @param labelStyle Overrides the option label typography; `null` falls back to the theme.
+ * @param labelColor Overrides the option label colour; `null` falls back to the theme or text colour.
+ * @param selectedLabelColor Overrides the selected option's label colour; `null` falls back to the theme or text colour.
+ * @param stateAnimationMillis Overrides the tween duration; `null` falls back to the theme.
+ * @param alpha Overrides the option opacity; `null` falls back to the state's value.
+ * @param enabled When `false` every option is dimmed, ignores input and resolves the disabled theme state.
+ * @param theme Theme supplying state properties; defaults to [MillenniumTheme.radioGroupTheme].
+ * @see MillenniumCheckbox
+ * @see MillenniumRadioGroupTheme
+ */
 @Composable
 fun <T> MillenniumRadioGroup(
     value: T,
@@ -145,6 +251,7 @@ fun <T> MillenniumRadioGroup(
     selectedLabelColor: Color? = null,
     stateAnimationMillis: Int? = null,
     alpha: Float? = null,
+    enabled: Boolean = true,
     theme: MillenniumRadioGroupTheme = MillenniumTheme.radioGroupTheme,
 ) {
     val colors = MillenniumTheme.colors
@@ -162,6 +269,7 @@ fun <T> MillenniumRadioGroup(
                 val focused by interaction.collectIsKeyboardFocusedAsState()
                 val hovered by interaction.collectIsHoveredAsState()
                 val state = when {
+                    !enabled -> MillenniumControlState.Disabled
                     pressed -> MillenniumControlState.Pressed
                     focused -> MillenniumControlState.Focused
                     hovered -> MillenniumControlState.Hovered
@@ -213,6 +321,7 @@ fun <T> MillenniumRadioGroup(
                     // creates a distracting blue slab behind the option label.
                     indication = null,
                     interactionSource = interaction,
+                    enabled = enabled,
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -264,14 +373,12 @@ fun <T> MillenniumRadioGroup(
                                 )
                             }
                         }
-                        if (!label.isNullOrBlank()) {
-                            CompositionLocalProvider(
-                                LocalTextStyle provides LocalTextStyle.current.merge(
-                                    labelStyle ?: itemProperties.labelStyle
-                                )
-                                    .copy(color = animatedLabelColor),
-                            ) { Text(optionLabel(option)) }
-                        }
+                        CompositionLocalProvider(
+                            LocalTextStyle provides LocalTextStyle.current.merge(
+                                labelStyle ?: itemProperties.labelStyle
+                            )
+                                .copy(color = animatedLabelColor),
+                        ) { Text(optionLabel(option)) }
                     }
                 }
             }

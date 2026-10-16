@@ -55,9 +55,57 @@ import org.spotube.millennium.theme.millenniumSurface
 import org.spotube.millennium.theme.millenniumInteractionSurface
 import org.spotube.millennium.theme.millenniumQuietEnamelStops
 
-enum class MillenniumIconButtonStyle { Primary, Secondary, Quiet, Danger }
+/**
+ * Visual emphasis of a [MillenniumIconButton]; each entry selects one variant of
+ * [MillenniumIconButtonTheme].
+ *
+ * @see MillenniumIconButton
+ */
+enum class MillenniumIconButtonStyle {
+    /** Main action: circular accent glass orb with a white icon. Use once per view. */
+    Primary,
 
-/** Complete, state-specific icon-button appearance and layout configuration. */
+    /** Standard action: pearl enamel face with the regular text colour. */
+    Secondary,
+
+    /** Low emphasis: transparent at rest, glassy accent-tinted enamel on hover/focus/press. For toolbars. */
+    Quiet,
+
+    /** Destructive action: red glass orb with a white icon. */
+    Danger,
+}
+
+/**
+ * Complete, state-specific icon-button appearance and layout configuration.
+ *
+ * One instance describes a single (variant, state) cell of [MillenniumIconButtonTheme]. Nullable
+ * properties are derived from the active palette when `null`.
+ *
+ * @property background Face brush. `null` = orb body stops for orb variants, otherwise accent gel
+ * (Primary), bevel (Secondary), animated enamel (Quiet) or red gel (Danger).
+ * @property foreground Icon/content colour. `null` = white for orb variants, on-accent/surface for
+ * non-orb Primary/Danger, accent while Quiet is hovered/focused/pressed, otherwise the text colour.
+ * @property shape Outline of the surface; default [CircleShape].
+ * @property size Fixed width and height of the button; default 44 x 44dp (the minimum accessible target).
+ * @property iconSize Size of an [ImageVector] icon; default `20.dp`.
+ * @property contentPadding Padding value kept for theme completeness; the button currently lays content
+ * out with zero padding and centers it.
+ * @property borderWidth Border thickness (0 for Quiet at rest, 1dp otherwise, 2dp when focused).
+ * @property borderColor Border colour. `null` = accent when focused/selected, danger in error, else a
+ * variant-specific colour. For orbs a metallic rim is drawn when `null` and not keyboard-focused.
+ * @property shadows Drop-shadow colour layers. `null` = a single 16% black layer.
+ * @property shadowElevation Drop-shadow elevation, spring-animated between states.
+ * @property innerGlowColor Top inner highlight colour. `null` = palette highlight for non-orb,
+ * non-Quiet variants and none for orbs and Quiet.
+ * @property bottomRimColor Lower inner rim colour. `null` = faint highlight for non-orb, non-Quiet variants.
+ * @property orb Draws the spherical glass reflections used by filled variants.
+ * @property orbColor Colour of the orb reflections. `null` = white at [orbStrength] alpha.
+ * @property orbStrength Alpha of the white reflections when [orbColor] is `null`; raised on hover and
+ * reduced on press in the defaults.
+ * @property alpha Overall opacity (the default disabled state uses `0.45f`).
+ * @property motion Motion settings; defaults to no hover scale-up in the theme (the composable still
+ * enforces at least `1.04f` on hover) and a `0.94f` press scale.
+ */
 @Immutable
 data class MillenniumIconButtonThemeProperties(
     val background: Brush? = null,
@@ -77,10 +125,30 @@ data class MillenniumIconButtonThemeProperties(
     val orbColor: Color? = null,
     val orbStrength: Float = 0.55f,
     val alpha: Float = 1f,
-    val motion: MillenniumButtonMotion = MillenniumButtonMotion(hoverScale = 1f, pressedScale = 0.94f),
+    val motion: MillenniumButtonMotion = MillenniumButtonMotion(hoverScale = 1.04f, pressedScale = 0.94f),
 )
 
-/** Four independently configurable variants, each with all control states. */
+/**
+ * Theme for [MillenniumIconButton]: four independently configurable variants, each with all control states.
+ *
+ * Installed as [MillenniumTheme.iconButtonTheme]; pass an instance to a single button through its
+ * `theme` parameter to override it locally.
+ *
+ * ```kotlin
+ * val base = defaultMillenniumIconButtonTheme()
+ * val big = base.copy(
+ *     secondary = base.secondary.copy(
+ *         default = base.secondary.default.copy(size = DpSize(56.dp, 56.dp), iconSize = 26.dp),
+ *     ),
+ * )
+ * ```
+ *
+ * @property primary State properties for [MillenniumIconButtonStyle.Primary].
+ * @property secondary State properties for [MillenniumIconButtonStyle.Secondary].
+ * @property quiet State properties for [MillenniumIconButtonStyle.Quiet].
+ * @property danger State properties for [MillenniumIconButtonStyle.Danger].
+ * @see defaultMillenniumIconButtonTheme
+ */
 @Immutable
 data class MillenniumIconButtonTheme(
     val primary: MillenniumControlStateProperty<MillenniumIconButtonThemeProperties>,
@@ -89,6 +157,19 @@ data class MillenniumIconButtonTheme(
     val danger: MillenniumControlStateProperty<MillenniumIconButtonThemeProperties>,
 )
 
+/**
+ * Creates the default [MillenniumIconButtonTheme].
+ *
+ * Every variant is a 44 x 44dp [CircleShape] with a 20dp icon. Primary and Danger enable the glass
+ * orb (strength 0.48, 0.62 on hover, 80% of rest on press); Secondary is enamel; Quiet has no border
+ * or shadow at rest. Shadows are 5dp at rest (3dp hovered for non-filled, 7dp for filled), 0dp when
+ * pressed or disabled; focused/selected/error use a 2dp border; disabled uses `alpha = 0.45f`.
+ *
+ * Customise with `copy` on the result or on individual state properties.
+ *
+ * @return A new theme with default values for every variant and state.
+ * @see MillenniumIconButtonTheme
+ */
 fun defaultMillenniumIconButtonTheme(): MillenniumIconButtonTheme {
     fun variant(style: MillenniumIconButtonStyle): MillenniumControlStateProperty<MillenniumIconButtonThemeProperties> {
         val filled = style == MillenniumIconButtonStyle.Primary || style == MillenniumIconButtonStyle.Danger
@@ -137,6 +218,53 @@ private fun MillenniumIconButtonTheme.forStyle(style: MillenniumIconButtonStyle)
  * ([MillenniumIconButtonStyle.Primary], [MillenniumIconButtonStyle.Danger]) carry the
  * Vista-style glass orb; [MillenniumIconButtonStyle.Secondary] is enamel and
  * [MillenniumIconButtonStyle.Quiet] is transparent at rest and becomes glassy enamel on hover/press.
+ *
+ * Built on Compose Unstyled `UnstyledButton`, so click, keyboard activation and button semantics come
+ * from the primitive. The state resolves as disabled, pressed, keyboard-focused, hovered, default; the
+ * focus ring uses `collectIsKeyboardFocusedAsState` and is therefore not drawn after pointer presses.
+ * The default target is 44 x 44dp. Hover scales up (at least `1.04f`) and press shrinks via springs;
+ * colours cross-fade. [contentDescription] is applied as the semantics description when non-null;
+ * icon-only buttons should always supply one.
+ *
+ * Every nullable parameter overrides one theme property for this instance and resolves as
+ * `param ?: themeValue ?: fallback`.
+ *
+ * ```kotlin
+ * var favorite by remember { mutableStateOf(false) }
+ * MillenniumIconButton(
+ *     icon = MillenniumIcons.Sparkle,
+ *     contentDescription = if (favorite) "Remove from favorites" else "Add to favorites",
+ *     onClick = { favorite = !favorite },
+ *     style = if (favorite) MillenniumIconButtonStyle.Primary else MillenniumIconButtonStyle.Secondary,
+ * )
+ * ```
+ *
+ * @param icon Vector drawn centered at [iconSize] in the resolved foreground colour.
+ * @param contentDescription Accessibility label for the button; pass `null` only when the surrounding
+ * UI already labels it.
+ * @param onClick Called on click, tap or keyboard activation; not called when disabled.
+ * @param modifier Modifier applied to the button.
+ * @param enabled When `false` the button ignores input, uses the disabled state and shows no hand cursor.
+ * @param style Emphasis variant, see [MillenniumIconButtonStyle].
+ * @param background Overrides the face brush; `null` falls back to the theme or the variant default.
+ * @param foreground Overrides the icon colour; `null` falls back to the theme or the variant default.
+ * @param shape Overrides the outline; `null` falls back to the theme ([CircleShape]).
+ * @param size Overrides the fixed button size; `null` falls back to the theme (44 x 44dp).
+ * @param iconSize Overrides the icon size; `null` falls back to the theme (20dp).
+ * @param borderWidth Overrides the border thickness; `null` falls back to the state's value.
+ * @param borderColor Overrides the border colour; `null` falls back to the theme or palette.
+ * @param shadows Overrides the shadow colour layers; `null` falls back to the theme or 16% black.
+ * @param shadowElevation Overrides the shadow elevation; `null` falls back to the state's value.
+ * @param innerGlowColor Overrides the top inner highlight; `null` falls back to the theme or palette.
+ * @param bottomRimColor Overrides the lower inner rim; `null` falls back to the theme or palette.
+ * @param orb Forces the glass orb on or off; `null` falls back to the theme (on for Primary/Danger).
+ * @param orbColor Overrides the orb reflection colour; `null` falls back to the theme or white.
+ * @param orbStrength Overrides the white reflection alpha; `null` falls back to the state's value.
+ * @param alpha Overrides the overall opacity; `null` falls back to the state's value.
+ * @param motion Overrides scale and tween settings; `null` falls back to the theme.
+ * @param theme Theme supplying variant/state properties; defaults to [MillenniumTheme.iconButtonTheme].
+ * @see MillenniumButton
+ * @see MillenniumIconButtonStyle
  */
 @Composable
 fun MillenniumIconButton(
@@ -192,7 +320,49 @@ fun MillenniumIconButton(
     )
 }
 
-/** Fully custom icon-button content; inherits the variant foreground through `LocalTextStyle`. */
+/**
+ * Fully custom icon-button content; inherits the variant foreground through `LocalTextStyle`.
+ *
+ * Use this overload for glyph text, badges or composed icons. It shares all surface, interaction,
+ * motion and accessibility behaviour with the [ImageVector] overload; the [content] is centered in the
+ * button and receives the resolved foreground colour (and the default text style) through
+ * `MillenniumStyledContent`. [iconSize] is accepted for parity but is only applied to the
+ * [ImageVector] overload.
+ *
+ * ```kotlin
+ * var count by remember { mutableStateOf(0) }
+ * MillenniumIconButton(
+ *     onClick = { count++ },
+ *     style = MillenniumIconButtonStyle.Secondary,
+ *     contentDescription = "Increment, current value $count",
+ * ) { Text("$count") }
+ * ```
+ *
+ * @param onClick Called on click, tap or keyboard activation; not called when disabled.
+ * @param modifier Modifier applied to the button.
+ * @param enabled When `false` the button ignores input and uses the disabled state.
+ * @param style Emphasis variant, see [MillenniumIconButtonStyle].
+ * @param contentDescription Accessibility label; defaults to `null`, so supply one for non-text content.
+ * @param background Overrides the face brush; `null` falls back to the theme or variant default.
+ * @param foreground Overrides the content colour; `null` falls back to the theme or variant default.
+ * @param shape Overrides the outline; `null` falls back to the theme.
+ * @param size Overrides the fixed button size; `null` falls back to the theme (44 x 44dp).
+ * @param iconSize Unused by this overload (kept for signature parity); `null` falls back to the theme.
+ * @param borderWidth Overrides the border thickness; `null` falls back to the state's value.
+ * @param borderColor Overrides the border colour; `null` falls back to the theme or palette.
+ * @param shadows Overrides the shadow colour layers; `null` falls back to the theme.
+ * @param shadowElevation Overrides the shadow elevation; `null` falls back to the state's value.
+ * @param innerGlowColor Overrides the top inner highlight; `null` falls back to the theme or palette.
+ * @param bottomRimColor Overrides the lower inner rim; `null` falls back to the theme or palette.
+ * @param orb Forces the glass orb on or off; `null` falls back to the theme.
+ * @param orbColor Overrides the orb reflection colour; `null` falls back to the theme or white.
+ * @param orbStrength Overrides the white reflection alpha; `null` falls back to the state's value.
+ * @param alpha Overrides the overall opacity; `null` falls back to the state's value.
+ * @param motion Overrides scale and tween settings; `null` falls back to the theme.
+ * @param theme Theme supplying variant/state properties; defaults to [MillenniumTheme.iconButtonTheme].
+ * @param content Composable content centered in the button.
+ * @see MillenniumIconButton
+ */
 @Composable
 fun MillenniumIconButton(
     onClick: () -> Unit,
@@ -247,6 +417,7 @@ fun MillenniumIconButton(
     )
 }
 
+/** Shared implementation behind both [MillenniumIconButton] overloads (exactly one of icon/content is set). */
 @Composable
 private fun IconButtonContainer(
     onClick: () -> Unit,
@@ -351,7 +522,7 @@ private fun IconButtonContainer(
         targetValue = when {
             !enabled -> 1f
             pressed -> resolvedMotion.pressedScale
-            hovered -> maxOf(resolvedMotion.hoverScale, 1.04f)
+            hovered -> resolvedMotion.hoverScale
             else -> 1f
         },
         animationSpec = spring(dampingRatio = 0.62f, stiffness = Spring.StiffnessMedium),
@@ -415,7 +586,17 @@ private fun IconButtonContainer(
     }
 }
 
-/** Continuous spherical shading, deliberately without the button gel's hard halfway break. */
+/**
+ * Continuous spherical shading, deliberately without the button gel's hard halfway break.
+ *
+ * Returns five vertical gradient stops (position to colour) from a dark body at the top to the
+ * brighter [top] accent at the lip. The body is [bottom] darkened 52% toward black, so every accent
+ * keeps a white icon readable. Internal; used for the orb background of filled icon buttons.
+ *
+ * @param top Illuminated lower-lip colour (the accent's bright stop).
+ * @param bottom Accent base colour from which the dark body is derived.
+ * @return Stops suitable for `Brush.verticalGradient(*stops.toTypedArray())`.
+ */
 internal fun millenniumIconOrbStops(top: Color, bottom: Color): List<Pair<Float, Color>> {
     // Every accent uses deep jewel glass. Bright amber/citron belong at the illuminated lip,
     // not across the face; keeping the body dark also gives every orb a white icon.
@@ -429,7 +610,12 @@ internal fun millenniumIconOrbStops(top: Color, bottom: Color): List<Pair<Float,
     )
 }
 
-/** Cached, size-relative glass layers; the surface clips them to the caller's shape. */
+/**
+ * Cached, size-relative glass layers; the surface clips them to the caller's shape.
+ *
+ * Draws a lower light pool, a curved translucent dome, the orb rim (metallic unless [borderColor] is
+ * given) and a thin inner rim, then the content.
+ */
 private fun Modifier.millenniumIconOrb(
     reflection: Color,
     tint: Color,

@@ -71,6 +71,37 @@ import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
 import org.spotube.millennium.theme.millenniumInteractionSurface
 
+/**
+ * Visual, layout and motion properties of a [MillenniumTabGroup].
+ *
+ * List-level properties (`list*`, `groupContentSpacing`, `tabShape`, `minimumTabHeight`, `tabBorderWidth`,
+ * `tabElevation`, `panelAnimationMillis`) are read from the default state; tab-level colours, text style, padding, alpha
+ * and `stateAnimationMillis` are resolved per tab from that tab's state.
+ *
+ * @property listBackground Fill of the tab list track; null uses a sunken bevel brush.
+ * @property listShape Corner shape of the tab list (10dp rounded).
+ * @property listBorderColor Border colour of the list; null uses the palette border colour.
+ * @property listBorderWidth Border thickness of the list (1dp).
+ * @property listPadding Padding between the list border and the tabs (4dp).
+ * @property listInnerSpacing Gap between adjacent tabs (4dp).
+ * @property groupContentSpacing Vertical gap between the tab list and the panel (16dp).
+ * @property tabShape Corner shape of tabs and the sliding selection pill (8dp rounded).
+ * @property selectedTabBackground Fill of the sliding selection pill; null uses the accent gel gradient.
+ * @property unselectedTabBackground Fill of unselected tabs; null is transparent, with an accent wash when hovered or pressed.
+ * @property selectedTabForeground Label colour of the selected tab; null uses the palette on-accent colour.
+ * @property unselectedTabForeground Label colour of unselected tabs; null uses muted, or text when hovered/focused.
+ * @property tabTextStyle Style of tab labels (14sp SemiBold).
+ * @property minimumTabHeight Minimum tab height (44dp touch target).
+ * @property tabPadding Padding inside each tab (12dp horizontal, 8dp vertical).
+ * @property stateAnimationMillis Duration in milliseconds of tab alpha, label colour and interaction lighting changes.
+ * @property panelAnimationMillis Base duration in milliseconds of the panel transition (200).
+ * @property alpha Tab opacity.
+ * @property tabBorderWidth Border width of the selection pill (1dp); keyboard focus draws at least 2dp.
+ * @property tabElevation Shadow depth of the selection pill (2dp).
+ * @property tabGlowColor Inner highlight of the selection pill; null uses the palette highlight at 50%.
+ * @see MillenniumTabGroupTheme
+ * @see defaultMillenniumTabGroupTheme
+ */
 @Immutable
 data class MillenniumTabGroupThemeProperties(
     val listBackground: Brush? = null,
@@ -96,11 +127,25 @@ data class MillenniumTabGroupThemeProperties(
     val tabGlowColor: Color? = null,
 )
 
+/**
+ * Per-state theme of [MillenniumTabGroup].
+ *
+ * @property states Properties per [MillenniumControlState]. Individual tabs resolve Pressed, keyboard Focused, Hovered,
+ * Selected or Default; list-level values come from the default state (and the selection pill from Selected).
+ */
 @Immutable
 data class MillenniumTabGroupTheme(
     val states: MillenniumControlStateProperty<MillenniumTabGroupThemeProperties>,
 )
 
+/**
+ * Creates the default [MillenniumTabGroupTheme] installed as `MillenniumTheme.tabGroupTheme`.
+ *
+ * Defaults: a sunken 10dp rounded track holding equal-width 44dp tabs with a 4dp gap, a gel selection pill that
+ * slides between tabs, 140ms state animation and a 200ms panel transition.
+ *
+ * @return A fresh theme instance.
+ */
 fun defaultMillenniumTabGroupTheme(): MillenniumTabGroupTheme {
     val base = MillenniumTabGroupThemeProperties(
         listShape = RoundedCornerShape(10.dp),
@@ -127,6 +172,64 @@ fun defaultMillenniumTabGroupTheme(): MillenniumTabGroupTheme {
     )
 }
 
+/**
+ * A segmented tab strip with a sliding gel selection pill and an animated content panel.
+ *
+ * Built on Compose Unstyled's `UnstyledTabGroup`, so tab semantics, selection and keyboard navigation come from the
+ * primitive. The tabs are generic: any type [T] with a label from [tabLabel]. Tabs share the row width equally. The
+ * selected tab is highlighted by a gel pill whose position follows the selection with a spring; the panel for the
+ * selected tab cross-fades and slides in the direction of the change.
+ *
+ * Selection is caller-owned. If [selectedTab] is not in [tabs] no pill is drawn and the panel still shows the state.
+ * Tabs show the hand cursor, are at least 44dp tall, scale slightly on hover and press, and show the focus border only
+ * for keyboard focus.
+ *
+ * Example:
+ * ```kotlin
+ * val tabs = listOf("Discover", "Saved", "Recent")
+ * var selected by remember { mutableStateOf(tabs.first()) }
+ * MillenniumTabGroup(
+ *     selectedTab = selected,
+ *     onSelectedTabChange = { selected = it },
+ *     tabs = tabs,
+ * ) { tab ->
+ *     MillenniumText("Content for $tab")
+ * }
+ * ```
+ *
+ * @param T The tab key type; must have stable equality because it identifies tabs and drives selection.
+ * @param selectedTab The currently selected tab (caller-owned).
+ * @param onSelectedTabChange Called with the tab the user selected.
+ * @param tabs All tabs in display order.
+ * @param modifier Modifier applied to the whole group (list and panel).
+ * @param tabLabel Maps a tab to its label; defaults to `toString()`.
+ * @param listBackground Overrides the list track fill; null uses the theme, then a sunken bevel brush.
+ * @param listShape Overrides the list corner shape; null uses the theme.
+ * @param listBorderColor Overrides the list border colour (the selection pill border also takes this value when
+ * set); null uses the theme, then the palette border colour (accent-bottom for the pill).
+ * @param listBorderWidth Overrides the list border thickness; null uses the theme.
+ * @param listPadding Overrides the padding inside the list; null uses the theme.
+ * @param listInnerSpacing Overrides the gap between tabs; null uses the theme.
+ * @param groupContentSpacing Overrides the gap between list and panel; null uses the theme.
+ * @param tabShape Overrides the tab and pill shape; null uses the theme.
+ * @param selectedTabBackground Overrides the selection pill fill; null uses the theme, then the accent gel.
+ * @param unselectedTabBackground Overrides the unselected tab fill; null uses the theme or the hover wash.
+ * @param selectedTabForeground Overrides the selected label colour; null uses the theme, then on-accent.
+ * @param unselectedTabForeground Overrides the unselected label colour; null uses the theme, then muted/text.
+ * @param tabTextStyle Overrides the label style; null uses the theme.
+ * @param tabBorderWidth Overrides the pill border width; null uses the theme.
+ * @param tabElevation Overrides the pill shadow depth; null uses the theme.
+ * @param tabGlowColor Overrides the pill inner highlight; null uses the theme, then the palette highlight.
+ * @param minimumTabHeight Overrides the minimum tab height; null uses the theme (44dp).
+ * @param tabPadding Overrides the padding inside each tab; null uses the tab's state value.
+ * @param stateAnimationMillis Overrides tab state animation duration; null uses the tab's state value.
+ * @param panelAnimationMillis Overrides the panel transition duration; null uses the theme.
+ * @param alpha Overrides the tab opacity; null uses the tab's state value.
+ * @param theme Per-state theme; defaults to `MillenniumTheme.tabGroupTheme`.
+ * @param panel Content of a tab; invoked with the tab being shown and animated on selection change.
+ * @see MillenniumTabGroupTheme
+ * @see MillenniumSegmentedButton
+ */
 @Composable
 fun <T> MillenniumTabGroup(
     selectedTab: T,

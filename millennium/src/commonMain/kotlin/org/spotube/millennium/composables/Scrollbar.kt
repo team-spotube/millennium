@@ -42,6 +42,21 @@ import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
 import org.spotube.millennium.theme.millenniumInteractionSurface
 
+/**
+ * Visual properties of a [MillenniumScrollbar] in one interaction state.
+ *
+ * @property trackBackground Track fill; null uses a sunken bevel brush.
+ * @property thumbBackground Thumb fill; null derives it from the state (neutral gradient at rest, accent gradient
+ * when hovered, accent bevel when dragged).
+ * @property shape Shape of both track and thumb (a capsule by default).
+ * @property thickness Width of a vertical bar or height of a horizontal bar (8dp by default).
+ * @property borderColor Track border colour; null uses the palette border colour.
+ * @property borderWidth Track border thickness (1dp by default).
+ * @property alpha Thumb opacity (0.74 at rest, 0.95 hovered, 1.0 dragged, 0.35 disabled). Changes animate.
+ * @property stateAnimationMillis Duration in milliseconds of the thumb opacity animation.
+ * @see MillenniumScrollbarTheme
+ * @see defaultMillenniumScrollbarTheme
+ */
 @Immutable
 data class MillenniumScrollbarThemeProperties(
     val trackBackground: Brush? = null,
@@ -54,11 +69,24 @@ data class MillenniumScrollbarThemeProperties(
     val stateAnimationMillis: Int,
 )
 
+/**
+ * Per-state theme of [MillenniumScrollbar].
+ *
+ * @property states Properties per [MillenniumControlState]. [MillenniumScrollbar] resolves Pressed while the thumb
+ * is dragged, Hovered while the pointer is over the bar and Default otherwise.
+ */
 @Immutable
 data class MillenniumScrollbarTheme(
     val states: MillenniumControlStateProperty<MillenniumScrollbarThemeProperties>,
 )
 
+/**
+ * Creates the default [MillenniumScrollbarTheme] installed as `MillenniumTheme.scrollbarTheme`.
+ *
+ * Defaults: a slim 8dp capsule track with a 1dp border and a thumb whose opacity rises on hover and drag.
+ *
+ * @return A fresh theme instance.
+ */
 fun defaultMillenniumScrollbarTheme(): MillenniumScrollbarTheme {
     val base = MillenniumScrollbarThemeProperties(
         shape = RoundedCornerShape(50),
@@ -80,6 +108,39 @@ fun defaultMillenniumScrollbarTheme(): MillenniumScrollbarTheme {
     )
 }
 
+/**
+ * A slim themed scrollbar bound to a Compose [ScrollState].
+ *
+ * Built on Compose Unstyled's scrollbar primitives, so thumb dragging and track input are handled by the primitive.
+ * Place it beside (or over) the scrolling content and share the same [ScrollState]. The hand cursor is only shown
+ * when the content can actually scroll (`scrollState.maxValue > 0`).
+ *
+ * Visual states: Default, Hovered (accent thumb) and Pressed while dragging (accent bevel thumb); thumb opacity
+ * animates over `stateAnimationMillis` and the thumb receives the shared interaction lighting.
+ *
+ * Example:
+ * ```kotlin
+ * val scroll = rememberScrollState()
+ * Row {
+ *     Column(Modifier.weight(1f).verticalScroll(scroll)) { LongContent() }
+ *     MillenniumScrollbar(scroll, Modifier.fillMaxHeight())
+ * }
+ * ```
+ *
+ * @param scrollState The caller-owned scroll state of the content this bar controls.
+ * @param modifier Modifier applied to the track; give it a size along the scroll axis, for example `fillMaxHeight()`.
+ * @param horizontal When true renders a horizontal bar (height = thickness); otherwise a vertical one.
+ * @param trackBackground Overrides the track fill; null uses the theme, then a sunken bevel brush.
+ * @param thumbBackground Overrides the thumb fill in every state; null lets the state decide.
+ * @param shape Overrides track and thumb shape; null uses the theme.
+ * @param thickness Overrides the bar thickness; null uses the theme (8dp).
+ * @param borderColor Overrides the track border colour; null uses the theme, then the palette border colour.
+ * @param borderWidth Overrides the track border thickness; null uses the theme.
+ * @param alpha Overrides the thumb opacity in every state; null uses the state's theme value.
+ * @param stateAnimationMillis Overrides the opacity animation duration; null uses the theme.
+ * @param theme Per-state theme; defaults to `MillenniumTheme.scrollbarTheme`.
+ * @see MillenniumScrollbarTheme
+ */
 @Composable
 fun MillenniumScrollbar(
     scrollState: ScrollState,

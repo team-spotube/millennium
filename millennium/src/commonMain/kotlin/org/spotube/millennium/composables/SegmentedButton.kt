@@ -51,7 +51,21 @@ import org.spotube.millennium.theme.millenniumInteractionSurface
 
 /** Shape helpers for [MillenniumSegmentedButton]. */
 object MillenniumSegmentedButtonDefaults {
-    /** A single segment's shape: only the outer edges of the row are rounded. */
+    /**
+     * A single segment's shape: only the outer edges of the row are rounded.
+     *
+     * The first segment (`index == 0`) rounds its start corners and the last (`index == count - 1`) its
+     * end corners, each with a 10dp radius; middle segments are square. A single segment
+     * (`count == 1`) is rounded on all four corners.
+     *
+     * ```kotlin
+     * val shape = MillenniumSegmentedButtonDefaults.itemShape(index = 1, count = 3)
+     * ```
+     *
+     * @param index Zero-based position of the segment inside the row.
+     * @param count Total number of segments in the row.
+     * @return The shape to pass as `shape` to [MillenniumSegmentedButton].
+     */
     fun itemShape(index: Int, count: Int): Shape = RoundedCornerShape(
         topStart = if (index == 0) 10.dp else 0.dp,
         bottomStart = if (index == 0) 10.dp else 0.dp,
@@ -60,7 +74,23 @@ object MillenniumSegmentedButtonDefaults {
     )
 }
 
-/** Complete, state-specific segment appearance and layout configuration. */
+/**
+ * Complete, state-specific segment appearance and layout configuration.
+ *
+ * @property background Face brush. `null` = accent gel when selected, sunken bevel when disabled or
+ * pressed, otherwise the raised enamel bevel.
+ * @property foreground Label colour. `null` = on-accent when selected, otherwise the text colour.
+ * @property textStyle Label typography; default 14sp / 20sp medium.
+ * @property contentPadding Padding around the label; default 16 x 10dp.
+ * @property minimumHeight Minimum segment height; default `44.dp` (accessible target).
+ * @property borderWidth Border thickness; `1.dp`, `2.dp` for focused and error states.
+ * @property borderColor Border colour. `null` = accent when keyboard-focused, accent-bottom when
+ * selected, otherwise the palette border.
+ * @property innerGlowColor Top inner highlight. `null` = palette highlight at 50% (selected) or 30%.
+ * @property alpha Overall opacity; `0.45f` when disabled.
+ * @property motion Motion settings; the theme default grows unselected hovered segments to `1.015f` and
+ * shrinks pressed ones to `0.97f`.
+ */
 @Immutable
 data class MillenniumSegmentedButtonThemeProperties(
     val background: Brush? = null,
@@ -72,14 +102,36 @@ data class MillenniumSegmentedButtonThemeProperties(
     val borderColor: Color? = null,
     val innerGlowColor: Color? = null,
     val alpha: Float = 1f,
-    val motion: MillenniumButtonMotion = MillenniumButtonMotion(hoverScale = 1f, pressedScale = 0.97f),
+    val motion: MillenniumButtonMotion = MillenniumButtonMotion(hoverScale = 1.015f, pressedScale = 0.97f),
 )
 
+/**
+ * Theme for [MillenniumSegmentedButton]: one set of [MillenniumSegmentedButtonThemeProperties] per
+ * control state. Installed as [MillenniumTheme.segmentedButtonTheme].
+ *
+ * @property states Properties for each control state (default, hovered, focused, pressed, disabled,
+ * selected, error).
+ * @see defaultMillenniumSegmentedButtonTheme
+ */
 @Immutable
 data class MillenniumSegmentedButtonTheme(
     val states: MillenniumControlStateProperty<MillenniumSegmentedButtonThemeProperties>,
 )
 
+/**
+ * Creates the default [MillenniumSegmentedButtonTheme].
+ *
+ * 14sp medium label, 16 x 10dp padding, 44dp minimum height and a 1dp border. Focused and error states
+ * use a 2dp border; disabled uses `alpha = 0.45f`; other states share the base properties. Colours are
+ * `null` and resolve from the palette. Customise with `copy`:
+ *
+ * ```kotlin
+ * val base = defaultMillenniumSegmentedButtonTheme()
+ * val tall = base.copy(states = base.states.copy(default = base.states.default.copy(minimumHeight = 52.dp)))
+ * ```
+ *
+ * @return A new default theme.
+ */
 fun defaultMillenniumSegmentedButtonTheme(): MillenniumSegmentedButtonTheme {
     val base = MillenniumSegmentedButtonThemeProperties(
         textStyle = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium),
@@ -100,7 +152,31 @@ fun defaultMillenniumSegmentedButtonTheme(): MillenniumSegmentedButtonTheme {
     )
 }
 
-/** A horizontal row of connected [MillenniumSegmentedButton] segments. */
+/**
+ * A horizontal row of connected [MillenniumSegmentedButton] segments.
+ *
+ * The row fills the available width and its [RowScope] lets each segment take an equal `weight(1f)`.
+ * Selection is not managed here; see [MillenniumSegmentedButton] for the caller-owned pattern.
+ *
+ * ```kotlin
+ * var selected by remember { mutableStateOf(0) }
+ * val labels = listOf("Day", "Week", "Month")
+ * MillenniumSegmentedButtonRow {
+ *     labels.forEachIndexed { index, label ->
+ *         MillenniumSegmentedButton(
+ *             selected = selected == index,
+ *             onClick = { selected = index },
+ *             shape = MillenniumSegmentedButtonDefaults.itemShape(index, labels.size),
+ *         ) { Text(label) }
+ *     }
+ * }
+ * ```
+ *
+ * @param modifier Modifier applied to the row (after `fillMaxWidth`).
+ * @param content The segments, declared in a [RowScope].
+ * @see MillenniumSegmentedButton
+ * @see MillenniumSegmentedButtonDefaults.itemShape
+ */
 @Composable
 fun MillenniumSegmentedButtonRow(
     modifier: Modifier = Modifier,
@@ -114,6 +190,51 @@ fun MillenniumSegmentedButtonRow(
  * typically [selected] at a time; the caller owns that state. Selection uses the accent
  * gel; the surrounding segments keep the enamel bevel. Customize through
  * [MillenniumTheme.segmentedButtonTheme].
+ *
+ * Behaviour: built on Compose Unstyled `UnstyledButton` (click, keyboard activation, button
+ * semantics, disabled state). The state resolves as disabled, pressed, keyboard-focused (ring only
+ * through `collectIsKeyboardFocusedAsState`), hovered, selected, default. Selected segments get the
+ * accent gel and an on-accent label; others use the enamel bevel (sunken when pressed or disabled).
+ * Foreground and border colours cross-fade; the segment scales with a spring (press uses the motion's
+ * `pressedScale`, hover grows 1.5% for unselected segments). The minimum height is 44dp and the
+ * pointer is a hand while enabled. Segments share the row width equally.
+ *
+ * Nullable parameters override single theme properties (`param ?: themeValue ?: fallback`).
+ *
+ * ```kotlin
+ * var sort by remember { mutableStateOf("Newest") }
+ * val options = listOf("Newest", "Popular")
+ * MillenniumSegmentedButtonRow {
+ *     options.forEachIndexed { i, option ->
+ *         MillenniumSegmentedButton(
+ *             selected = sort == option,
+ *             onClick = { sort = option },
+ *             shape = MillenniumSegmentedButtonDefaults.itemShape(i, options.size),
+ *         ) { Text(option) }
+ *     }
+ * }
+ * ```
+ *
+ * @param selected Whether this segment is the active one; caller-owned.
+ * @param onClick Called when the segment is activated; not called when disabled.
+ * @param shape Outline of the segment; use [MillenniumSegmentedButtonDefaults.itemShape] so only the
+ * outer row edges are rounded.
+ * @param modifier Modifier applied to the segment (the equal `weight(1f)` is added after it).
+ * @param enabled When `false` the segment ignores input and uses the disabled state.
+ * @param background Overrides the face brush; `null` falls back to the theme or selection-based default.
+ * @param foreground Overrides the label colour; `null` falls back to the theme or default.
+ * @param textStyle Overrides the label typography; `null` falls back to the theme.
+ * @param contentPadding Overrides the padding around the label; `null` falls back to the theme.
+ * @param minimumHeight Overrides the minimum height; `null` falls back to the theme (44dp).
+ * @param borderWidth Overrides the border thickness; `null` falls back to the state's value.
+ * @param borderColor Overrides the border colour; `null` falls back to the theme or palette.
+ * @param innerGlowColor Overrides the inner highlight; `null` falls back to the theme or palette.
+ * @param alpha Overrides the overall opacity; `null` falls back to the state's value.
+ * @param motion Overrides tween duration and press scale; `null` falls back to the theme.
+ * @param theme Theme supplying state properties; defaults to [MillenniumTheme.segmentedButtonTheme].
+ * @param content Segment label content, typically `Text`.
+ * @see MillenniumSegmentedButtonRow
+ * @see MillenniumSegmentedButtonTheme
  */
 @Composable
 fun RowScope.MillenniumSegmentedButton(
@@ -173,7 +294,7 @@ fun RowScope.MillenniumSegmentedButton(
         targetValue = when {
             !enabled -> 1f
             pressed -> resolvedMotion.pressedScale
-            hovered && !selected -> 1.015f
+            hovered && !selected -> resolvedMotion.hoverScale
             else -> 1f
         },
         animationSpec = spring(dampingRatio = 0.65f, stiffness = Spring.StiffnessMedium),

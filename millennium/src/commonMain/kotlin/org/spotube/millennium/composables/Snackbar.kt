@@ -1,5 +1,8 @@
 package org.spotube.millennium.composables
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -47,17 +50,53 @@ import org.spotube.millennium.theme.MillenniumTheme
 import org.spotube.millennium.theme.millenniumPanelBrush
 import org.spotube.millennium.theme.millenniumSurface
 
-/** How long a snackbar stays on screen. */
+/**
+ * How long a snackbar stays on screen. [MillenniumSnackbarHost] auto-dismisses a snackbar after [millis]
+ * unless it is [Indefinite].
+ *
+ * @property millis Display time in milliseconds; 0 for [Indefinite] (never auto-dismissed).
+ */
 enum class MillenniumSnackbarDuration(val millis: Long) {
+    /** Auto-dismisses after 4 seconds. */
     Short(4_000),
+
+    /** Auto-dismisses after 10 seconds. */
     Long(10_000),
+
+    /** Stays until dismissed by the caller or its action is performed. */
     Indefinite(0),
 }
 
-/** The outcome of a shown snackbar. */
-enum class MillenniumSnackbarResult { Dismissed, ActionPerformed }
+/**
+ * The outcome of a shown snackbar, returned by [MillenniumSnackbarHostState.showSnackbar].
+ */
+enum class MillenniumSnackbarResult {
+    /** The snackbar timed out or was dismissed programmatically (for example via `dismiss()`). */
+    Dismissed,
 
-/** Complete appearance configuration for [MillenniumSnackbarHost]. */
+    /** The user pressed the snackbar's action button. */
+    ActionPerformed,
+}
+
+/**
+ * Complete appearance configuration for [MillenniumSnackbarHost].
+ *
+ * Normally produced by [defaultMillenniumSnackbarTheme] and customised with `copy`.
+ *
+ * @property background Brush of the pill; `null` derives the palette panel brush (pearl/smoke glass).
+ * @property foreground Message text colour; `null` uses the palette text colour.
+ * @property actionForeground Action label colour; `null` uses the palette accent.
+ * @property shape Shape of the pill.
+ * @property margin Outer space around the pill (inside the host box).
+ * @property contentPadding Space between the pill edge and its content.
+ * @property borderColor Hairline colour; `null` uses the palette border colour.
+ * @property borderWidth Hairline thickness in dp.
+ * @property shadowElevation Shadow elevation in dp.
+ * @property innerGlowColor Inner highlight colour; `null` uses the palette highlight at 40% alpha.
+ * @property maxWidth Maximum pill width in dp (the pill is centered in the host).
+ * @property actionSpacing Gap in dp between the message and the action button.
+ * @property animationMillis Fade-in duration in ms; the exit animation uses 75% of it (minimum 120 ms).
+ */
 @Immutable
 data class MillenniumSnackbarThemeProperties(
     val background: Brush? = null,
@@ -75,9 +114,28 @@ data class MillenniumSnackbarThemeProperties(
     val animationMillis: Int,
 )
 
+/**
+ * Theme wrapper for [MillenniumSnackbarHost], installed as [MillenniumTheme.snackbarTheme].
+ *
+ * @property properties Snackbar appearance and animation.
+ * @see defaultMillenniumSnackbarTheme
+ */
 @Immutable
 data class MillenniumSnackbarTheme(val properties: MillenniumSnackbarThemeProperties)
 
+/**
+ * Creates the default snackbar theme: a 12dp rounded pearl/smoke glass pill, at most 600dp wide, with a 1dp
+ * hairline, 10dp shadow, 16x12dp content padding, 16x10dp margin, 12dp action spacing and a 200ms
+ * animation.
+ *
+ * Customise with `copy`:
+ * ```kotlin
+ * val base = defaultMillenniumSnackbarTheme()
+ * val theme = base.copy(properties = base.properties.copy(maxWidth = 480.dp, animationMillis = 260))
+ * ```
+ *
+ * @return A new [MillenniumSnackbarTheme].
+ */
 fun defaultMillenniumSnackbarTheme(): MillenniumSnackbarTheme = MillenniumSnackbarTheme(
     MillenniumSnackbarThemeProperties(
         shape = RoundedCornerShape(12.dp),
@@ -91,7 +149,16 @@ fun defaultMillenniumSnackbarTheme(): MillenniumSnackbarTheme = MillenniumSnackb
     ),
 )
 
-/** A single queued snackbar. */
+/**
+ * A single snackbar currently shown by [MillenniumSnackbarHost].
+ *
+ * Created only by [MillenniumSnackbarHostState.showSnackbar]; read via
+ * [MillenniumSnackbarHostState.currentSnackbarData] (for example to build a custom host).
+ *
+ * @property message Text shown in the pill.
+ * @property actionLabel Label of the optional action button, or `null` for no action.
+ * @property duration How long the snackbar stays visible.
+ */
 @Stable
 class MillenniumSnackbarData internal constructor(
     val message: String,
@@ -99,10 +166,12 @@ class MillenniumSnackbarData internal constructor(
     val duration: MillenniumSnackbarDuration,
     internal val continuation: CancellableContinuation<MillenniumSnackbarResult>,
 ) {
+    /** Resolves the pending `showSnackbar` call with [MillenniumSnackbarResult.Dismissed]; no-op if already resolved. */
     fun dismiss() {
         if (continuation.isActive) continuation.resumeWith(Result.success(MillenniumSnackbarResult.Dismissed))
     }
 
+    /** Resolves the pending `showSnackbar` call with [MillenniumSnackbarResult.ActionPerformed]; no-op if already resolved. */
     fun performAction() {
         if (continuation.isActive) continuation.resumeWith(Result.success(MillenniumSnackbarResult.ActionPerformed))
     }
@@ -111,14 +180,45 @@ class MillenniumSnackbarData internal constructor(
 /**
  * State holder for [MillenniumSnackbarHost]. Snackbars are shown one at a time; the
  * suspend call resolves when the snackbar is dismissed, times out, or its action runs.
+ *
+ * Create it in the caller (for example `remember { MillenniumSnackbarHostState() }`), pass the same instance
+ * to the host and call [showSnackbar] from a coroutine. Concurrent calls queue behind a mutex and are
+ * shown in order. There is no `rememberMillenniumSnackbarHostState` helper in this file.
+ *
+ * ```kotlin
+ * val snackbars = remember { MillenniumSnackbarHostState() }
+ * val scope = rememberCoroutineScope()
+ * Box(Modifier.fillMaxSize()) {
+ *     MillenniumButton(onClick = {
+ *         scope.launch {
+ *             val r = snackbars.showSnackbar("Track removed", actionLabel = "Undo")
+ *             if (r == MillenniumSnackbarResult.ActionPerformed) undoRemove()
+ *         }
+ *     }) { MillenniumText("Remove") }
+ *     MillenniumSnackbarHost(snackbars, Modifier.align(Alignment.BottomCenter))
+ * }
+ * ```
  */
 @Stable
 class MillenniumSnackbarHostState {
     private val mutex = Mutex()
     private var snackbarData by mutableStateOf<MillenniumSnackbarData?>(null)
 
+    /** The snackbar currently being shown, or `null` when none is; observable Compose state. */
     val currentSnackbarData: MillenniumSnackbarData? get() = snackbarData
 
+    /**
+     * Shows a snackbar and suspends until it ends.
+     *
+     * If another snackbar is showing this call waits for it first. Cancelling the calling coroutine removes
+     * the snackbar immediately.
+     *
+     * @param message Text to display.
+     * @param actionLabel Optional action button label; `null` shows no button.
+     * @param duration Display time; [MillenniumSnackbarDuration.Indefinite] waits until [dismiss] or the action.
+     * @return [MillenniumSnackbarResult.ActionPerformed] if the action was pressed, otherwise
+     * [MillenniumSnackbarResult.Dismissed].
+     */
     suspend fun showSnackbar(
         message: String,
         actionLabel: String? = null,
@@ -145,6 +245,43 @@ class MillenniumSnackbarHostState {
  * hairline, a shared shadow and a quiet accent action. Place it in the scaffold's
  * snackbar slot or align it inside a Box; it renders nothing when there is no snackbar
  * to show. Customize through [MillenniumTheme.snackbarTheme].
+ *
+ * Behaviour: the pill enters with a fade, a spring slide from below and a spring scale (0.92 to 1, origin at
+ * the bottom centre), and exits with a shorter fade, slide and scale. The auto-dismiss timer runs in a
+ * `LaunchedEffect` keyed by the current snackbar. The last shown snackbar is kept while the exit animation
+ * plays. Messages and the action label are plain text and the action is a quiet [MillenniumButton], so
+ * keyboard activation and a button role come from that button. The snackbar is a polite live region, so
+ * screen readers announce the message when it appears.
+ *
+ * ```kotlin
+ * val hostState = remember { MillenniumSnackbarHostState() }
+ * Box(Modifier.fillMaxSize()) {
+ *     MillenniumSnackbarHost(
+ *         hostState = hostState,
+ *         modifier = Modifier.align(Alignment.BottomCenter),
+ *         maxWidth = 480.dp,
+ *     )
+ * }
+ * ```
+ *
+ * @param hostState The caller-owned state whose current snackbar is rendered.
+ * @param modifier Modifier applied to the full-width host box that centers the pill.
+ * @param background Overrides the pill brush; `null` falls back to the theme, then the panel brush.
+ * @param foreground Overrides the message colour; `null` falls back to the theme, then the palette text colour.
+ * @param actionForeground Overrides the action label colour; `null` falls back to the theme, then the accent.
+ * @param shape Overrides the pill shape; `null` falls back to the theme.
+ * @param margin Overrides the outer margin; `null` falls back to the theme.
+ * @param contentPadding Overrides the inner padding; `null` falls back to the theme.
+ * @param borderColor Overrides the hairline colour; `null` falls back to the theme, then the palette border.
+ * @param borderWidth Overrides the hairline thickness; `null` falls back to the theme.
+ * @param shadowElevation Overrides the shadow elevation; `null` falls back to the theme.
+ * @param innerGlowColor Overrides the inner glow; `null` falls back to the theme, then the palette highlight.
+ * @param maxWidth Overrides the maximum pill width; `null` falls back to the theme.
+ * @param actionSpacing Overrides the gap before the action; `null` falls back to the theme.
+ * @param animationMillis Overrides the fade-in duration in ms; `null` falls back to the theme.
+ * @param theme Theme supplying defaults; defaults to [MillenniumTheme.snackbarTheme].
+ * @see MillenniumSnackbarHostState
+ * @see MillenniumSnackbarTheme
  */
 @Composable
 fun MillenniumSnackbarHost(
@@ -216,6 +353,8 @@ fun MillenniumSnackbarHost(
                 modifier = Modifier
                     .widthIn(max = maxWidth ?: properties.maxWidth)
                     .padding(margin ?: properties.margin)
+                    // Screen readers announce the message when it appears.
+                    .semantics { liveRegion = LiveRegionMode.Polite }
                     .millenniumSurface(
                         background = background ?: properties.background ?: millenniumPanelBrush(colors),
                         shape = shape ?: properties.shape,

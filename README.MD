@@ -60,9 +60,28 @@ dependencies {
 | Layout | `MillenniumScaffold` |
 | Actions | `MillenniumButton` (primary, secondary, quiet, danger), `MillenniumIconButton`, `MillenniumDisclosure` |
 | Inputs | `MillenniumCheckbox`, `MillenniumTriStateCheckbox`, `MillenniumSwitch`, `MillenniumTextField`, `MillenniumAutocomplete`, `MillenniumSlider`, `MillenniumRadioGroup`, `MillenniumSegmentedButton` |
-| Navigation | `MillenniumTabGroup`, `MillenniumDropdownMenu`, `MillenniumSidebar`, `MillenniumBottomNavigationBar`, `MillenniumTopAppBar`, `MillenniumListTile` |
-| Feedback | `MillenniumAvatar`, `MillenniumIcon`, `MillenniumProgress`, `MillenniumIndeterminateProgress`, `MillenniumScrollbar`, `MillenniumSeparator`, `MillenniumTooltip`, `MillenniumSnackbarHost`, `MillenniumPullToRefreshBox` |
-| Overlays | `MillenniumDialog`, `MillenniumDrawer`, `MillenniumBottomSheet`, `MillenniumModalBottomSheet` |
+| Navigation | `MillenniumTabGroup`, `MillenniumDropdownMenu` (+ bricks), `MillenniumSidebar` (+ bricks), `MillenniumBottomNavigationBar`, `MillenniumTopAppBar`, `MillenniumListTile` |
+| Display | `MillenniumText`, `MillenniumAvatar`, `MillenniumIcon`, `MillenniumScrollbar`, `MillenniumSeparator`, `MillenniumTooltip` |
+| Progress & loading | `MillenniumProgress`, `MillenniumStripedProgress`, `MillenniumShimmerProgress`, `MillenniumSegmentedProgress`, `MillenniumBufferedProgress`, `MillenniumIndeterminateProgress`, `MillenniumMarqueeProgress`, `MillenniumCircularProgress`, `MillenniumOrbSpinner`, `MillenniumSpokeSpinner`, `MillenniumDotsLoader`, `MillenniumBarsLoader`, `MillenniumPulseLoader`, `MillenniumSkeleton` |
+| Feedback | `MillenniumSnackbarHost`, `MillenniumPullToRefreshBox` |
+| Overlays | `MillenniumDialog` (+ bricks, `MillenniumAlertDialog`), `MillenniumDrawer`, `MillenniumBottomSheet`, `MillenniumModalBottomSheet` |
+
+### Design principles
+
+1. **Everything is a brick.** Complex components (sidebar, dropdown menu, dialog,
+   list tile, top app bar, autocomplete) are assembled from small composables rather
+   than configured with strings and flags. Anything that can be composed accepts a
+   composable slot; `String` overloads exist only as conveniences over the slotted form.
+2. **State is caller-owned.** Components never hide state you might need: pass
+   `expanded`/`checked`/`selected`/`TextFieldState` in and react to callbacks.
+   Hoisted helpers (`rememberMillenniumSidebarState`, `rememberMillenniumDrawerState`, …)
+   are optional.
+3. **Theme, then override.** Every composable takes a `theme` (default
+   `MillenniumTheme.<component>Theme`) and nullable named overrides for its common
+   visual knobs, resolved as `parameter ?: themeValue ?: fallback`.
+4. **Accessibility is inherited, not imitated.** Controls wrap Compose Unstyled
+   primitives; Millennium only adds visuals. Targets are 44dp and focus rings appear
+   for keyboard focus only.
 
 `MillenniumTopAppBar`, `MillenniumSegmentedButton`, `MillenniumSnackbarHost` and
 `MillenniumPullToRefreshBox` are themed like the rest: each owns a
@@ -164,6 +183,198 @@ MillenniumAutocomplete(
     menuFooter = { MillenniumText("↑ ↓ move · Enter choose · Esc close") },
 )
 ```
+
+#### Dropdown menu
+
+`MillenniumDropdownMenu` is the same style of composition as the sidebar. The root owns
+the anchored, animated panel; everything inside is a brick:
+
+| Brick | Role |
+| --- | --- |
+| `MillenniumDropdownMenuHeader` / `…Footer` | Fixed regions above and below the scrolling rows, with an optional divider |
+| `MillenniumDropdownMenuContent` | The scrolling region; a themed scrollbar appears only on overflow |
+| `MillenniumDropdownMenuFilter` | A search field wired to your own `TextFieldState` |
+| `MillenniumDropdownMenuGroup` / `…Label` / `…Separator` / `…Empty` | Structure, headings and empty states (label and empty take composables) |
+| `MillenniumDropdownMenuItem` | Slotted row: `leading`, `label`, `description`, `shortcut`, `trailing`, `selectedIndicator`; `selected` and `destructive` flags |
+| `MillenniumDropdownMenuCheckboxItem` | Toggle row that stays open by default |
+| `MillenniumDropdownMenuRadioGroup` + `…RadioItem` | One shared value among several rows |
+| `MillenniumDropdownMenuItemContainer` | The raw row surface, for completely custom rows |
+
+Inside any custom row, `MillenniumDropdownMenuItemIcon` and
+`LocalMillenniumDropdownMenuItemVisuals` follow the row's hover/press/destructive
+colours. The older `items: List<String>` overload remains as a one-liner convenience.
+
+```kotlin
+var expanded by remember { mutableStateOf(false) }
+var showLyrics by remember { mutableStateOf(true) }
+var quality by remember { mutableStateOf("High") }
+val filter = rememberTextFieldState()
+
+MillenniumDropdownMenu(
+    expanded = expanded,
+    onExpandedChange = { expanded = it },
+    anchor = { MillenniumButton({ expanded = !expanded }) { Text("Track options") } },
+) {
+    MillenniumDropdownMenuHeader { MillenniumDropdownMenuFilter(filter, placeholder = "Search") }
+    MillenniumDropdownMenuContent(maximumHeight = 280.dp) {
+        MillenniumDropdownMenuGroup {
+            MillenniumDropdownMenuLabel("TRACK")
+            MillenniumDropdownMenuItem(
+                label = "Add to playlist", onClick = {},
+                icon = MillenniumIcons.Music, shortcut = "Ctrl+P",
+            )
+            MillenniumDropdownMenuItem(
+                onClick = {},
+                leading = { MillenniumAvatar("KR", "Kingkor", size = 28.dp) },
+                description = { Text("Following") },
+                trailing = { MillenniumSidebarBadge("3") },
+            ) { Text("Kingkor Roy") }
+        }
+        MillenniumDropdownMenuSeparator()
+        MillenniumDropdownMenuCheckboxItem(showLyrics, { showLyrics = it }) { Text("Show lyrics") }
+        MillenniumDropdownMenuRadioGroup(quality, { quality = it }) {
+            listOf("Standard", "High", "Lossless").forEach { level ->
+                MillenniumDropdownMenuRadioItem(level) { Text(level) }
+            }
+        }
+        MillenniumDropdownMenuSeparator()
+        MillenniumDropdownMenuItem("Remove from library", onClick = {}, destructive = true)
+    }
+    MillenniumDropdownMenuFooter { MillenniumText("Quality: $quality") }
+}
+```
+
+Known limits: rows inside the scrolling region do not register with Compose Unstyled's
+panel focus list, so Home/End and keyboard-open initial focus do not land on the first
+row (arrow keys still move between rows once one is focused). Submenus are not
+implemented.
+
+#### Dialog
+
+`MillenniumDialog` is the scrim plus the animated panel; header, body and footer are
+bricks. The title bar, close cap and footer are all optional.
+
+| Brick | Role |
+| --- | --- |
+| `MillenniumDialogHeader` | Fixed title bar (a `RowScope`) with a hairline |
+| `MillenniumDialogTitle` | Takes the remaining header width (composable or `String`) |
+| `MillenniumDialogClose` | 44dp target that dismisses the dialog; custom content slot, default `MillenniumDialogCloseCap` |
+| `MillenniumDialogBody` | The region that scrolls when the dialog is taller than the screen |
+| `MillenniumDialogDescription` | Muted supporting text (composable or `String`) |
+| `MillenniumDialogFooter` | End-aligned action row, any `horizontalArrangement` |
+| `MillenniumAlertDialog` | Fully slotted confirmation: `icon`, `title`, `description`, `content`, `actions` |
+
+```kotlin
+var open by remember { mutableStateOf(false) }
+
+MillenniumDialog(visible = open, onDismissRequest = { open = false }) {
+    MillenniumDialogHeader {
+        MillenniumIcon(MillenniumIcons.Sparkle, tint = MillenniumTheme.colors.accent)
+        MillenniumDialogTitle { Text("Share playlist") }
+        MillenniumDialogClose()
+    }
+    MillenniumDialogBody {
+        MillenniumDialogDescription("Anyone with the link can listen.")
+        MillenniumTextField(rememberTextFieldState("The golden hour mix"), "Name")
+    }
+    MillenniumDialogFooter {
+        MillenniumButton({ open = false }, style = MillenniumButtonStyle.Secondary) { Text("Cancel") }
+        MillenniumButton({ open = false }) { Text("Share") }
+    }
+}
+
+MillenniumAlertDialog(
+    visible = confirm,
+    onDismissRequest = { confirm = false },
+    title = { Text("Delete this playlist?") },
+    description = { Text("This can’t be undone.") },
+    actions = {
+        MillenniumButton({ confirm = false }, style = MillenniumButtonStyle.Secondary) { Text("Keep it") }
+        MillenniumButton({ confirm = false }, style = MillenniumButtonStyle.Danger) { Text("Delete") }
+    },
+)
+```
+
+Overlays (`MillenniumDialog`, `MillenniumDrawer`, the modal bottom sheet) need
+finite, screen-sized constraints. Compose Unstyled's drawer viewport throws
+`Drawer Viewport requires finite maximum width and height constraints` when it is
+placed inside a scrolling column, so keep their state in a screen-sized root, as the
+sample catalog does with `DemoOverlays`.
+
+#### Progress and loading indicators
+
+Linear bars share the recessed track and gel fill of `MillenniumProgress`; round
+indicators and loaders draw from the same accent gel, so they follow the palette and
+dark mode automatically. All of them accept a `color` override (e.g.
+`MillenniumTheme.colors.success`), a `size`/`height`, and report
+`progressBarRangeInfo` (indeterminate when there is no value) plus a
+`contentDescription` to accessibility services. Shared knobs live in
+`MillenniumTheme.loadingTheme`.
+
+| Indicator | Kind | Notes |
+| --- | --- | --- |
+| `MillenniumProgress` | determinate | The gel bar |
+| `MillenniumStripedProgress` | determinate / endless | Barber pole; `progress = null` marches the whole track |
+| `MillenniumShimmerProgress` | determinate | A glint sweeps across the fill |
+| `MillenniumSegmentedProgress` | determinate / endless | Windows-style blocks; endless chases a lit group |
+| `MillenniumBufferedProgress` | determinate | Pale buffered region ahead of the playhead |
+| `MillenniumIndeterminateProgress` | endless | Bouncing gel chunk |
+| `MillenniumMarqueeProgress` | endless | Two bars sweeping at different speeds |
+| `MillenniumCircularProgress` | determinate / endless | Recessed ring with a gel arc; `content` slot for a label |
+| `MillenniumOrbSpinner` | endless | Glass orb with an orbiting comet |
+| `MillenniumSpokeSpinner` | endless | Classic fading ticks |
+| `MillenniumDotsLoader` | endless | Gel beads bouncing in a wave |
+| `MillenniumBarsLoader` | endless | Equalizer bars |
+| `MillenniumPulseLoader` | endless | Aqua ripples from a breathing bead |
+| `MillenniumSkeleton` | endless | Placeholder with a pearly glint |
+
+```kotlin
+MillenniumProgress(progress)
+MillenniumStripedProgress(progress = progress)          // determinate barber pole
+MillenniumStripedProgress()                              // endless barber pole
+MillenniumSegmentedProgress(progress = progress, segments = 10)
+MillenniumBufferedProgress(progress = 0.4f, buffered = 0.7f)
+
+MillenniumCircularProgress(progress = 0.72f, size = 56.dp) {
+    MillenniumText("72", weight = FontWeight.SemiBold)
+}
+MillenniumOrbSpinner(color = MillenniumTheme.colors.success)
+
+// A button that shows it is busy
+MillenniumButton(onClick = save, enabled = !saving) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (saving) MillenniumSpokeSpinner(size = 18.dp, color = MillenniumTheme.colors.onAccent)
+        Text(if (saving) "Saving…" else "Save")
+    }
+}
+
+// Placeholders shaped like the content that is loading
+Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    MillenniumSkeleton(Modifier.size(40.dp), shape = CircleShape)
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        MillenniumSkeleton(Modifier.width(180.dp).height(14.dp))
+        MillenniumSkeleton(Modifier.width(110.dp).height(10.dp))
+    }
+}
+```
+
+#### Icons
+
+`MillenniumIcons` is a small dependency-free vector set (`Sparkle`, `Music`, `Check`,
+`Chevron`). `MillenniumIcon` tints and sizes any `ImageVector`, following the
+control-state colours; inside rows of dropdown menus, use
+`MillenniumDropdownMenuItemIcon`, which follows the row's colours.
+
+```kotlin
+MillenniumIcon(MillenniumIcons.Sparkle, "Sparkle", tint = MillenniumTheme.colors.accent, size = 28.dp)
+```
+
+#### Sample catalog
+
+The sample's component catalog (`sample/sharedUI/.../catalog`) has one page per
+component, a flat searchable sidebar of all components, and per-page lists of the
+bricks a lego component is built from. To add a component page: write a demo in
+`catalog/demos/…Demos.kt` and register it in `CatalogRegistry.kt`.
 
 ### Hackable theme configuration
 
@@ -403,8 +614,8 @@ Sidebar bricks (`MillenniumSidebarHeader`, `...Content`, `...Footer`,
 
 Bottom sheets use Compose Unstyled's `rememberBottomSheetState` and
 `rememberModalBottomSheetState`; drawers use `rememberMillenniumDrawerState`.
-The shared gallery demonstrates every component, both themes, parent/child
-tri-state selection, input validation, indeterminate progress, and real overlays.
+The sample catalog demonstrates every component, both themes, parent/child
+tri-state selection, input validation, progress and loading indicators, and real overlays.
 
 ### Design & accessibility
 
@@ -434,9 +645,9 @@ line height so multiline titles remain readable.
 The sample initially opens **Aero / Design Study 01**, an isolated reference-led
 composition with interactive preferences, a music panel and bottom navigation.
 Its light/dark component overrides live in `sample/sharedUI/.../AeroDesignStudy.kt`,
-not the library defaults. Choose **Component gallery** to access the full gallery;
-**Back to design study** returns to the specimen. This direction is pending visual
-approval before it is applied throughout the library.
+not the library defaults. Open the **component catalog** from the study to browse
+every component (one page each, searchable, with live demos in light/dark and all
+palettes); the header's **Design study** button returns to the specimen.
 
  - Desktop JVM: `./gradlew :sample:desktopApp:run`
  - Android: `open project in Android Studio and run the sample app`

@@ -96,6 +96,55 @@ import org.spotube.millennium.theme.millenniumSurface
 import org.spotube.millennium.theme.millenniumInteractionSurface
 import org.spotube.millennium.theme.millenniumPanelBrush
 
+/**
+ * Resolved visual and layout properties for one control state of [MillenniumDropdownMenu].
+ *
+ * The panel reads only the `default` state of [MillenniumDropdownMenuTheme.states]; rows resolve the
+ * state that matches their own hover, focus, press, selected or disabled interaction. Nullable
+ * colours and brushes are derived from the active palette (`MillenniumTheme.colors`) when left null.
+ *
+ * @property panelBackground Fill of the floating panel. Null uses `millenniumPanelBrush(colors)`.
+ * @property panelShape Corner shape of the panel.
+ * @property panelBorderColor Panel hairline colour. Null uses `colors.border`.
+ * @property panelBorderWidth Panel hairline thickness.
+ * @property panelShadowElevation Drop-shadow elevation under the panel.
+ * @property panelGlowColor Inner top glow of the panel. Null uses `colors.highlight` at 50% alpha.
+ * @property minimumWidth Minimum width of the panel (applied with `widthIn(min = ...)`).
+ * @property sideOffset Gap between the anchor and the panel along the anchor side.
+ * @property panelPadding Padding between the panel edge and the column of bricks.
+ * @property itemBackground Row fill override for every row state. Null derives it per state
+ * (translucent wash for selected, accent bevel when hovered/focused/pressed, danger wash for
+ * destructive rows).
+ * @property itemShape Corner shape of a row.
+ * @property itemForeground Row text colour override. Null derives it from the state and variant.
+ * @property itemTextStyle Typography of the row label (also the base for the panel content).
+ * @property itemMinimumHeight Minimum row height; 44dp by default so rows are accessible touch targets.
+ * @property itemPadding Padding inside a row around its leading, label and trailing parts.
+ * @property itemSpacing Vertical spacing between rows and between bricks in the panel column and
+ * header/footer/content/group sections.
+ * @property stateAnimationMillis Duration of row colour, border and elevation transitions.
+ * @property openAnimationMillis Duration of the panel fade-in when it opens.
+ * @property closeAnimationMillis Duration of the panel exit transition.
+ * @property enterScale Initial scale of the panel when entering (spring towards 1).
+ * @property exitScale Target scale of the panel when exiting.
+ * @property alpha Overall opacity of the panel (panel default state) or of a row (row state).
+ * @property itemBorderColor Row border colour override. Null shows an accent or danger border only
+ * while the row is active.
+ * @property itemBorderWidth Row border thickness while it is shown.
+ * @property itemGlowColor Row inner glow override. Null uses a soft highlight on filled rows.
+ * @property itemWidth Fixed width of the panel's inner column, so row fills reach both panel edges.
+ * @property maximumHeight Height cap of [MillenniumDropdownMenuContent] before it scrolls.
+ * @property iconSize Size of [MillenniumDropdownMenuItemIcon] and of the checkbox/radio indicator slot.
+ * @property iconLabelSpacing Horizontal gap between leading, label, shortcut, trailing and indicator.
+ * @property descriptionTextStyle Typography of a row's [MillenniumDropdownMenuItem] description.
+ * @property shortcutTextStyle Typography of a row's shortcut hint.
+ * @property groupLabelStyle Typography of [MillenniumDropdownMenuLabel].
+ * @property groupLabelPadding Padding around a group label.
+ * @property sectionPadding Padding inside [MillenniumDropdownMenuHeader] and [MillenniumDropdownMenuFooter].
+ *
+ * @see MillenniumDropdownMenuTheme
+ * @see defaultMillenniumDropdownMenuTheme
+ */
 @Immutable
 data class MillenniumDropdownMenuThemeProperties(
     val panelBackground: Brush? = null,
@@ -136,11 +185,34 @@ data class MillenniumDropdownMenuThemeProperties(
     val sectionPadding: PaddingValues = PaddingValues(0.dp),
 )
 
+/**
+ * Theme of [MillenniumDropdownMenu] and all of its bricks, resolved per control state.
+ *
+ * Installed as `MillenniumTheme.dropdownMenuTheme`. Every dropdown brick accepts a `theme` parameter
+ * that defaults to it, so one instance can restyle a single menu without touching the global theme.
+ *
+ * @property states State-dependent [MillenniumDropdownMenuThemeProperties]. Panels use `default`; rows
+ * resolve `hovered`, `focused`, `pressed`, `disabled` or `selected` from their interaction state.
+ *
+ * @see defaultMillenniumDropdownMenuTheme
+ */
 @Immutable
 data class MillenniumDropdownMenuTheme(
     val states: MillenniumControlStateProperty<MillenniumDropdownMenuThemeProperties>,
 )
 
+/**
+ * Builds the stock dropdown-menu theme: a 12dp rounded pearl/smoke glass panel (200dp minimum, 8dp
+ * shadow, 4dp padding), 8dp rounded rows with a 44dp minimum height, 14sp medium labels, a 192dp inner
+ * column, a 320dp scroll cap, and spring-based open/close motion (180ms in, 130ms out). Hover and press
+ * slightly lower the alpha, disabled drops to 45%, and error thickens the border.
+ *
+ * Customise by copying: `defaultMillenniumDropdownMenuTheme().let { t -> t.copy(states =
+ * t.states.copy(default = t.states.default.copy(itemWidth = 240.dp))) }`.
+ *
+ * @return A fresh [MillenniumDropdownMenuTheme] with palette-derived colours left null.
+ * @see MillenniumDropdownMenuThemeProperties
+ */
 fun defaultMillenniumDropdownMenuTheme(): MillenniumDropdownMenuTheme {
     val base = MillenniumDropdownMenuThemeProperties(
         panelShape = RoundedCornerShape(12.dp),
@@ -175,25 +247,74 @@ fun defaultMillenniumDropdownMenuTheme(): MillenniumDropdownMenuTheme {
 // ---------------------------------------------------------------------------
 
 /**
- * A themed, caller-owned dropdown menu. Compose the panel from lego bricks:
+ * A themed, caller-owned dropdown menu. Compose the panel from lego bricks.
  *
- * ```
- * MillenniumDropdownMenu(expanded, onExpandedChange, anchor = { ... }) {
- *     MillenniumDropdownMenuHeader { MillenniumDropdownMenuFilter(filterState) }  // fixed
- *     MillenniumDropdownMenuContent {                                             // scrolls
+ * The menu is built on Compose Unstyled's `UnstyledDropdownMenu`, so open/close semantics, outside-click
+ * and Escape dismissal, and the focus handling of rows come from that primitive. The panel animates with
+ * an anchor-aware spring (scale, slide and expand from the trigger side) and leaves with a brisk
+ * fade/shrink. [expanded] is fully caller-owned; the menu only reports requests through
+ * [onExpandedChange] (outside click, Escape, or a row with `closeOnClick`).
+ *
+ * ```kotlin
+ * var expanded by remember { mutableStateOf(false) }
+ * var showLyrics by remember { mutableStateOf(true) }
+ * val filter = rememberTextFieldState()
+ *
+ * MillenniumDropdownMenu(
+ *     expanded = expanded,
+ *     onExpandedChange = { expanded = it },
+ *     anchor = { MillenniumButton(onClick = { expanded = true }) { Text("Track options") } },
+ * ) {
+ *     MillenniumDropdownMenuHeader { MillenniumDropdownMenuFilter(filter) }          // fixed
+ *     MillenniumDropdownMenuContent {                                                // scrolls
  *         MillenniumDropdownMenuGroup {
  *             MillenniumDropdownMenuLabel("Account")
  *             MillenniumDropdownMenuItem("Profile", onClick = {}, icon = MillenniumIcons.Music)
- *             MillenniumDropdownMenuCheckboxItem(checked, onChange, "Show lyrics")
+ *             MillenniumDropdownMenuCheckboxItem(showLyrics, { showLyrics = it }, "Show lyrics")
  *         }
  *         MillenniumDropdownMenuSeparator()
  *         MillenniumDropdownMenuItem("Delete", onClick = {}, destructive = true)
  *     }
- *     MillenniumDropdownMenuFooter { MillenniumText("3 results") }                // fixed
+ *     MillenniumDropdownMenuFooter { MillenniumText("3 results") }                   // fixed
  * }
  * ```
  *
- * Every brick is optional and any composable may sit between them.
+ * Every brick is optional and any composable may sit between them. Known limits: rows nested inside
+ * [MillenniumDropdownMenuContent] (the scrolling region) do not register with Compose Unstyled's panel
+ * focus list, so Home/End and opening by keyboard do not focus the first row (arrow movement between
+ * already focused rows still works). Submenus are not implemented.
+ *
+ * @param expanded Whether the panel is shown. Caller-owned.
+ * @param onExpandedChange Called with the requested new value when the menu wants to open or close.
+ * @param modifier Modifier applied to the anchor container.
+ * @param side Which side of the anchor the panel opens on; also selects the enter/exit animation direction.
+ * @param alignment How the panel aligns to the anchor along the cross axis.
+ * @param width Fixed width of the inner column. Null uses [MillenniumDropdownMenuThemeProperties.itemWidth].
+ * @param panelBackground Panel fill override; null falls back to the theme, then `millenniumPanelBrush`.
+ * @param panelShape Panel shape override; null falls back to the theme.
+ * @param panelBorderColor Panel border colour override; null falls back to the theme, then `colors.border`.
+ * @param panelBorderWidth Panel border thickness override; null falls back to the theme.
+ * @param panelShadowElevation Panel shadow override; null falls back to the theme.
+ * @param panelGlowColor Panel inner glow override; null falls back to the theme, then a soft highlight.
+ * @param minimumWidth Minimum panel width override; null falls back to the theme.
+ * @param sideOffset Gap between anchor and panel; null falls back to the theme.
+ * @param panelPadding Padding around the bricks; null falls back to the theme.
+ * @param sectionSpacing Vertical spacing between the direct children of the panel column; null falls
+ * back to [MillenniumDropdownMenuThemeProperties.itemSpacing].
+ * @param openAnimationMillis Fade-in duration; null falls back to the theme.
+ * @param closeAnimationMillis Exit duration; null falls back to the theme.
+ * @param enterScale Initial scale when entering; null falls back to the theme.
+ * @param exitScale Target scale when exiting; null falls back to the theme.
+ * @param alpha Panel opacity; null falls back to the theme.
+ * @param theme Component theme; defaults to `MillenniumTheme.dropdownMenuTheme`. Only its `default` state
+ * is used for the panel.
+ * @param anchor The trigger content (usually a button) the panel is positioned against.
+ * @param content The panel body, composed from the `MillenniumDropdownMenu*` bricks. Text inside inherits
+ * the item text style and `colors.text`.
+ * @see MillenniumDropdownMenuHeader
+ * @see MillenniumDropdownMenuContent
+ * @see MillenniumDropdownMenuFooter
+ * @see MillenniumDropdownMenuItem
  */
 @Composable
 fun MillenniumDropdownMenu(
@@ -330,9 +451,65 @@ fun MillenniumDropdownMenu(
 }
 
 /**
- * Convenience menu for a plain list of strings, built from the same bricks as the
- * composable overload. Reach for the lego overload when rows need icons, groups,
- * toggles, separators or any custom content.
+ * Convenience menu for a plain list of strings, built from the same bricks as the lego overload.
+ *
+ * Reach for the lego overload when rows need icons, groups, toggles, separators or any custom content.
+ * With `filterable = true` a header with a search field is added; the query lives in internal state and
+ * is cleared whenever the menu closes. Caller owns [expanded] and handles [onItemClick].
+ *
+ * ```kotlin
+ * var expanded by remember { mutableStateOf(false) }
+ * MillenniumDropdownMenu(
+ *     expanded = expanded,
+ *     onExpandedChange = { expanded = it },
+ *     items = listOf("Low", "High", "Lossless"),
+ *     onItemClick = { quality -> setQuality(quality) },
+ *     filterable = true,
+ *     anchor = { MillenniumButton(onClick = { expanded = true }) { Text("Quality") } },
+ * )
+ * ```
+ *
+ * @param expanded Whether the panel is shown. Caller-owned.
+ * @param onExpandedChange Called when the menu requests opening or closing.
+ * @param items The row labels, in display order.
+ * @param onItemClick Called with the clicked label; the menu then requests closing.
+ * @param modifier Modifier applied to the anchor container.
+ * @param side Side of the anchor the panel opens on.
+ * @param panelBackground Panel fill override; null falls back to the theme.
+ * @param panelShape Panel shape override; null falls back to the theme.
+ * @param panelBorderColor Panel border colour override; null falls back to the theme.
+ * @param panelBorderWidth Panel border thickness override; null falls back to the theme.
+ * @param panelShadowElevation Panel shadow override; null falls back to the theme.
+ * @param panelGlowColor Panel inner glow override; null falls back to the theme.
+ * @param minimumWidth Minimum panel width override; null falls back to the theme.
+ * @param sideOffset Anchor-to-panel gap override; null falls back to the theme.
+ * @param panelPadding Panel padding override; null falls back to the theme.
+ * @param itemBackground Row fill override; null falls back to the per-state theme/derived fill.
+ * @param itemShape Row shape override; null falls back to the theme.
+ * @param itemForeground Row text colour override; null falls back to the theme/derived colour.
+ * @param itemTextStyle Row label typography override; null falls back to the theme.
+ * @param itemMinimumHeight Minimum row height override; null falls back to the theme (44dp).
+ * @param itemPadding Row padding override; null falls back to the theme.
+ * @param itemSpacing Spacing between rows (and the panel's sections); null falls back to the theme.
+ * @param itemBorderColor Row border colour override; null falls back to the theme.
+ * @param itemBorderWidth Row border thickness override; null falls back to the theme.
+ * @param itemGlowColor Row inner glow override; null falls back to the theme.
+ * @param itemWidth Fixed inner column width; null falls back to the theme.
+ * @param maximumHeight Height at which the list starts to scroll; null falls back to the theme.
+ * @param filterable Show a search header that narrows [items].
+ * @param onFilter Custom filter producing the visible items from the query. Null uses a case-insensitive
+ * substring match. Only used when [filterable] is true and the query is not blank.
+ * @param filterPlaceholder Placeholder of the filter field.
+ * @param emptyText Text shown when no rows remain.
+ * @param stateAnimationMillis Row state transition duration; null falls back to the theme.
+ * @param openAnimationMillis Panel fade-in duration; null falls back to the theme.
+ * @param closeAnimationMillis Panel exit duration; null falls back to the theme.
+ * @param enterScale Initial panel scale when entering; null falls back to the theme.
+ * @param exitScale Target panel scale when exiting; null falls back to the theme.
+ * @param alpha Panel opacity; null falls back to the theme.
+ * @param theme Component theme; defaults to `MillenniumTheme.dropdownMenuTheme`.
+ * @param anchor The trigger content the panel is positioned against.
+ * @see MillenniumDropdownMenuItem
  */
 @Composable
 fun MillenniumDropdownMenu(
@@ -444,7 +621,25 @@ fun MillenniumDropdownMenu(
 // Sections: header / content / footer
 // ---------------------------------------------------------------------------
 
-/** Fixed top region (filters, titles, account summaries). Stays put while content scrolls. */
+/**
+ * Fixed top region of a menu (filters, titles, account summaries) that stays put while the content scrolls.
+ *
+ * Place it as the first child of [MillenniumDropdownMenu], before [MillenniumDropdownMenuContent].
+ * Children are laid out in a column; an optional hairline separates it from the rest.
+ *
+ * ```kotlin
+ * MillenniumDropdownMenuHeader { MillenniumDropdownMenuFilter(filterState, placeholder = "Search") }
+ * ```
+ *
+ * @param modifier Modifier for the header column.
+ * @param showDivider Draw a [MillenniumDropdownMenuSeparator] below the header.
+ * @param contentPadding Padding around the content; null uses [MillenniumDropdownMenuThemeProperties.sectionPadding].
+ * @param contentSpacing Spacing between children; null uses the theme's item spacing.
+ * @param theme Component theme; defaults to `MillenniumTheme.dropdownMenuTheme`.
+ * @param content Header content in a [ColumnScope].
+ * @see MillenniumDropdownMenuFooter
+ * @see MillenniumDropdownMenuFilter
+ */
 @Composable
 fun MillenniumDropdownMenuHeader(
     modifier: Modifier = Modifier,
@@ -465,8 +660,28 @@ fun MillenniumDropdownMenuHeader(
 }
 
 /**
- * The scrollable region. Its height is capped at [maximumHeight] and a themed
- * scrollbar appears only when the rows actually overflow.
+ * The scrollable region of a menu. Its height is capped at [maximumHeight] and a themed scrollbar
+ * appears only when the rows actually overflow.
+ *
+ * Put the rows, groups and separators here. Limit: rows inside this scroll region do not register with
+ * Compose Unstyled's panel focus list, so Home/End and keyboard-open initial focus do not land on the
+ * first row.
+ *
+ * ```kotlin
+ * MillenniumDropdownMenuContent(maximumHeight = 240.dp) {
+ *     tracks.forEach { MillenniumDropdownMenuItem(it.title, onClick = { play(it) }) }
+ * }
+ * ```
+ *
+ * @param modifier Modifier for the scroll container.
+ * @param maximumHeight Height cap before scrolling; null uses [MillenniumDropdownMenuThemeProperties.maximumHeight].
+ * @param contentSpacing Spacing between children; null uses the theme's item spacing.
+ * @param showScrollbar Whether a [MillenniumScrollbar] may be drawn on overflow (8dp end padding is
+ * reserved only while it is visible).
+ * @param theme Component theme; defaults to `MillenniumTheme.dropdownMenuTheme`.
+ * @param content Rows and bricks in a [ColumnScope].
+ * @see MillenniumDropdownMenuHeader
+ * @see MillenniumDropdownMenuFooter
  */
 @Composable
 fun MillenniumDropdownMenuContent(
@@ -492,7 +707,23 @@ fun MillenniumDropdownMenuContent(
     }
 }
 
-/** Fixed bottom region (actions, counts, hints). */
+/**
+ * Fixed bottom region of a menu (actions, counts, hints) that stays put while the content scrolls.
+ *
+ * Place it as the last child of [MillenniumDropdownMenu], after [MillenniumDropdownMenuContent].
+ *
+ * ```kotlin
+ * MillenniumDropdownMenuFooter { MillenniumText("Showing all results") }
+ * ```
+ *
+ * @param modifier Modifier for the footer column.
+ * @param showDivider Draw a [MillenniumDropdownMenuSeparator] above the footer.
+ * @param contentPadding Padding around the content; null uses [MillenniumDropdownMenuThemeProperties.sectionPadding].
+ * @param contentSpacing Spacing between children; null uses the theme's item spacing.
+ * @param theme Component theme; defaults to `MillenniumTheme.dropdownMenuTheme`.
+ * @param content Footer content in a [ColumnScope].
+ * @see MillenniumDropdownMenuHeader
+ */
 @Composable
 fun MillenniumDropdownMenuFooter(
     modifier: Modifier = Modifier,
@@ -512,7 +743,23 @@ fun MillenniumDropdownMenuFooter(
     }
 }
 
-/** A search field wired to caller-owned [state], usually placed in a header. */
+/**
+ * A search field wired to caller-owned [state], usually placed in a [MillenniumDropdownMenuHeader].
+ *
+ * A thin wrapper over [MillenniumTextField] that fills the available width. The caller filters its own
+ * rows from `state.text`; clear the state when the menu closes if the query should not persist.
+ *
+ * ```kotlin
+ * val filter = rememberTextFieldState()
+ * MillenniumDropdownMenuHeader { MillenniumDropdownMenuFilter(filter, placeholder = "Search actions") }
+ * ```
+ *
+ * @param state Caller-owned text state.
+ * @param modifier Modifier for the field (width is forced to fill).
+ * @param placeholder Hint shown while the field is empty.
+ * @param enabled Whether the field accepts input.
+ * @see MillenniumDropdownMenuHeader
+ */
 @Composable
 fun MillenniumDropdownMenuFilter(
     state: TextFieldState,
@@ -532,7 +779,24 @@ fun MillenniumDropdownMenuFilter(
 // Groups, labels, separators, empty state
 // ---------------------------------------------------------------------------
 
-/** A cluster of related rows, typically opened by a [MillenniumDropdownMenuLabel]. */
+/**
+ * A cluster of related rows, typically opened by a [MillenniumDropdownMenuLabel].
+ *
+ * Purely structural: a full-width column with item spacing. It does not add semantics.
+ *
+ * ```kotlin
+ * MillenniumDropdownMenuGroup {
+ *     MillenniumDropdownMenuLabel("Playback")
+ *     MillenniumDropdownMenuItem("Shuffle", onClick = {})
+ * }
+ * ```
+ *
+ * @param modifier Modifier for the column.
+ * @param contentSpacing Spacing between children; null uses the theme's item spacing.
+ * @param theme Component theme; defaults to `MillenniumTheme.dropdownMenuTheme`.
+ * @param content Group rows in a [ColumnScope].
+ * @see MillenniumDropdownMenuRadioGroup
+ */
 @Composable
 fun MillenniumDropdownMenuGroup(
     modifier: Modifier = Modifier,
@@ -546,7 +810,23 @@ fun MillenniumDropdownMenuGroup(
     ) { content() }
 }
 
-/** Non-interactive heading for a group. Any composable may go inside. */
+/**
+ * Non-interactive heading for a group; any composable may go inside.
+ *
+ * Text inherits the theme's group-label style and the muted palette colour.
+ *
+ * ```kotlin
+ * MillenniumDropdownMenuLabel { Text("Account") }
+ * ```
+ *
+ * @param modifier Modifier for the label box.
+ * @param textStyle Typography override; null uses [MillenniumDropdownMenuThemeProperties.groupLabelStyle].
+ * @param foreground Colour override; null uses `colors.muted`.
+ * @param contentPadding Padding override; null uses the theme's group label padding.
+ * @param theme Component theme; defaults to `MillenniumTheme.dropdownMenuTheme`.
+ * @param content Label content.
+ * @see MillenniumDropdownMenuGroup
+ */
 @Composable
 fun MillenniumDropdownMenuLabel(
     modifier: Modifier = Modifier,
@@ -566,6 +846,16 @@ fun MillenniumDropdownMenuLabel(
     }
 }
 
+/**
+ * String convenience overload of [MillenniumDropdownMenuLabel].
+ *
+ * @param text Heading text.
+ * @param modifier Modifier for the label box.
+ * @param textStyle Typography override; null falls back to the theme.
+ * @param foreground Colour override; null uses `colors.muted`.
+ * @param contentPadding Padding override; null falls back to the theme.
+ * @param theme Component theme; defaults to `MillenniumTheme.dropdownMenuTheme`.
+ */
 @Composable
 fun MillenniumDropdownMenuLabel(
     text: String,
@@ -578,7 +868,19 @@ fun MillenniumDropdownMenuLabel(
     MillenniumDropdownMenuLabel(modifier, textStyle, foreground, contentPadding, theme) { Text(text) }
 }
 
-/** A hairline between groups. */
+/**
+ * A hairline between groups, with 2dp of vertical padding.
+ *
+ * Renders a [MillenniumSeparator]; the [theme] parameter is accepted for API symmetry but is not read
+ * by the current implementation.
+ *
+ * ```kotlin
+ * MillenniumDropdownMenuSeparator()
+ * ```
+ *
+ * @param modifier Modifier for the separator.
+ * @param theme Component theme; defaults to `MillenniumTheme.dropdownMenuTheme` (currently unused).
+ */
 @Composable
 fun MillenniumDropdownMenuSeparator(
     modifier: Modifier = Modifier,
@@ -587,7 +889,21 @@ fun MillenniumDropdownMenuSeparator(
     MillenniumSeparator(modifier.padding(vertical = 2.dp))
 }
 
-/** Placeholder shown when a filtered list has no rows. Any composable may go inside. */
+/**
+ * Placeholder shown when a filtered list has no rows; any composable may go inside.
+ *
+ * Uses the item text style in the muted colour with the item padding.
+ *
+ * ```kotlin
+ * if (visible.isEmpty()) MillenniumDropdownMenuEmpty { Text("Nothing matches") }
+ * ```
+ *
+ * @param modifier Modifier for the placeholder box.
+ * @param textStyle Typography override; null uses the theme's item text style.
+ * @param contentPadding Padding override; null uses the theme's item padding.
+ * @param theme Component theme; defaults to `MillenniumTheme.dropdownMenuTheme`.
+ * @param content Placeholder content.
+ */
 @Composable
 fun MillenniumDropdownMenuEmpty(
     modifier: Modifier = Modifier,
@@ -602,6 +918,15 @@ fun MillenniumDropdownMenuEmpty(
     }
 }
 
+/**
+ * String convenience overload of [MillenniumDropdownMenuEmpty].
+ *
+ * @param text Placeholder text; defaults to "No results".
+ * @param modifier Modifier for the placeholder box.
+ * @param textStyle Typography override; null falls back to the theme.
+ * @param contentPadding Padding override; null falls back to the theme.
+ * @param theme Component theme; defaults to `MillenniumTheme.dropdownMenuTheme`.
+ */
 @Composable
 fun MillenniumDropdownMenuEmpty(
     text: String = "No results",
@@ -618,7 +943,21 @@ fun MillenniumDropdownMenuEmpty(
 // Items
 // ---------------------------------------------------------------------------
 
-/** Visual facts a row exposes to a custom content slot. */
+/**
+ * Visual facts a row exposes to its custom content slot.
+ *
+ * Created by [MillenniumDropdownMenuItemContainer] on each state change, handed to its `content`
+ * lambda, and also published through [LocalMillenniumDropdownMenuItemVisuals] for descendants. Colours
+ * are already animated, so custom content can read them directly.
+ *
+ * @property state The resolved interaction state (disabled, pressed, focused, hovered, selected or default).
+ * @property selected Whether the row is marked as the current value.
+ * @property destructive Whether the row uses the danger palette.
+ * @property foreground Current label colour (white on filled hover rows, red when destructive).
+ * @property mutedForeground Current colour for secondary text such as descriptions and shortcuts.
+ * @property iconTint Current colour for icons (accent when selected, muted otherwise).
+ * @see MillenniumDropdownMenuItemContainer
+ */
 @Immutable
 data class MillenniumDropdownMenuItemVisuals(
     val state: MillenniumControlState,
@@ -629,10 +968,41 @@ data class MillenniumDropdownMenuItemVisuals(
     val iconTint: Color,
 )
 
-/** Hands the resolved row colours to any composable inside a row, e.g. [MillenniumDropdownMenuItemIcon]. */
+/**
+ * Hands the resolved row colours to any composable inside a row, e.g. [MillenniumDropdownMenuItemIcon].
+ *
+ * Provided by [MillenniumDropdownMenuItemContainer]; the value is null outside of a row, in which case
+ * consumers fall back to their own defaults. Read-only: do not provide it yourself.
+ *
+ * ```kotlin
+ * val visuals = LocalMillenniumDropdownMenuItemVisuals.current
+ * Box(Modifier.size(8.dp).background(visuals?.iconTint ?: Color.Gray, CircleShape))
+ * ```
+ *
+ * @see MillenniumDropdownMenuItemVisuals
+ */
 val LocalMillenniumDropdownMenuItemVisuals = staticCompositionLocalOf<MillenniumDropdownMenuItemVisuals?> { null }
 
-/** An icon that follows the row's state colours (white on a hovered gel row, red when destructive). */
+/**
+ * An icon that follows the row's state colours (white on a hovered gel row, red when destructive).
+ *
+ * Reads [LocalMillenniumDropdownMenuItemVisuals] for its tint, so place it inside a row slot. Pass
+ * [contentDescription] only when the icon carries meaning that the label does not.
+ *
+ * ```kotlin
+ * MillenniumDropdownMenuItem(onClick = {}, leading = { MillenniumDropdownMenuItemIcon(MillenniumIcons.Music) }) {
+ *     Text("Playlists")
+ * }
+ * ```
+ *
+ * @param imageVector The icon to draw.
+ * @param modifier Modifier for the icon.
+ * @param contentDescription Accessibility description; null marks it decorative.
+ * @param tint Explicit tint; null uses the row's `iconTint`, then the icon default.
+ * @param size Icon size; null uses [MillenniumDropdownMenuThemeProperties.iconSize].
+ * @param theme Component theme; defaults to `MillenniumTheme.dropdownMenuTheme`.
+ * @see MillenniumIcon
+ */
 @Composable
 fun MillenniumDropdownMenuItemIcon(
     imageVector: ImageVector,
@@ -652,11 +1022,52 @@ fun MillenniumDropdownMenuItemIcon(
 }
 
 /**
- * A standard row where every part is a slot: [leading] (icon, avatar, indicator),
- * the [label] content, an optional [description] beneath it, a [shortcut] hint and
- * a [trailing] slot. Text inside the slots inherits the row's style and colours.
- * [selected] marks the current value with [selectedIndicator]; [destructive]
- * switches to the danger palette.
+ * A standard row where every part is a slot.
+ *
+ * Layout is [leading] (icon, avatar, indicator), the [label] with an optional [description] beneath it,
+ * a [shortcut] hint, a [trailing] slot, and the [selectedIndicator] shown when [selected]. Text inside
+ * the slots inherits the row's style and colours. The row is a Compose Unstyled dropdown item, so it has
+ * button semantics, keyboard activation and a minimum height of 44dp. Hover, focus and press show an
+ * accent gel row with spring scale; the focus look appears only for keyboard focus. [destructive]
+ * switches to the danger palette. Use [MillenniumDropdownMenuItemContainer] when the layout itself must
+ * be custom.
+ *
+ * ```kotlin
+ * MillenniumDropdownMenuItem(
+ *     onClick = { open(profile) },
+ *     leading = { MillenniumAvatar("K", "Kingkor", size = 28.dp) },
+ *     description = { Text("Following") },
+ *     trailing = { MillenniumSidebarBadge("3") },
+ * ) { Text("Kingkor Roy") }
+ * ```
+ *
+ * @param onClick Called when the row is activated.
+ * @param modifier Modifier applied to the row surface.
+ * @param enabled Disabled rows are muted, not focusable, and ignore clicks.
+ * @param selected Marks the row as the current value (soft accent wash plus [selectedIndicator]).
+ * @param destructive Use the danger palette (for delete-style actions).
+ * @param closeOnClick Whether activating the row requests closing the menu.
+ * @param leading Content before the label; a spacing gap is added when non-null.
+ * @param description Secondary text under the label, in the muted colour.
+ * @param shortcut Hint at the end of the row (e.g. a key combination), in the muted colour.
+ * @param trailing Content after the shortcut.
+ * @param selectedIndicator Content shown after the row while [selected]; defaults to a check icon, null hides it.
+ * @param background Row fill override; null falls back to the theme, then a state-derived fill.
+ * @param foreground Label colour override; null falls back to the theme, then a state-derived colour.
+ * @param shape Row shape override; null falls back to the theme.
+ * @param textStyle Label typography override; null falls back to the theme.
+ * @param minimumHeight Minimum row height override; null falls back to the theme (44dp).
+ * @param contentPadding Padding inside the row; null falls back to the theme.
+ * @param borderColor Border colour override; null falls back to the theme, then accent/danger while active.
+ * @param borderWidth Border thickness override; null falls back to the theme.
+ * @param innerGlowColor Inner glow override; null falls back to the theme.
+ * @param stateAnimationMillis State transition duration; null falls back to the theme.
+ * @param alpha Row opacity override; null falls back to the per-state theme alpha.
+ * @param theme Component theme; defaults to `MillenniumTheme.dropdownMenuTheme`.
+ * @param label The label content.
+ * @see MillenniumDropdownMenuItemContainer
+ * @see MillenniumDropdownMenuCheckboxItem
+ * @see MillenniumDropdownMenuRadioItem
  */
 @Composable
 fun MillenniumDropdownMenuItem(
@@ -730,7 +1141,39 @@ fun MillenniumDropdownMenuItem(
     }
 }
 
-/** String/icon convenience over the slotted [MillenniumDropdownMenuItem]. */
+/**
+ * String/icon convenience over the slotted [MillenniumDropdownMenuItem].
+ *
+ * The selected indicator keeps its default check icon; use the slotted overload to change it.
+ *
+ * ```kotlin
+ * MillenniumDropdownMenuItem("Share", onClick = {}, description = "Copy a link", icon = MillenniumIcons.Sparkle)
+ * ```
+ *
+ * @param label Row text.
+ * @param onClick Called when the row is activated.
+ * @param modifier Modifier applied to the row surface.
+ * @param enabled Disabled rows are muted and ignore clicks.
+ * @param selected Marks the row as the current value.
+ * @param destructive Use the danger palette.
+ * @param closeOnClick Whether activating the row requests closing the menu.
+ * @param icon Optional leading icon drawn with [MillenniumDropdownMenuItemIcon].
+ * @param description Optional secondary text under the label.
+ * @param shortcut Optional hint at the end of the row.
+ * @param trailing Optional content after the shortcut.
+ * @param background Row fill override; null falls back to the theme.
+ * @param foreground Label colour override; null falls back to the theme.
+ * @param shape Row shape override; null falls back to the theme.
+ * @param textStyle Label typography override; null falls back to the theme.
+ * @param minimumHeight Minimum height override; null falls back to the theme (44dp).
+ * @param contentPadding Row padding override; null falls back to the theme.
+ * @param borderColor Border colour override; null falls back to the theme.
+ * @param borderWidth Border thickness override; null falls back to the theme.
+ * @param innerGlowColor Inner glow override; null falls back to the theme.
+ * @param stateAnimationMillis State transition duration; null falls back to the theme.
+ * @param alpha Row opacity override; null falls back to the theme.
+ * @param theme Component theme; defaults to `MillenniumTheme.dropdownMenuTheme`.
+ */
 @Composable
 fun MillenniumDropdownMenuItem(
     label: String,
@@ -783,7 +1226,44 @@ fun MillenniumDropdownMenuItem(
     ) { Text(label) }
 }
 
-/** The raw row surface: a row with fully custom content that receives the resolved [MillenniumDropdownMenuItemVisuals]. */
+/**
+ * The raw row surface: a row with fully custom content that receives the resolved
+ * [MillenniumDropdownMenuItemVisuals].
+ *
+ * It owns interaction (hover, keyboard-only focus ring, press), the state-derived fill, border,
+ * elevation and spring scale, and the pointer cursor, and wraps a Compose Unstyled dropdown item so
+ * button semantics and keyboard activation are preserved. It also provides
+ * [LocalMillenniumDropdownMenuItemVisuals] to its content. Prefer [MillenniumDropdownMenuItem] unless the
+ * internal layout must be custom.
+ *
+ * ```kotlin
+ * MillenniumDropdownMenuItemContainer(onClick = { select(track) }) { visuals ->
+ *     MillenniumText(track.title, color = visuals.foreground, modifier = Modifier.weight(1f))
+ *     MillenniumText(track.length, color = visuals.mutedForeground)
+ * }
+ * ```
+ *
+ * @param onClick Called when the row is activated.
+ * @param modifier Modifier applied to the row surface.
+ * @param enabled Disabled rows are muted and ignore input.
+ * @param selected Marks the row as the current value (soft accent wash).
+ * @param destructive Use the danger palette.
+ * @param closeOnClick Whether activating the row requests closing the menu.
+ * @param background Row fill override; null falls back to the theme, then a state-derived fill.
+ * @param foreground Label colour override; null falls back to the theme, then a state-derived colour.
+ * @param shape Row shape override; null falls back to the theme.
+ * @param minimumHeight Minimum height override; null falls back to the theme (44dp).
+ * @param contentPadding Padding inside the row; null falls back to the theme.
+ * @param borderColor Border colour override; null falls back to the theme.
+ * @param borderWidth Border thickness override; null falls back to the theme.
+ * @param innerGlowColor Inner glow override; null falls back to the theme.
+ * @param stateAnimationMillis State transition duration; null falls back to the theme.
+ * @param alpha Row opacity override; null falls back to the per-state theme alpha.
+ * @param theme Component theme; defaults to `MillenniumTheme.dropdownMenuTheme`.
+ * @param content Row content in a [RowScope], given the resolved visuals; vertically centred.
+ * @see MillenniumDropdownMenuItem
+ * @see MillenniumDropdownMenuItemVisuals
+ */
 @Composable
 fun MillenniumDropdownMenuItemContainer(
     onClick: () -> Unit,
@@ -920,8 +1400,32 @@ fun MillenniumDropdownMenuItemContainer(
 // ---------------------------------------------------------------------------
 
 /**
- * A toggleable row; [label], [description] and [shortcut] are slots. Stays open by
- * default so several options can be changed in one visit.
+ * A toggleable row; [label], [description] and [shortcut] are slots. Stays open by default so several
+ * options can be changed in one visit.
+ *
+ * Exposes `Role.Checkbox` with a toggleable state to accessibility services. The [indicator] sits in a
+ * fixed icon-size leading slot and pops in with a spring when [checked] becomes true. State is
+ * caller-owned: the row only reports the requested value.
+ *
+ * ```kotlin
+ * var showLyrics by remember { mutableStateOf(true) }
+ * MillenniumDropdownMenuCheckboxItem(showLyrics, { showLyrics = it }, shortcut = { Text("L") }) {
+ *     Text("Show lyrics")
+ * }
+ * ```
+ *
+ * @param checked Current value.
+ * @param onCheckedChange Called with the negated value when the row is activated.
+ * @param modifier Modifier applied to the row (semantics are merged onto it).
+ * @param enabled Disabled rows are muted and ignore clicks.
+ * @param closeOnClick Whether toggling also closes the menu; false by default.
+ * @param indicator Mark drawn while checked; defaults to a check icon that follows row colours.
+ * @param description Optional secondary text under the label.
+ * @param shortcut Optional hint at the end of the row.
+ * @param trailing Optional content after the shortcut.
+ * @param theme Component theme; defaults to `MillenniumTheme.dropdownMenuTheme`.
+ * @param label The label content.
+ * @see MillenniumDropdownMenuRadioItem
  */
 @Composable
 fun MillenniumDropdownMenuCheckboxItem(
@@ -944,6 +1448,8 @@ fun MillenniumDropdownMenuCheckboxItem(
             toggleableState = ToggleableState(checked)
         },
         enabled = enabled,
+        selected = checked,
+        selectedIndicator = null,
         closeOnClick = closeOnClick,
         leading = { DropdownIndicatorSlot(checked, theme.states.default.iconSize, indicator) },
         description = description,
@@ -954,6 +1460,23 @@ fun MillenniumDropdownMenuCheckboxItem(
     )
 }
 
+/**
+ * String convenience overload of the slotted [MillenniumDropdownMenuCheckboxItem].
+ *
+ * ```kotlin
+ * MillenniumDropdownMenuCheckboxItem(checked, { checked = it }, "Crossfade", shortcut = "C")
+ * ```
+ *
+ * @param checked Current value.
+ * @param onCheckedChange Called with the negated value when activated.
+ * @param label Row text.
+ * @param modifier Modifier applied to the row.
+ * @param enabled Disabled rows are muted and ignore clicks.
+ * @param closeOnClick Whether toggling also closes the menu; false by default.
+ * @param description Optional secondary text.
+ * @param shortcut Optional hint at the end of the row.
+ * @param theme Component theme; defaults to `MillenniumTheme.dropdownMenuTheme`.
+ */
 @Composable
 fun MillenniumDropdownMenuCheckboxItem(
     checked: Boolean,
@@ -974,15 +1497,41 @@ fun MillenniumDropdownMenuCheckboxItem(
     ) { Text(label) }
 }
 
+/**
+ * Internal holder that shares a radio group's selected value with its items through [LocalDropdownRadioScope].
+ */
 @Stable
 private class DropdownRadioScope(
     val value: Any?,
     val onValueChange: (Any?) -> Unit,
 )
 
+/**
+ * Provided by [MillenniumDropdownMenuRadioGroup]; null when a radio item is used outside a group.
+ */
 private val LocalDropdownRadioScope = staticCompositionLocalOf<DropdownRadioScope?> { null }
 
-/** Shares one selected [value] among the [MillenniumDropdownMenuRadioItem]s inside it. */
+/**
+ * Shares one selected [value] among the [MillenniumDropdownMenuRadioItem]s inside it.
+ *
+ * Renders a [MillenniumDropdownMenuGroup] column. Selection is caller-owned: items call
+ * [onValueChange] with their own value and the caller stores it.
+ *
+ * ```kotlin
+ * var quality by remember { mutableStateOf("High") }
+ * MillenniumDropdownMenuRadioGroup(quality, { quality = it }) {
+ *     listOf("Low", "High", "Lossless").forEach { MillenniumDropdownMenuRadioItem(it, it) }
+ * }
+ * ```
+ *
+ * @param T Type of the values compared and reported.
+ * @param value Currently selected value.
+ * @param onValueChange Called with the value of the activated item.
+ * @param modifier Modifier for the group column.
+ * @param theme Component theme; defaults to `MillenniumTheme.dropdownMenuTheme`.
+ * @param content The radio items (and any other bricks) in a [ColumnScope].
+ * @see MillenniumDropdownMenuRadioItem
+ */
 @Composable
 fun <T> MillenniumDropdownMenuRadioGroup(
     value: T,
@@ -1000,7 +1549,29 @@ fun <T> MillenniumDropdownMenuRadioGroup(
     }
 }
 
-/** One choice in a [MillenniumDropdownMenuRadioGroup]; [label] and [description] are slots. */
+/**
+ * One choice in a [MillenniumDropdownMenuRadioGroup]; [label] and [description] are slots.
+ *
+ * Exposes `Role.RadioButton` with a selected state. The row is selected when its [value] equals the
+ * group's value; outside a group it is never selected and clicks do nothing. Stays open by default.
+ *
+ * ```kotlin
+ * MillenniumDropdownMenuRadioItem("Lossless", description = { Text("FLAC, larger files") }) { Text("Lossless") }
+ * ```
+ *
+ * @param T Type of the value.
+ * @param value The value this item represents.
+ * @param modifier Modifier applied to the row.
+ * @param enabled Disabled rows are muted and ignore clicks.
+ * @param closeOnClick Whether choosing also closes the menu; false by default.
+ * @param indicator Mark shown while selected; defaults to an 8dp dot in the row's icon tint.
+ * @param description Optional secondary text under the label.
+ * @param shortcut Optional hint at the end of the row.
+ * @param trailing Optional content after the shortcut.
+ * @param theme Component theme; defaults to `MillenniumTheme.dropdownMenuTheme`.
+ * @param label The label content.
+ * @see MillenniumDropdownMenuRadioGroup
+ */
 @Composable
 fun <T> MillenniumDropdownMenuRadioItem(
     value: T,
@@ -1028,6 +1599,8 @@ fun <T> MillenniumDropdownMenuRadioItem(
             selected = isSelected
         },
         enabled = enabled,
+        selected = isSelected,
+        selectedIndicator = null,
         closeOnClick = closeOnClick,
         leading = { DropdownIndicatorSlot(isSelected, theme.states.default.iconSize, indicator) },
         description = description,
@@ -1038,6 +1611,18 @@ fun <T> MillenniumDropdownMenuRadioItem(
     )
 }
 
+/**
+ * String convenience overload of the slotted [MillenniumDropdownMenuRadioItem].
+ *
+ * @param T Type of the value.
+ * @param value The value this item represents.
+ * @param label Row text.
+ * @param modifier Modifier applied to the row.
+ * @param enabled Disabled rows are muted and ignore clicks.
+ * @param closeOnClick Whether choosing also closes the menu; false by default.
+ * @param description Optional secondary text.
+ * @param theme Component theme; defaults to `MillenniumTheme.dropdownMenuTheme`.
+ */
 @Composable
 fun <T> MillenniumDropdownMenuRadioItem(
     value: T,
@@ -1055,6 +1640,9 @@ fun <T> MillenniumDropdownMenuRadioItem(
     ) { Text(label) }
 }
 
+/**
+ * Fixed-size leading box that springs its indicator in and out; keeps label alignment stable when unchecked.
+ */
 @Composable
 private fun DropdownIndicatorSlot(visible: Boolean, size: Dp, content: @Composable () -> Unit) {
     Box(Modifier.size(size), contentAlignment = Alignment.Center) {
@@ -1067,6 +1655,9 @@ private fun DropdownIndicatorSlot(visible: Boolean, size: Dp, content: @Composab
 }
 
 
+/**
+ * Preview showing the full lego composition (filter, groups, toggles, radios, footer).
+ */
 @Preview
 @Composable
 private fun MillenniumDropdownMenuPreview() = MillenniumPreview {

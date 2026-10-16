@@ -13,7 +13,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 
-/** Shared light-theme frame used by the component previews. */
+/**
+ * Shared light-theme frame used by the component previews: installs [MillenniumTheme] (light), paints
+ * [MillenniumColors.background], pads by 24dp and caps the content column at 480dp.
+ *
+ * ```kotlin
+ * @Preview
+ * @Composable
+ * private fun ButtonPreview() = MillenniumPreview {
+ *     MillenniumButton(onClick = { }) { Text("Save") }
+ * }
+ * ```
+ *
+ * @param content Preview content, laid out in a [Column].
+ */
 @Composable
 fun MillenniumPreview(content: @Composable () -> Unit) {
     MillenniumTheme(dark = false) {
@@ -27,6 +40,7 @@ fun MillenniumPreview(content: @Composable () -> Unit) {
     }
 }
 
+/** Sample preview of [MillenniumPreview] with heading and muted caption text. */
 @Preview
 @Composable
 private fun MillenniumDefaultPreview() {

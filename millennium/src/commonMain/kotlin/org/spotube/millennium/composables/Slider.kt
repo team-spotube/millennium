@@ -48,6 +48,30 @@ import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
 import org.spotube.millennium.theme.millenniumInteractionSurface
 
+/**
+ * State-specific appearance and layout of a [MillenniumSlider].
+ *
+ * @property trackBackground Track brush; `null` = sunken bevel.
+ * @property activeTrackBackground Filled-portion brush; `null` = accent gel.
+ * @property thumbBackground Thumb brush; `null` = raised bevel.
+ * @property trackShape Outline of the track and its filled portion; default fully rounded (50%).
+ * @property thumbShape Thumb outline; default 6dp rounded rectangle.
+ * @property trackHeight Track thickness; default `10.dp`.
+ * @property thumbSize Resting thumb size; default `24.dp`. The track is inset by half of the default
+ * state's value so the fill endpoint meets the thumb centre.
+ * @property activeThumbSize Thumb size while pressed or dragged; default `26.dp`.
+ * @property touchTargetHeight Minimum height of the whole slider; default `44.dp`.
+ * @property trackBorderColor Track border; `null` = danger in error, otherwise the palette border.
+ * @property trackBorderWidth Track border thickness; `1.dp`, `2.dp` in error.
+ * @property thumbBorderColor Thumb border; `null` = accent when focused/hovered/pressed, danger in error, else palette border.
+ * @property thumbBorderWidth Thumb border thickness; `1.dp`, `2.dp` when focused or in error.
+ * @property thumbElevation Thumb drop-shadow elevation; `4.dp`, `2.dp` while pressed.
+ * @property thumbGlowColor Thumb inner highlight; `null` = palette highlight at 55%.
+ * @property stateAnimationMillis Duration in ms of the thumb border tween and interaction lighting. Default `120`.
+ * @property alpha Overall opacity; `0.45f` when disabled.
+ * @property thumbBottomRimColor Thumb lower inner rim; `null` = palette highlight at 60%.
+ * @property trackInsetShadeColor Inner shade at the track's top edge; `null` = text colour at 10%.
+ */
 @Immutable
 data class MillenniumSliderThemeProperties(
     val trackBackground: Brush? = null,
@@ -71,11 +95,34 @@ data class MillenniumSliderThemeProperties(
     val trackInsetShadeColor: Color? = null,
 )
 
+/**
+ * Theme for [MillenniumSlider]: one [MillenniumSliderThemeProperties] per control state.
+ * Installed as [MillenniumTheme.sliderTheme].
+ *
+ * @property states Properties for each control state (default, hovered, focused, pressed, disabled,
+ * selected, error).
+ * @see defaultMillenniumSliderTheme
+ */
 @Immutable
 data class MillenniumSliderTheme(
     val states: MillenniumControlStateProperty<MillenniumSliderThemeProperties>,
 )
 
+/**
+ * Creates the default [MillenniumSliderTheme].
+ *
+ * A 10dp fully rounded recessed track with a gel fill, a 24dp rounded-rectangle thumb that grows to
+ * 26dp while dragged, a 44dp minimum touch height, 4dp thumb shadow (2dp pressed) and 120ms tweens.
+ * Focused uses a 2dp thumb border; error uses 2dp track and thumb borders; disabled uses
+ * `alpha = 0.45f`. Colours are `null` and follow the palette. Customise with `copy`:
+ *
+ * ```kotlin
+ * val base = defaultMillenniumSliderTheme()
+ * val thick = base.copy(states = base.states.copy(default = base.states.default.copy(trackHeight = 14.dp)))
+ * ```
+ *
+ * @return A new default theme.
+ */
 fun defaultMillenniumSliderTheme(): MillenniumSliderTheme {
     val base = MillenniumSliderThemeProperties(
         trackShape = RoundedCornerShape(50),
@@ -102,6 +149,63 @@ fun defaultMillenniumSliderTheme(): MillenniumSliderTheme {
     )
 }
 
+/**
+ * A horizontal value slider with a recessed gel track and a beveled thumb.
+ *
+ * Use it to pick a continuous value (or discrete steps) from a range, such as volume or progress
+ * scrubbing. The value is caller-owned: pass [value] and update it in [onValueChange].
+ *
+ * Built on Compose Unstyled `UnstyledSlider`, which provides drag/tap handling, slider semantics and
+ * keyboard adjustment; [label] is applied as the content description. The slider fills the available
+ * width with a 44dp default minimum height. State resolves as disabled, pressed/dragged,
+ * keyboard-focused (`collectIsKeyboardFocusedAsState`, no ring after pointer presses), hovered,
+ * default. The thumb grows from [thumbSize] to [activeThumbSize] with a spring while pressed or dragged,
+ * its border colour tweens and its shadow animates. The track is inset by half a thumb so the filled
+ * portion ends at the thumb centre. The hand cursor is shown while enabled.
+ *
+ * Nullable parameters override single theme properties (`param ?: themeValue ?: fallback`).
+ *
+ * ```kotlin
+ * var volume by remember { mutableStateOf(0.68f) }
+ * MillenniumSlider(
+ *     value = volume,
+ *     onValueChange = { volume = it },
+ *     label = "Volume",
+ *     onValueChangeFinished = { println("volume settled at $volume") },
+ * )
+ * ```
+ *
+ * @param value Current value, expected within [valueRange]; caller-owned.
+ * @param onValueChange Called continuously with the new value while the user drags or presses keys.
+ * @param label Accessibility description of the slider (announced by screen readers); required.
+ * @param modifier Modifier applied to the slider (after the hand cursor and before fill-width).
+ * @param enabled When `false` the slider ignores input and uses the disabled state (45% alpha by default).
+ * @param valueRange Inclusive range of selectable values; default `0f..1f`.
+ * @param steps Number of discrete stops between the range ends; `0` (default) means continuous.
+ * @param onValueChangeFinished Called when a drag or key interaction ends; `null` (default) for none.
+ * @param trackBackground Overrides the track brush; `null` falls back to the theme or sunken bevel.
+ * @param activeTrackBackground Overrides the filled-portion brush; `null` falls back to the theme or accent gel.
+ * @param thumbBackground Overrides the thumb brush; `null` falls back to the theme or raised bevel.
+ * @param trackShape Overrides the track outline; `null` falls back to the theme.
+ * @param thumbShape Overrides the thumb outline; `null` falls back to the theme.
+ * @param trackHeight Overrides the track thickness; `null` falls back to the theme (10dp).
+ * @param thumbSize Overrides the resting thumb size; `null` falls back to the theme (24dp).
+ * @param activeThumbSize Overrides the pressed/dragged thumb size; `null` falls back to the theme (26dp).
+ * @param touchTargetHeight Overrides the minimum slider height; `null` falls back to the theme (44dp).
+ * @param trackBorderColor Overrides the track border colour; `null` falls back to the theme or palette.
+ * @param trackBorderWidth Overrides the track border thickness; `null` falls back to the state's value.
+ * @param thumbBorderColor Overrides the thumb border colour; `null` falls back to the theme or palette.
+ * @param thumbBorderWidth Overrides the thumb border thickness; `null` falls back to the state's value.
+ * @param thumbElevation Overrides the thumb shadow elevation; `null` falls back to the state's value.
+ * @param thumbGlowColor Overrides the thumb inner highlight; `null` falls back to the theme or palette.
+ * @param thumbBottomRimColor Overrides the thumb lower inner rim; `null` falls back to the theme or palette.
+ * @param trackInsetShadeColor Overrides the track inner shade; `null` falls back to the theme or 10% text colour.
+ * @param stateAnimationMillis Overrides the tween duration; `null` falls back to the theme.
+ * @param alpha Overrides the overall opacity; `null` falls back to the state's value.
+ * @param theme Theme supplying state properties; defaults to [MillenniumTheme.sliderTheme].
+ * @see MillenniumSliderTheme
+ * @see MillenniumProgress
+ */
 @Composable
 fun MillenniumSlider(
     value: Float,

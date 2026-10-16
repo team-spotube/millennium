@@ -32,7 +32,33 @@ import org.spotube.millennium.theme.MillenniumStyledContent
 import org.spotube.millennium.theme.MillenniumTheme
 import org.spotube.millennium.theme.millenniumPanelBrush
 
-/** Complete, theme-owned appearance and layout configuration for [MillenniumTopAppBar]. */
+/**
+ * Complete, theme-owned appearance and layout configuration for [MillenniumTopAppBar].
+ *
+ * Every nullable color or brush is derived from the active palette when left `null`. Use `copy`
+ * to adjust a single value and wrap the result in [MillenniumTopAppBarTheme].
+ *
+ * @property titleStyle Text style of the title. It is also the ambient style for the navigation
+ *   and actions slots, so icons-with-text in those slots inherit its size and weight.
+ * @property subtitleStyle Text style of the optional subtitle line.
+ * @property titleForeground Title color; `null` uses the palette's primary text color.
+ * @property subtitleForeground Subtitle color; `null` uses the palette's muted text color.
+ * @property navigationForeground Ambient content color of the navigation slot; `null` uses the
+ *   palette's text color.
+ * @property actionForeground Ambient content color of the actions row; `null` uses the palette's
+ *   text color.
+ * @property background Fill of the whole bar; `null` paints the shared pearl/smoked glass panel
+ *   brush ([millenniumPanelBrush]).
+ * @property contentPadding Padding between the bar's edges and its navigation/title/actions row.
+ * @property minimumHeight Minimum height of the content row (excluding window insets and the
+ *   1dp hairline). The bar grows when its content is taller.
+ * @property navigationSpacing Horizontal gap between the navigation slot and the title column.
+ * @property actionSpacing Horizontal gap between sibling actions.
+ * @property separatorColor Color of the 1dp hairline along the bottom edge; `null` uses the
+ *   palette's border color.
+ * @see MillenniumTopAppBar
+ * @see defaultMillenniumTopAppBarTheme
+ */
 @Immutable
 data class MillenniumTopAppBarThemeProperties(
     val titleStyle: TextStyle,
@@ -49,11 +75,36 @@ data class MillenniumTopAppBarThemeProperties(
     val separatorColor: Color? = null,
 )
 
+/**
+ * Theme wrapper for [MillenniumTopAppBar], exposed as [MillenniumTheme.topAppBarTheme].
+ *
+ * Pass a custom instance through the `theme` parameter of one bar, or install it globally
+ * through the [MillenniumTheme] configuration.
+ *
+ * ```kotlin
+ * val dense = defaultMillenniumTopAppBarTheme().let {
+ *     MillenniumTopAppBarTheme(it.properties.copy(minimumHeight = 44.dp))
+ * }
+ * MillenniumTopAppBar(title = { MillenniumText("Dense") }, theme = dense)
+ * ```
+ *
+ * @property properties The resolved appearance and layout values.
+ * @see MillenniumTopAppBarThemeProperties
+ */
 @Immutable
 data class MillenniumTopAppBarTheme(
     val properties: MillenniumTopAppBarThemeProperties,
 )
 
+/**
+ * Builds the default [MillenniumTopAppBarTheme].
+ *
+ * Defaults: 18sp semibold title, 12sp subtitle, 14dp by 8dp content padding, a 56dp minimum
+ * row height, 10dp navigation gap, 4dp action gap, and every color and the background brush left
+ * `null` so they follow the active light or dark palette (glass panel fill, palette text,
+ * muted subtitle and a border-colored hairline). Customise with `copy` on
+ * [MillenniumTopAppBarTheme.properties].
+ */
 fun defaultMillenniumTopAppBarTheme(): MillenniumTopAppBarTheme = MillenniumTopAppBarTheme(
     MillenniumTopAppBarThemeProperties(
         titleStyle = TextStyle(fontSize = 18.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold),
@@ -70,6 +121,65 @@ fun defaultMillenniumTopAppBarTheme(): MillenniumTopAppBarTheme = MillenniumTopA
  * actions row, finished with a hairline. Colors, typography, spacing, the glass fill and
  * the separator all resolve from [MillenniumTheme.topAppBarTheme], so it matches
  * [MillenniumScaffold]'s integrated bar and the rest of the system.
+ *
+ * Layout is a single row: the [navigationIcon] slot, a weighted column holding the [title] and the
+ * optional [subtitle], and the [actions] row, followed by a 1dp separator. The bar fills the
+ * available width, is at least `minimumHeight` tall and does not consume system insets unless you
+ * pass [windowInsets]. It is purely presentational: it has no state and does not scroll or
+ * collapse. Slots are wrapped in `MillenniumStyledContent`, so plain text inherits the themed style
+ * and color, while [MillenniumIconButton] and other controls keep their own colors. The title and
+ * action buttons are ordinary focusable controls, so keyboard focus and 44dp targets come from the
+ * components you place in the slots (for example [MillenniumIconButton]); the bar adds no
+ * semantics of its own.
+ *
+ * ```kotlin
+ * MillenniumTopAppBar(
+ *     title = { MillenniumText("Library") },
+ *     subtitle = { MillenniumText("128 tracks") },
+ *     navigationIcon = {
+ *         MillenniumIconButton(MillenniumIcons.Chevron, "Back", onClick = { navigator.back() },
+ *             style = MillenniumIconButtonStyle.Quiet)
+ *     },
+ *     actions = {
+ *         MillenniumIconButton(MillenniumIcons.Sparkle, "Favorite", onClick = { favorite() },
+ *             style = MillenniumIconButtonStyle.Quiet)
+ *     },
+ *     windowInsets = WindowInsets.statusBars,
+ * )
+ * ```
+ *
+ * @param title The title content. Defaults to empty.
+ * @param modifier Modifier applied to the outer column (fill width, background, insets).
+ * @param subtitle Optional second line under the title; `null` omits it.
+ * @param navigationIcon Leading slot, typically a back or menu button. Defaults to empty, but the
+ *   [navigationSpacing] gap is still reserved.
+ * @param actions Trailing slot laid out in a [Row] with [actionSpacing] between items.
+ * @param windowInsets Insets applied as padding inside the background. Defaults to zero so the bar
+ *   can be embedded; pass `WindowInsets.statusBars` or `safeDrawing` when it sits at the screen top.
+ * @param titleStyle Overrides the theme title style (also the ambient style of the navigation and
+ *   action slots); `null` uses the theme.
+ * @param subtitleStyle Overrides the theme subtitle style; `null` uses the theme.
+ * @param titleForeground Overrides the title color; `null` falls back to the theme, then the
+ *   palette text color.
+ * @param subtitleForeground Overrides the subtitle color; `null` falls back to the theme, then the
+ *   palette muted color.
+ * @param navigationForeground Overrides the navigation slot color; `null` falls back to the theme,
+ *   then the palette text color.
+ * @param actionForeground Overrides the actions color; `null` falls back to the theme, then the
+ *   palette text color.
+ * @param background Overrides the bar fill; `null` falls back to the theme, then the glass panel
+ *   brush.
+ * @param contentPadding Overrides the row padding; `null` uses the theme.
+ * @param minimumHeight Overrides the minimum row height; `null` uses the theme.
+ * @param navigationSpacing Overrides the gap after the navigation slot; `null` uses the theme.
+ * @param actionSpacing Overrides the gap between actions; `null` uses the theme.
+ * @param separatorColor Overrides the bottom hairline color; `null` falls back to the theme, then
+ *   the palette border color.
+ * @param theme Theme supplying defaults for every nullable override above. Defaults to
+ *   [MillenniumTheme.topAppBarTheme].
+ * @see MillenniumScaffold
+ * @see MillenniumIconButton
+ * @see MillenniumTopAppBarTheme
  */
 @Composable
 fun MillenniumTopAppBar(
@@ -148,6 +258,7 @@ fun MillenniumTopAppBar(
     }
 }
 
+/** Design-time preview of [MillenniumTopAppBar] with navigation, subtitle and two actions. */
 @Preview
 @Composable
 private fun MillenniumTopAppBarPreview() = MillenniumPreview {

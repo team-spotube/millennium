@@ -71,7 +71,26 @@ import org.spotube.millennium.theme.millenniumSurface
 // Theme
 // ---------------------------------------------------------------------------
 
-/** Shared knobs for the extra progress bars and the infinite loading indicators. */
+/**
+ * Shared knobs for the extra progress bars and the infinite loading indicators in this file.
+ *
+ * Normally produced by [defaultMillenniumLoadingTheme] and customised with `copy`. All composables here
+ * resolve only [MillenniumControlState.Default] from the owning [MillenniumLoadingTheme]; individual
+ * composables derive some values from these (for example half or one and a half times
+ * [animationMillis]) so one setting speeds up the whole family.
+ *
+ * @property size Base diameter in dp of circular indicators; spinners derive theirs from it (orb: +8dp,
+ * spoke: -8dp, pulse: +16dp).
+ * @property thickness Ring thickness in dp of [MillenniumCircularProgress].
+ * @property linearHeight Height in dp of the extra linear bars (striped, segmented, buffered, marquee, shimmer).
+ * @property animationMillis Duration in ms of one loop of an infinite animation (scaled per variant).
+ * @property stripeWidth Width in dp of one barber-pole stripe in [MillenniumStripedProgress].
+ * @property segmentCount Default number of blocks in [MillenniumSegmentedProgress].
+ * @property segmentSpacing Gap in dp between the segmented blocks.
+ * @property color Replaces the palette accent when set (a gel is built from it); `null` uses the accent gel.
+ * @property trackColor Ring track colour of [MillenniumCircularProgress]; `null` uses the palette inset colour.
+ * @property alpha Overall opacity multiplier (1 = opaque).
+ */
 @Immutable
 data class MillenniumLoadingThemeProperties(
     /** Default diameter of circular indicators and spinners. */
@@ -92,11 +111,31 @@ data class MillenniumLoadingThemeProperties(
     val alpha: Float = 1f,
 )
 
+/**
+ * Theme for the loading indicators and extra progress bars, grouping [MillenniumLoadingThemeProperties] per
+ * control state and installed as [MillenniumTheme.loadingTheme].
+ *
+ * @property states State-resolved properties; every composable here resolves [MillenniumControlState.Default].
+ * @see defaultMillenniumLoadingTheme
+ */
 @Immutable
 data class MillenniumLoadingTheme(
     val states: MillenniumControlStateProperty<MillenniumLoadingThemeProperties>,
 )
 
+/**
+ * Creates the default loading theme: 40dp indicators with a 6dp ring, 14dp tall linear bars, 12dp barber
+ * stripes, 12 segments with 3dp gaps, a 1300ms base loop, the palette accent as colour and 45% opacity when
+ * disabled.
+ *
+ * Customise with `copy`:
+ * ```kotlin
+ * val base = defaultMillenniumLoadingTheme()
+ * val calm = base.copy(states = base.states.copy(default = base.states.default.copy(animationMillis = 2000)))
+ * ```
+ *
+ * @return A new [MillenniumLoadingTheme].
+ */
 fun defaultMillenniumLoadingTheme(): MillenniumLoadingTheme {
     val base = MillenniumLoadingThemeProperties(
         size = 40.dp,
@@ -124,7 +163,7 @@ fun defaultMillenniumLoadingTheme(): MillenniumLoadingTheme {
 // Shared helpers
 // ---------------------------------------------------------------------------
 
-/** The accent's gel endpoints, or a gel built from a caller-supplied [color]. */
+/** Internal: the accent's gel endpoints, or a gel built from a caller-supplied colour. */
 private class LoadingGel(val top: Color, val bottom: Color) {
     val brush: Brush get() = gelBrush(top, bottom)
     val glow: Color get() = bottom
@@ -150,6 +189,12 @@ private fun loopingPhase(millis: Int, easing: androidx.compose.animation.core.Ea
         label = "phase",
     )
 
+/**
+ * Internal: sets `contentDescription` to [label] and `progressBarRangeInfo` to the clamped [progress]
+ * (0..1), or `ProgressBarRangeInfo.Indeterminate` when [progress] is null. Used by every indicator here
+ * except [MillenniumSkeleton], which is silent unless you pass a `contentDescription` (give one skeleton in a
+ * group a description rather than every placeholder).
+ */
 private fun Modifier.loadingSemantics(progress: Float?, label: String): Modifier = semantics {
     contentDescription = label
     progressBarRangeInfo = if (progress == null) {
@@ -161,7 +206,7 @@ private fun Modifier.loadingSemantics(progress: Float?, label: String): Modifier
 
 private fun wrap01(value: Float): Float = value - floor(value)
 
-/** Recessed track shared by every linear variant, matching [MillenniumProgress]. */
+/** Internal: recessed track shared by every linear variant, matching [MillenniumProgress]; carries the semantics. */
 @Composable
 private fun LinearTrack(
     modifier: Modifier,
@@ -205,7 +250,30 @@ private fun DrawScope.glossBand(color: Color = Color.White) {
 
 /**
  * Classic barber-pole bar: gel fill with diagonal stripes that march to the right.
- * With a null [progress] the whole track is a marching pole (indeterminate).
+ *
+ * With a null [progress] the fill spans the whole track and only the stripes move (indeterminate). A given
+ * [progress] animates the fill with a spring (damping 0.8) and the stripes keep marching on top, with a gloss band over the upper half.
+ * Accessibility: sets `contentDescription` and `progressBarRangeInfo` (0..1 when [progress] is given, `ProgressBarRangeInfo.Indeterminate` when null).
+ *
+ * ```kotlin
+ * MillenniumStripedProgress(
+ *     progress = uploaded / total.toFloat(),
+ *     modifier = Modifier.fillMaxWidth(),
+ *     contentDescription = "Uploading",
+ * )
+ * ```
+ *
+ *
+ * @param modifier Modifier applied to the indicator (linear bars already fill the max width).
+ * @param progress Completed fraction 0..1 (clamped), or `null` for the indeterminate marching pole.
+ * @param height Overrides the bar height; `null` falls back to the theme linear height.
+ * @param color Overrides the accent; `null` falls back to the theme colour, then the palette accent gel.
+ * @param shape Overrides the track and fill shape; `null` uses a fully rounded shape.
+ * @param stripeWidth Overrides the stripe width; `null` falls back to the theme.
+ * @param animationMillis Overrides the loop duration in ms; `null` falls back to half of the theme `animationMillis`.
+ * @param contentDescription Accessibility label announced by screen readers; defaults to "Progress". Localise it for your app.
+ * @param theme Theme supplying defaults (size, durations, tint, opacity); defaults to [MillenniumTheme.loadingTheme].
+ * @see MillenniumProgress
  */
 @Composable
 fun MillenniumStripedProgress(
@@ -255,7 +323,33 @@ fun MillenniumStripedProgress(
     }
 }
 
-/** Determinate gel bar with a bright glint that sweeps across the fill. */
+/**
+ * Determinate gel bar with a bright glint that sweeps across the fill.
+ *
+ * Use it for a prominent task where plain [MillenniumProgress] feels too quiet. The fill animates with a spring and a
+ * white glint loops across it using `FastOutSlowInEasing`.
+ * Accessibility: sets `contentDescription` and `progressBarRangeInfo` (0..1 for [progress]); it is never
+ * indeterminate because [progress] is required.
+ *
+ * ```kotlin
+ * MillenniumShimmerProgress(
+ *     progress = 0.62f,
+ *     modifier = Modifier.fillMaxWidth(),
+ *     contentDescription = "Installing",
+ * )
+ * ```
+ *
+ *
+ * @param progress Completed fraction 0..1 (clamped).
+ * @param modifier Modifier applied to the indicator (linear bars already fill the max width).
+ * @param height Overrides the bar height; `null` falls back to the theme linear height.
+ * @param color Overrides the accent; `null` falls back to the theme colour, then the palette accent gel.
+ * @param shape Overrides the track and fill shape; `null` uses a fully rounded shape.
+ * @param animationMillis Overrides the loop duration in ms; `null` falls back to one and a half times the theme `animationMillis`.
+ * @param contentDescription Accessibility label announced by screen readers; defaults to "Progress". Localise it for your app.
+ * @param theme Theme supplying defaults (size, durations, tint, opacity); defaults to [MillenniumTheme.loadingTheme].
+ * @see MillenniumStripedProgress
+ */
 @Composable
 fun MillenniumShimmerProgress(
     progress: Float,
@@ -300,8 +394,31 @@ fun MillenniumShimmerProgress(
 }
 
 /**
- * Windows-style blocks. Determinate when [progress] is set; otherwise a lit group
- * of blocks chases along the track.
+ * Windows-style progress made of separate recessed blocks.
+ *
+ * Determinate when [progress] is set (blocks light up one by one, the boundary block fades in proportionally); otherwise a lit group
+ * of blocks chases along the track with a fading tail.
+ * Accessibility: sets `contentDescription` and `progressBarRangeInfo` (0..1 when [progress] is given, `ProgressBarRangeInfo.Indeterminate` when null).
+ *
+ * ```kotlin
+ * MillenniumSegmentedProgress(
+ *     progress = 0.5f,
+ *     segments = 10,
+ *     contentDescription = "Scanning",
+ * )
+ * ```
+ *
+ *
+ * @param modifier Modifier applied to the indicator (linear bars already fill the max width).
+ * @param progress Completed fraction 0..1 (clamped), or `null` for the chasing animation.
+ * @param segments Overrides the block count (at least 1); `null` falls back to the theme `segmentCount`.
+ * @param height Overrides the bar height; `null` falls back to the theme linear height.
+ * @param color Overrides the accent; `null` falls back to the theme colour, then the palette accent gel.
+ * @param spacing Overrides the gap between blocks; `null` falls back to the theme.
+ * @param animationMillis Overrides the loop duration in ms; `null` falls back to one and a half times the theme `animationMillis`.
+ * @param contentDescription Accessibility label announced by screen readers; defaults to "Progress". Localise it for your app.
+ * @param theme Theme supplying defaults (size, durations, tint, opacity); defaults to [MillenniumTheme.loadingTheme].
+ * @see MillenniumProgress
  */
 @Composable
 fun MillenniumSegmentedProgress(
@@ -360,7 +477,32 @@ fun MillenniumSegmentedProgress(
     }
 }
 
-/** Streaming-style bar: a pale buffered region ahead of the gel playhead. */
+/**
+ * Streaming-style bar: a pale buffered region ahead of the gel playhead.
+ *
+ * Use it for media playback or downloads that expose both position and buffered amount. Both values animate with springs. The buffered
+ * region is never shorter than [progress].
+ * Accessibility: sets `contentDescription` and `progressBarRangeInfo` for [progress] only; the buffered amount is not exposed.
+ *
+ * ```kotlin
+ * MillenniumBufferedProgress(
+ *     progress = position / duration,
+ *     buffered = bufferedPosition / duration,
+ *     contentDescription = "Playback position",
+ * )
+ * ```
+ *
+ *
+ * @param progress Played fraction 0..1 (clamped).
+ * @param buffered Buffered fraction 0..1; values below [progress] are raised to it.
+ * @param modifier Modifier applied to the indicator (linear bars already fill the max width).
+ * @param height Overrides the bar height; `null` falls back to the theme linear height.
+ * @param color Overrides the accent; `null` falls back to the theme colour, then the palette accent gel.
+ * @param shape Overrides the track and fill shape; `null` uses a fully rounded shape.
+ * @param contentDescription Accessibility label announced by screen readers; defaults to "Progress". Localise it for your app.
+ * @param theme Theme supplying defaults (size, durations, tint, opacity); defaults to [MillenniumTheme.loadingTheme].
+ * @see MillenniumShimmerProgress
+ */
 @Composable
 fun MillenniumBufferedProgress(
     progress: Float,
@@ -393,7 +535,26 @@ fun MillenniumBufferedProgress(
     }
 }
 
-/** Two gel bars that sweep through the track at different speeds. */
+/**
+ * Two gel bars that sweep through the track at different speeds.
+ *
+ * An indeterminate bar for work of unknown length. Each bar uses `FastOutSlowInEasing`, the second is half a loop out of phase and narrower.
+ * Accessibility: sets `contentDescription` and `ProgressBarRangeInfo.Indeterminate`, so it is announced as a busy indicator.
+ *
+ * ```kotlin
+ * MillenniumMarqueeProgress(contentDescription = "Connecting")
+ * ```
+ *
+ *
+ * @param modifier Modifier applied to the indicator (linear bars already fill the max width).
+ * @param height Overrides the bar height; `null` falls back to the theme linear height.
+ * @param color Overrides the accent; `null` falls back to the theme colour, then the palette accent gel.
+ * @param shape Overrides the track and fill shape; `null` uses a fully rounded shape.
+ * @param animationMillis Overrides the loop duration in ms; `null` falls back to one and a half times the theme `animationMillis`.
+ * @param contentDescription Accessibility label announced by screen readers; defaults to "Loading". Localise it for your app.
+ * @param theme Theme supplying defaults (size, durations, tint, opacity); defaults to [MillenniumTheme.loadingTheme].
+ * @see MillenniumIndeterminateProgress
+ */
 @Composable
 fun MillenniumMarqueeProgress(
     modifier: Modifier = Modifier,
@@ -433,8 +594,30 @@ fun MillenniumMarqueeProgress(
 // ---------------------------------------------------------------------------
 
 /**
- * Round gel progress with a recessed ring. Pass a null [progress] for an endlessly
- * spinning, breathing arc. [content] is centered inside the ring, e.g. a percentage.
+ * Round gel progress with a recessed ring.
+ *
+ * Pass a null [progress] for an endlessly spinning, breathing arc (the sweep grows and shrinks between 40 and 290 degrees while rotating);
+ * otherwise the arc starts at the top and fills clockwise with a spring. A reflection arc rides the outer edge. [content] is centered inside the ring, e.g. a percentage.
+ * Accessibility: sets `contentDescription` and `progressBarRangeInfo` (0..1 when [progress] is given, `ProgressBarRangeInfo.Indeterminate` when null).
+ *
+ * ```kotlin
+ * MillenniumCircularProgress(progress = 0.7f, size = 64.dp, contentDescription = "Sync progress") {
+ *     MillenniumText("70%")
+ * }
+ * ```
+ *
+ *
+ * @param modifier Modifier applied to the indicator (linear bars already fill the max width).
+ * @param progress Completed fraction 0..1 (clamped), or `null` for the spinning arc.
+ * @param size Overrides the diameter; `null` falls back to the theme size.
+ * @param thickness Overrides the ring thickness; `null` falls back to the theme.
+ * @param color Overrides the accent; `null` falls back to the theme colour, then the palette accent gel.
+ * @param trackColor Overrides the ring track colour; `null` falls back to the theme, then the palette inset colour.
+ * @param animationMillis Overrides the loop duration in ms; `null` falls back to the theme `animationMillis` (rotation); the breathing cycle uses two thirds of it.
+ * @param contentDescription Accessibility label announced by screen readers; defaults to "Progress". Localise it for your app.
+ * @param theme Theme supplying defaults (size, durations, tint, opacity); defaults to [MillenniumTheme.loadingTheme].
+ * @param content Optional content centered inside the ring; `null` for none.
+ * @see MillenniumOrbSpinner
  */
 @Composable
 fun MillenniumCircularProgress(
@@ -512,6 +695,22 @@ fun MillenniumCircularProgress(
 
 /**
  * A glassy blue orb with a comet of light orbiting it, in the spirit of the Vista busy cursor.
+ *
+ * The orb gently pulses while the comet ring rotates once per loop. Indeterminate only.
+ * Accessibility: sets `contentDescription` and `ProgressBarRangeInfo.Indeterminate`, so it is announced as a busy indicator.
+ *
+ * ```kotlin
+ * MillenniumOrbSpinner(size = 56.dp, contentDescription = "Loading tracks")
+ * ```
+ *
+ *
+ * @param modifier Modifier applied to the indicator (linear bars already fill the max width).
+ * @param size Overrides the diameter; `null` uses the theme size plus 8dp.
+ * @param color Overrides the accent; `null` falls back to the theme colour, then the palette accent gel.
+ * @param animationMillis Overrides the loop duration in ms; `null` falls back to the theme `animationMillis`.
+ * @param contentDescription Accessibility label announced by screen readers; defaults to "Loading". Localise it for your app.
+ * @param theme Theme supplying defaults (size, durations, tint, opacity); defaults to [MillenniumTheme.loadingTheme].
+ * @see MillenniumSpokeSpinner
  */
 @Composable
 fun MillenniumOrbSpinner(
@@ -579,7 +778,26 @@ fun MillenniumOrbSpinner(
     }
 }
 
-/** Classic spoke spinner: a fading tail of rounded ticks stepping around the circle. */
+/**
+ * Classic spoke spinner: a fading tail of rounded ticks stepping around the circle.
+ *
+ * The head advances in discrete steps (one spoke at a time), which gives the familiar ticking look.
+ * Accessibility: sets `contentDescription` and `ProgressBarRangeInfo.Indeterminate`, so it is announced as a busy indicator.
+ *
+ * ```kotlin
+ * MillenniumSpokeSpinner(size = 24.dp, spokes = 8)
+ * ```
+ *
+ *
+ * @param modifier Modifier applied to the indicator (linear bars already fill the max width).
+ * @param size Overrides the diameter; `null` uses the theme size minus 8dp.
+ * @param color Overrides the accent; `null` falls back to the theme colour, then the palette accent gel.
+ * @param spokes Number of ticks around the circle; defaults to 12 and is not themed. Should be at least 1.
+ * @param animationMillis Overrides the loop duration in ms; `null` falls back to three quarters of the theme `animationMillis`.
+ * @param contentDescription Accessibility label announced by screen readers; defaults to "Loading". Localise it for your app.
+ * @param theme Theme supplying defaults (size, durations, tint, opacity); defaults to [MillenniumTheme.loadingTheme].
+ * @see MillenniumOrbSpinner
+ */
 @Composable
 fun MillenniumSpokeSpinner(
     modifier: Modifier = Modifier,
@@ -615,7 +833,26 @@ fun MillenniumSpokeSpinner(
     }
 }
 
-/** Glossy gel beads that bounce in a staggered wave. */
+/**
+ * Glossy gel beads that bounce in a staggered wave.
+ *
+ * Each bead hops once in the first 55% of the loop and rests the remainder, staggered by 12% of the loop, with a slight squash at rest.
+ * Accessibility: sets `contentDescription` and `ProgressBarRangeInfo.Indeterminate`, so it is announced as a busy indicator.
+ *
+ * ```kotlin
+ * MillenniumDotsLoader(dotSize = 10.dp, count = 4)
+ * ```
+ *
+ *
+ * @param modifier Modifier applied to the indicator (linear bars already fill the max width).
+ * @param dotSize Diameter of each bead; defaults to 12dp and is not themed.
+ * @param count Number of beads; defaults to 3 and is not themed.
+ * @param color Overrides the accent; `null` falls back to the theme colour, then the palette accent gel.
+ * @param animationMillis Overrides the loop duration in ms; `null` falls back to two thirds of the theme `animationMillis`.
+ * @param contentDescription Accessibility label announced by screen readers; defaults to "Loading". Localise it for your app.
+ * @param theme Theme supplying defaults (size, durations, tint, opacity); defaults to [MillenniumTheme.loadingTheme].
+ * @see MillenniumPulseLoader
+ */
 @Composable
 fun MillenniumDotsLoader(
     modifier: Modifier = Modifier,
@@ -663,7 +900,26 @@ fun MillenniumDotsLoader(
     }
 }
 
-/** Equalizer bars that dance out of phase. */
+/**
+ * Equalizer bars that dance out of phase.
+ *
+ * Each bar's height follows a sine wave, offset per bar, between 28% and 100% of the available height.
+ * Accessibility: sets `contentDescription` and `ProgressBarRangeInfo.Indeterminate`, so it is announced as a busy indicator.
+ *
+ * ```kotlin
+ * MillenniumBarsLoader(size = 32.dp, bars = 4)
+ * ```
+ *
+ *
+ * @param modifier Modifier applied to the indicator (linear bars already fill the max width).
+ * @param size Overrides the square size; `null` falls back to the theme size.
+ * @param bars Number of bars; defaults to 5 and is not themed.
+ * @param color Overrides the accent; `null` falls back to the theme colour, then the palette accent gel.
+ * @param animationMillis Overrides the loop duration in ms; `null` falls back to five sixths of the theme `animationMillis`.
+ * @param contentDescription Accessibility label announced by screen readers; defaults to "Loading". Localise it for your app.
+ * @param theme Theme supplying defaults (size, durations, tint, opacity); defaults to [MillenniumTheme.loadingTheme].
+ * @see MillenniumDotsLoader
+ */
 @Composable
 fun MillenniumBarsLoader(
     modifier: Modifier = Modifier,
@@ -695,7 +951,26 @@ fun MillenniumBarsLoader(
     }
 }
 
-/** Aqua ripples spreading from a breathing gel bead. */
+/**
+ * Aqua ripples spreading from a breathing gel bead.
+ *
+ * Concentric rings expand and fade out of a central bead that breathes in sync, evenly staggered across the loop.
+ * Accessibility: sets `contentDescription` and `ProgressBarRangeInfo.Indeterminate`, so it is announced as a busy indicator.
+ *
+ * ```kotlin
+ * MillenniumPulseLoader(size = 72.dp, rings = 3)
+ * ```
+ *
+ *
+ * @param modifier Modifier applied to the indicator (linear bars already fill the max width).
+ * @param size Overrides the diameter; `null` uses the theme size plus 16dp.
+ * @param color Overrides the accent; `null` falls back to the theme colour, then the palette accent gel.
+ * @param rings Number of ripples; defaults to 3 and is not themed. Should be at least 1.
+ * @param animationMillis Overrides the loop duration in ms; `null` falls back to one and a half times the theme `animationMillis`.
+ * @param contentDescription Accessibility label announced by screen readers; defaults to "Loading". Localise it for your app.
+ * @param theme Theme supplying defaults (size, durations, tint, opacity); defaults to [MillenniumTheme.loadingTheme].
+ * @see MillenniumOrbSpinner
+ */
 @Composable
 fun MillenniumPulseLoader(
     modifier: Modifier = Modifier,
@@ -747,21 +1022,46 @@ fun MillenniumPulseLoader(
 // ---------------------------------------------------------------------------
 
 /**
- * A recessed placeholder with a pearly glint sweeping across it. Compose several (a circle
- * and a few bars) to mimic the shape of the content that is loading.
+ * A recessed placeholder with a pearly glint sweeping across it.
+ *
+ * Compose several (a circle and a few bars) to mimic the shape of the content that is loading. Give it a size through [modifier]; it has
+ * no intrinsic size. The glint loops with `FastOutSlowInEasing`. Accessibility: it exposes no semantics (no `contentDescription` or progress range), so announce
+ * loading state elsewhere, for example on the container.
+ *
+ * ```kotlin
+ * Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+ *     MillenniumSkeleton(Modifier.size(48.dp), shape = CircleShape)
+ *     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+ *         MillenniumSkeleton(Modifier.height(14.dp).width(160.dp))
+ *         MillenniumSkeleton(Modifier.height(14.dp).width(100.dp))
+ *     }
+ * }
+ * ```
+ *
+ *
+ * @param modifier Modifier that must provide the size of the placeholder.
+ * @param shape Clip shape of the placeholder; defaults to an 8dp rounded rectangle.
+ * @param animationMillis Overrides the loop duration in ms; `null` falls back to one and a half times the theme `animationMillis`.
+ * @param contentDescription Optional accessibility label. `null` (default) leaves the placeholder silent, so a
+ * list of skeletons does not spam screen readers; give one skeleton in the group a description such as "Loading".
+ * @param theme Theme supplying defaults (size, durations, tint, opacity); defaults to [MillenniumTheme.loadingTheme].
+ * @see MillenniumStripedProgress
  */
 @Composable
 fun MillenniumSkeleton(
     modifier: Modifier = Modifier,
     shape: Shape = RoundedCornerShape(8.dp),
     animationMillis: Int? = null,
+    contentDescription: String? = null,
     theme: MillenniumLoadingTheme = MillenniumTheme.loadingTheme,
 ) {
     val properties = theme.states.resolve(MillenniumControlState.Default)
     val colors = MillenniumTheme.colors
     val phase = loopingPhase(animationMillis ?: (properties.animationMillis * 3 / 2), FastOutSlowInEasing)
     Box(
-        modifier.clip(shape)
+        modifier
+            .then(if (contentDescription != null) Modifier.loadingSemantics(null, contentDescription) else Modifier)
+            .clip(shape)
             .background(millenniumBevelBrush(colors, sunken = true))
             .drawWithContent {
                 drawContent()
@@ -780,6 +1080,7 @@ fun MillenniumSkeleton(
     )
 }
 
+/** Preview of every progress bar and loader. */
 @Preview
 @Composable
 private fun MillenniumLoadingPreview() = MillenniumPreview {
