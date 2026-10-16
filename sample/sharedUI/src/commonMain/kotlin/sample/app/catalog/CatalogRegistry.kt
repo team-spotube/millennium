@@ -67,7 +67,22 @@ internal val catalogEntries: List<CatalogEntry> = listOf(
         "modal-bottom-sheet", "Modal bottom sheet",
         "A sheet with a scrim, a drag handle and native dismissal.",
     ) { ModalSheetDemo() },
-    CatalogEntry("progress", "Progress", "Make the waiting feel lighter.") { ProgressDemo() },
+    CatalogEntry(
+        "loading", "Loading indicators",
+        "Endless spinners, loaders and skeletons for when the wait has no end in sight.",
+        parts = listOf(
+            "CircularProgress", "OrbSpinner", "SpokeSpinner", "DotsLoader", "BarsLoader",
+            "PulseLoader", "Skeleton",
+        ),
+    ) { LoadingDemo() },
+    CatalogEntry(
+        "progress", "Progress bars",
+        "Gel, barber pole, glint, blocks and buffered bars, determinate or endless.",
+        parts = listOf(
+            "Progress", "StripedProgress", "ShimmerProgress", "SegmentedProgress",
+            "BufferedProgress", "IndeterminateProgress", "MarqueeProgress",
+        ),
+    ) { ProgressDemo() },
     CatalogEntry("pull-to-refresh", "Pull to refresh", "Drag down to fetch what's new.") { PullToRefreshDemo() },
     CatalogEntry("radio-group", "Radio group", "One choice from a few.") { RadioGroupDemo() },
     CatalogEntry(

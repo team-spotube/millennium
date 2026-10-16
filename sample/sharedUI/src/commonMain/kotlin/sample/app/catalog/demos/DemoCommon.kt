@@ -34,3 +34,12 @@ import org.spotube.millennium.theme.gelBrush
 internal fun DemoHint(text: String) {
     MillenniumText(text, size = 11.sp, color = MillenniumTheme.colors.muted)
 }
+
+/** A labelled specimen: a small caption above the thing being demonstrated. */
+@Composable
+internal fun Variant(name: String, content: @Composable ColumnScope.() -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        MillenniumText(name, size = 11.sp, weight = FontWeight.SemiBold, color = MillenniumTheme.colors.muted)
+        content()
+    }
+}

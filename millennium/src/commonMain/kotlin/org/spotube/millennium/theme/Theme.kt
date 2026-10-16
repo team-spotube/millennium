@@ -143,6 +143,7 @@ data class MillenniumThemeComponents(
     val dropdownMenuTheme: MillenniumDropdownMenuTheme,
     val tooltipTheme: MillenniumTooltipTheme,
     val progressTheme: MillenniumProgressTheme,
+    val loadingTheme: MillenniumLoadingTheme = defaultMillenniumLoadingTheme(),
     val scrollbarTheme: MillenniumScrollbarTheme,
     val separatorTheme: MillenniumSeparatorTheme,
     val bottomSheetTheme: MillenniumBottomSheetTheme,
@@ -179,6 +180,7 @@ fun defaultMillenniumThemeComponents() = MillenniumThemeComponents(
     dropdownMenuTheme = defaultMillenniumDropdownMenuTheme(),
     tooltipTheme = defaultMillenniumTooltipTheme(),
     progressTheme = defaultMillenniumProgressTheme(),
+    loadingTheme = defaultMillenniumLoadingTheme(),
     scrollbarTheme = defaultMillenniumScrollbarTheme(),
     separatorTheme = defaultMillenniumSeparatorTheme(),
     bottomSheetTheme = defaultMillenniumBottomSheetTheme(),
@@ -239,6 +241,7 @@ object MillenniumTheme {
     val dropdownMenuTheme: MillenniumDropdownMenuTheme @Composable get() = components.dropdownMenuTheme
     val tooltipTheme: MillenniumTooltipTheme @Composable get() = components.tooltipTheme
     val progressTheme: MillenniumProgressTheme @Composable get() = components.progressTheme
+    val loadingTheme: MillenniumLoadingTheme @Composable get() = components.loadingTheme
     val scrollbarTheme: MillenniumScrollbarTheme @Composable get() = components.scrollbarTheme
     val separatorTheme: MillenniumSeparatorTheme @Composable get() = components.separatorTheme
     val bottomSheetTheme: MillenniumBottomSheetTheme @Composable get() = components.bottomSheetTheme
