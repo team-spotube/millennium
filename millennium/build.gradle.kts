@@ -8,6 +8,9 @@ plugins {
     alias(libs.plugins.compose.compiler)
 }
 
+group = "org.spotube.millennium"
+version = "0.1.0"
+
 kotlin {
     android {
         namespace = "org.spotube.millennium"
@@ -55,10 +58,12 @@ kotlin {
 
 mavenPublishing {
     publishToMavenCentral()
-    coordinates("org.spotube.millennium", "millennium", "1.0.0")
+    signAllPublications()
+    coordinates(group.toString(), "millennium", version.toString())
     pom {
         name = "Millennium"
-        description = "Millennium design system for Android Jetpack Compose and Compose Multiplatform"
+        description =
+            "Millennium design system for Android Jetpack Compose and Compose Multiplatform"
         url = "https://github.com/team-spotube/millennium"
         licenses {
             license {
@@ -71,9 +76,13 @@ mavenPublishing {
                 id = "team-spotube"
                 name = "Team Spotube"
                 email = "team.spotube@proton.me"
+                url = "https://github.com/team-spotube/"
             }
         }
-        scm { url = "https://github.com/team-spotube/millennium" }
+        scm {
+            url = "https://github.com/team-spotube/millennium"
+            connection = "scm:git:git://github.com/team-spotube/millennium.git"
+            developerConnection = "scm:git:ssh://git@github.com/team-spotube/millennium.git"
+        }
     }
-    if (project.hasProperty("signing.keyId")) signAllPublications()
 }

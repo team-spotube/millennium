@@ -47,7 +47,7 @@ scope in the published platform POMs. The sample relies on this: it declares onl
 
 ```kotlin
 dependencies {
-    implementation("org.spotube.millennium:millennium:1.0.0")
+    implementation("org.spotube.millennium:millennium:0.1.0")
     // No composeunstyled dependency needed; it comes from Millennium's API.
 }
 ```
@@ -664,31 +664,3 @@ palettes); the header's **Design study** button returns to the specimen.
 `build` runs the common/JVM and Firefox-based JS/WebAssembly tests, Android
 lint/build, and compiles the desktop/web and iOS target sources. iOS simulator
 runtime tests require macOS/Xcode and are skipped on Linux.
-
-### Publish to MavenLocal
-
-1) Run `./gradlew :millennium:publishToMavenLocal`
-2) Open `~/.m2/repository/org/spotube/millennium/`
-
-### Publish to MavenCentral
-
-1) Create an account and a namespace on Sonatype:  
-   https://central.sonatype.org/register/central-portal/#create-an-account
-2) Add the developer ID, name, email, and project URL to  
-   `./millennium/build.gradle.kts`
-3) Generate a GPG key:  
-   https://getstream.io/blog/publishing-libraries-to-mavencentral-2021/#generating-a-gpg-key-pair
-   ```
-   gpg --full-gen-key
-   gpg --keyserver keyserver.ubuntu.com --send-keys XXXXXXXX
-   gpg --export-secret-key XXXXXXXX > XXXXXXXX.gpg
-   ```
-4) Add these lines to `gradle.properties`:
-   ```
-   signing.keyId=XXXXXXXX
-   signing.password=[key password]
-   signing.secretKeyRingFile=../XXXXXXXX.gpg
-   mavenCentralUsername=[generated username]
-   mavenCentralPassword=[generated password]
-   ```
-5) Run `./gradlew :millennium:publishAndReleaseToMavenCentral --no-configuration-cache`
