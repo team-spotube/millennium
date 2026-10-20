@@ -12,6 +12,7 @@ import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -292,6 +294,8 @@ private fun MillenniumButtonTheme.forStyle(style: MillenniumButtonStyle) = when 
  * @param modifier Modifier applied to the outer button (before the Millennium surface is added).
  * @param enabled When `false` the button ignores input, is exposed as disabled, uses the theme's
  * disabled state (default 45% alpha) and does not show a hand cursor.
+ * @param loading When `true` the button behaves as disabled and an indeterminate spinner in the
+ * foreground colour replaces [content]; the content stays laid out (invisibly) so the size is kept.
  * @param style Emphasis variant; selects which of the theme's four variants is used.
  * @param background Overrides the face brush; `null` = the theme's brush or the variant default.
  * @param foreground Overrides the label/icon colour; `null` falls back to the theme or the variant default.
@@ -325,6 +329,7 @@ fun MillenniumButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    loading: Boolean = false,
     style: MillenniumButtonStyle = MillenniumButtonStyle.Primary,
     background: Brush? = null,
     foreground: Color? = null,
@@ -348,12 +353,13 @@ fun MillenniumButton(
     theme: MillenniumButtonTheme = MillenniumTheme.buttonTheme,
     content: @Composable () -> Unit,
 ) {
+    val interactive = enabled && !loading
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val focused by interaction.collectIsKeyboardFocusedAsState()
     val hovered by interaction.collectIsHoveredAsState()
     val state = when {
-        !enabled -> MillenniumControlState.Disabled
+        !interactive -> MillenniumControlState.Disabled
         pressed -> MillenniumControlState.Pressed
         focused -> MillenniumControlState.Focused
         hovered -> MillenniumControlState.Hovered
@@ -399,7 +405,7 @@ fun MillenniumButton(
     }
     val resolvedShadowColors = shadowColors ?: properties.shadows ?: listOf(Color.Black.copy(alpha = 0.16f))
     val targetScale = when {
-        !enabled -> 1f
+        !interactive -> 1f
         pressed -> resolvedMotion.pressedScale
         hovered -> resolvedMotion.hoverScale
         else -> 1f
@@ -423,11 +429,11 @@ fun MillenniumButton(
     val resolvedMinSize = minSize ?: properties.minSize
     UnstyledButton(
         onClick = onClick,
-        enabled = enabled,
+        enabled = interactive,
         interactionSource = interaction,
         indication = null,
         modifier = modifier
-            .millenniumActionPointer(enabled)
+            .millenniumActionPointer(interactive)
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .defaultMinSize(minWidth = resolvedMinSize.width, minHeight = resolvedMinSize.height)
             .alpha(alpha ?: properties.alpha)
@@ -456,10 +462,39 @@ fun MillenniumButton(
             resolvedTextStyle.copy(shadow = Shadow(colors.accentBottom, Offset(0f, 1f), 1f))
         } else resolvedTextStyle
         MillenniumStyledContent(labelStyle, resolvedForeground) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(contentSpacing ?: properties.contentSpacing),
-            ) { content() }
+            MillenniumLoadingContent(loading, resolvedForeground, spinnerSize = 18.dp) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(contentSpacing ?: properties.contentSpacing),
+                ) { content() }
+            }
+        }
+    }
+}
+
+/**
+ * Internal: while [loading], hides [content] (still measured, so the button keeps its size) under an
+ * indeterminate spinner drawn in [color]. The spinner is silent to accessibility; the button itself is
+ * reported disabled. Shared by [MillenniumButton] and [MillenniumIconButton].
+ */
+@Composable
+internal fun MillenniumLoadingContent(
+    loading: Boolean,
+    color: Color,
+    spinnerSize: Dp,
+    content: @Composable () -> Unit,
+) {
+    Box(contentAlignment = Alignment.Center) {
+        Box(Modifier.alpha(if (loading) 0f else 1f)) { content() }
+        if (loading) {
+            Box(Modifier.clearAndSetSemantics {}) {
+                MillenniumCircularProgress(
+                    size = spinnerSize,
+                    thickness = spinnerSize / 7,
+                    color = color,
+                    trackColor = color.copy(alpha = 0.25f),
+                )
+            }
         }
     }
 }

@@ -181,6 +181,37 @@ internal fun SliderDemo() {
     }
     MillenniumSlider(volume, { volume = it }, "Volume")
     DemoHint("Arrow keys nudge the value.")
+
+    // A scrubber that starts disabled (nothing loaded yet) and commits in onValueChangeFinished,
+    // like a media player's seek bar. Tapping the track must seek once it becomes enabled.
+    var trackLoaded by rememberSaveable { mutableStateOf(false) }
+    var scrub by rememberSaveable { mutableFloatStateOf(0f) }
+    var seekedTo by rememberSaveable { mutableStateOf<Int?>(null) }
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        MillenniumButton(
+            { trackLoaded = !trackLoaded },
+            style = MillenniumButtonStyle.Secondary
+        ) { Text(if (trackLoaded) "Eject" else "Load a track") }
+        MillenniumSlider(
+            scrub,
+            { scrub = it },
+            "Seek",
+            modifier = Modifier.weight(1f),
+            enabled = trackLoaded,
+            onValueChangeFinished = { seekedTo = (scrub * 100).toInt() }
+        )
+    }
+    DemoHint(
+        when {
+            !trackLoaded -> "Load a track, then tap anywhere on the bar to seek."
+            seekedTo == null -> "Tap or drag to seek."
+            else -> "Seeked to $seekedTo%."
+        }
+    )
 }
 
 @Composable

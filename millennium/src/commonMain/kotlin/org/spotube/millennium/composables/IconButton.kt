@@ -245,6 +245,7 @@ private fun MillenniumIconButtonTheme.forStyle(style: MillenniumIconButtonStyle)
  * @param onClick Called on click, tap or keyboard activation; not called when disabled.
  * @param modifier Modifier applied to the button.
  * @param enabled When `false` the button ignores input, uses the disabled state and shows no hand cursor.
+ * @param loading When `true` the button behaves as disabled and an indeterminate spinner replaces the icon.
  * @param style Emphasis variant, see [MillenniumIconButtonStyle].
  * @param background Overrides the face brush; `null` falls back to the theme or the variant default.
  * @param foreground Overrides the icon colour; `null` falls back to the theme or the variant default.
@@ -273,6 +274,7 @@ fun MillenniumIconButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    loading: Boolean = false,
     style: MillenniumIconButtonStyle = MillenniumIconButtonStyle.Primary,
     background: Brush? = null,
     foreground: Color? = null,
@@ -296,6 +298,7 @@ fun MillenniumIconButton(
         onClick = onClick,
         modifier = modifier,
         enabled = enabled,
+        loading = loading,
         style = style,
         icon = icon,
         contentDescription = contentDescription,
@@ -341,6 +344,7 @@ fun MillenniumIconButton(
  * @param onClick Called on click, tap or keyboard activation; not called when disabled.
  * @param modifier Modifier applied to the button.
  * @param enabled When `false` the button ignores input and uses the disabled state.
+ * @param loading When `true` the button behaves as disabled and an indeterminate spinner replaces [content].
  * @param style Emphasis variant, see [MillenniumIconButtonStyle].
  * @param contentDescription Accessibility label; defaults to `null`, so supply one for non-text content.
  * @param background Overrides the face brush; `null` falls back to the theme or variant default.
@@ -368,6 +372,7 @@ fun MillenniumIconButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    loading: Boolean = false,
     style: MillenniumIconButtonStyle = MillenniumIconButtonStyle.Primary,
     contentDescription: String? = null,
     background: Brush? = null,
@@ -393,6 +398,7 @@ fun MillenniumIconButton(
         onClick = onClick,
         modifier = modifier,
         enabled = enabled,
+        loading = loading,
         style = style,
         icon = null,
         contentDescription = contentDescription,
@@ -423,6 +429,7 @@ private fun IconButtonContainer(
     onClick: () -> Unit,
     modifier: Modifier,
     enabled: Boolean,
+    loading: Boolean,
     style: MillenniumIconButtonStyle,
     icon: ImageVector?,
     contentDescription: String?,
@@ -445,12 +452,13 @@ private fun IconButtonContainer(
     alpha: Float?,
     motion: MillenniumButtonMotion?,
 ) {
+    val interactive = enabled && !loading
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val focused by interaction.collectIsKeyboardFocusedAsState()
     val hovered by interaction.collectIsHoveredAsState()
     val state = when {
-        !enabled -> MillenniumControlState.Disabled
+        !interactive -> MillenniumControlState.Disabled
         pressed -> MillenniumControlState.Pressed
         focused -> MillenniumControlState.Focused
         hovered -> MillenniumControlState.Hovered
@@ -520,7 +528,7 @@ private fun IconButtonContainer(
     }
     val scale by animateFloatAsState(
         targetValue = when {
-            !enabled -> 1f
+            !interactive -> 1f
             pressed -> resolvedMotion.pressedScale
             hovered -> resolvedMotion.hoverScale
             else -> 1f
@@ -542,13 +550,13 @@ private fun IconButtonContainer(
     }
     UnstyledButton(
         onClick = onClick,
-        enabled = enabled,
+        enabled = interactive,
         interactionSource = interaction,
         indication = null,
         contentPadding = PaddingValues(0.dp),
         contentAlignment = Alignment.Center,
         modifier = modifier
-            .millenniumActionPointer(enabled)
+            .millenniumActionPointer(interactive)
             .then(semantics)
             .size(size ?: properties.size)
             .graphicsLayer { scaleX = scale; scaleY = scale }
@@ -578,10 +586,12 @@ private fun IconButtonContainer(
                 tint = if (style == MillenniumIconButtonStyle.Danger) colors.danger else colors.accent,
                 animationMillis = resolvedMotion.stateChangeMillis),
     ) {
-        if (icon != null) {
-            UnstyledIcon(icon, null, Modifier.size(iconSize ?: properties.iconSize), animatedForeground)
-        } else {
-            MillenniumStyledContent(TextStyle.Default, animatedForeground) { content?.invoke() }
+        MillenniumLoadingContent(loading, animatedForeground, spinnerSize = iconSize ?: properties.iconSize) {
+            if (icon != null) {
+                UnstyledIcon(icon, null, Modifier.size(iconSize ?: properties.iconSize), animatedForeground)
+            } else {
+                MillenniumStyledContent(TextStyle.Default, animatedForeground) { content?.invoke() }
+            }
         }
     }
 }

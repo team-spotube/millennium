@@ -32,6 +32,8 @@ import org.spotube.millennium.theme.gelBrush
 @Composable
 internal fun ButtonDemo() {
     var clicks by rememberSaveable { mutableIntStateOf(0) }
+    var syncing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -42,10 +44,22 @@ internal fun ButtonDemo() {
             style = MillenniumButtonStyle.Secondary
         ) { Text("Take it easy") }
         MillenniumButton({}, enabled = false) { Text("Not just yet") }
+        MillenniumButton(
+            {
+                syncing = true
+                scope.launch { delay(2000); syncing = false }
+            },
+            loading = syncing,
+            style = MillenniumButtonStyle.Secondary
+        ) { Text("Sync library") }
         MillenniumButton({ clicks = 0 }, style = MillenniumButtonStyle.Danger) { Text("Reset") }
     }
     MillenniumText(
-        if (clicks == 0) "Try a click. Or navigate with Tab + Enter." else "$clicks clicks. Still feels good.",
+        when {
+            syncing -> "Syncing… loading buttons keep their size and ignore clicks."
+            clicks == 0 -> "Try a click. Or navigate with Tab + Enter."
+            else -> "$clicks clicks. Still feels good."
+        },
         color = MillenniumTheme.colors.muted,
         size = 11.sp
     )
@@ -54,6 +68,8 @@ internal fun ButtonDemo() {
 @Composable
 internal fun IconButtonDemo() {
     var saved by rememberSaveable { mutableStateOf(false) }
+    var queueing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     Row(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -78,9 +94,22 @@ internal fun IconButtonDemo() {
             style = MillenniumIconButtonStyle.Danger
         )
         MillenniumIconButton(MillenniumIcons.Sparkle, "Disabled", {}, enabled = false)
+        MillenniumIconButton(
+            MillenniumIcons.Music,
+            "Add to queue",
+            {
+                queueing = true
+                scope.launch { delay(2000); queueing = false }
+            },
+            loading = queueing
+        )
     }
     MillenniumText(
-        if (saved) "Filled variants wear the orb sheen." else "Primary, secondary, quiet, danger — all 44dp targets.",
+        when {
+            queueing -> "Loading swaps the icon for a spinner until the work is done."
+            saved -> "Filled variants wear the orb sheen."
+            else -> "Primary, secondary, quiet, danger — all 44dp targets."
+        },
         size = 11.sp,
         color = MillenniumTheme.colors.muted
     )

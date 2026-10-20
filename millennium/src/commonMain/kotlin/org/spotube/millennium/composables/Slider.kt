@@ -24,7 +24,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -257,93 +259,99 @@ fun MillenniumSlider(
     val resolvedTrackBorderColor = trackBorderColor ?: properties.trackBorderColor
         ?: if (controlState == MillenniumControlState.Error) colors.danger else colors.border
     val baseThumbSize = thumbSize ?: theme.states.default.thumbSize
-    UnstyledSlider(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = modifier.millenniumActionPointer(enabled).fillMaxWidth()
-            .hoverable(interaction, enabled)
-            .heightIn(min = touchTargetHeight ?: properties.touchTargetHeight)
-            .alpha(alpha ?: properties.alpha).semantics { contentDescription = label },
-        enabled = enabled,
-        interactionSource = interaction,
-        valueRange = valueRange,
-        steps = steps,
-        onValueChangeFinished = onValueChangeFinished,
-        track = { state ->
-            // The thumb travels between half-thumb insets; inset the track the same way so
-            // the active fill endpoint lines up with the thumb center.
-            Box(Modifier.fillMaxWidth().padding(horizontal = baseThumbSize / 2)) {
-                Box(
-                    Modifier.fillMaxWidth().height(trackHeight ?: properties.trackHeight).millenniumSurface(
-                        background = resolvedTrackBackground,
-                        shape = trackShape ?: properties.trackShape,
-                        borderColor = resolvedTrackBorderColor,
-                        borderWidth = trackBorderWidth ?: properties.trackBorderWidth,
-                        insetShadeColor = trackInsetShadeColor ?: properties.trackInsetShadeColor
-                            ?: colors.text.copy(alpha = 0.1f),
-                    )
-                    .millenniumInteractionSurface(controlState, trackShape ?: properties.trackShape, animationMillis = stateAnimationMillis ?: properties.stateAnimationMillis),
-                ) {
+    // UnstyledSlider's tap handler captures `enabled` and `onValueChangeFinished` once and never
+    // restarts on their change: a slider created disabled ignores taps forever, and a tap reports
+    // to a stale callback. Recreate it when `enabled` flips and route the callback through state.
+    val currentOnValueChangeFinished by rememberUpdatedState(onValueChangeFinished)
+    key(enabled) {
+        UnstyledSlider(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = modifier.millenniumActionPointer(enabled).fillMaxWidth()
+                .hoverable(interaction, enabled)
+                .heightIn(min = touchTargetHeight ?: properties.touchTargetHeight)
+                .alpha(alpha ?: properties.alpha).semantics { contentDescription = label },
+            enabled = enabled,
+            interactionSource = interaction,
+            valueRange = valueRange,
+            steps = steps,
+            onValueChangeFinished = { currentOnValueChangeFinished?.invoke() },
+            track = { state ->
+                // The thumb travels between half-thumb insets; inset the track the same way so
+                // the active fill endpoint lines up with the thumb center.
+                Box(Modifier.fillMaxWidth().padding(horizontal = baseThumbSize / 2)) {
                     Box(
-                        Modifier.fillMaxHeight().fillMaxWidth(state.fraction)
-                            .background(resolvedActiveTrackBackground, trackShape ?: properties.trackShape),
+                        Modifier.fillMaxWidth().height(trackHeight ?: properties.trackHeight).millenniumSurface(
+                            background = resolvedTrackBackground,
+                            shape = trackShape ?: properties.trackShape,
+                            borderColor = resolvedTrackBorderColor,
+                            borderWidth = trackBorderWidth ?: properties.trackBorderWidth,
+                            insetShadeColor = trackInsetShadeColor ?: properties.trackInsetShadeColor
+                                ?: colors.text.copy(alpha = 0.1f),
+                        )
+                        .millenniumInteractionSurface(controlState, trackShape ?: properties.trackShape, animationMillis = stateAnimationMillis ?: properties.stateAnimationMillis),
+                    ) {
+                        Box(
+                            Modifier.fillMaxHeight().fillMaxWidth(state.fraction)
+                                .background(resolvedActiveTrackBackground, trackShape ?: properties.trackShape),
+                        )
+                    }
+                }
+            },
+            thumb = { state ->
+                val thumbState = when {
+                    !enabled -> MillenniumControlState.Disabled
+                    state.isDragging || state.isPressed -> MillenniumControlState.Pressed
+                    focused -> MillenniumControlState.Focused
+                    hovered -> MillenniumControlState.Hovered
+                    else -> MillenniumControlState.Default
+                }
+                val thumbProperties = theme.states.resolve(thumbState)
+                val resolvedThumbBackground = thumbBackground ?: thumbProperties.thumbBackground
+                    ?: millenniumBevelBrush(colors)
+                val resolvedThumbBorderColor = thumbBorderColor ?: thumbProperties.thumbBorderColor ?: when (thumbState) {
+                    MillenniumControlState.Focused, MillenniumControlState.Selected,
+                    MillenniumControlState.Hovered, MillenniumControlState.Pressed -> colors.accent
+                    MillenniumControlState.Error -> colors.danger
+                    else -> colors.border
+                }
+                val animatedThumbBorderColor by animateColorAsState(
+                    targetValue = resolvedThumbBorderColor,
+                    animationSpec = tween(stateAnimationMillis ?: thumbProperties.stateAnimationMillis),
+                )
+                val resolvedThumbGlowColor = thumbGlowColor ?: thumbProperties.thumbGlowColor
+                    ?: colors.highlight.copy(alpha = 0.55f)
+                val targetSize = if (state.isPressed || state.isDragging) {
+                    activeThumbSize ?: thumbProperties.activeThumbSize
+                } else {
+                    thumbSize ?: thumbProperties.thumbSize
+                }
+                val animatedSize by animateDpAsState(
+                    targetSize,
+                    spring(dampingRatio = 0.62f, stiffness = Spring.StiffnessMedium),
+                )
+                val animatedElevation by animateDpAsState(
+                    thumbElevation ?: thumbProperties.thumbElevation,
+                    spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMediumLow),
+                )
+                Box(Modifier.size(baseThumbSize), contentAlignment = Alignment.Center) {
+                    Box(
+                        Modifier.size(animatedSize).millenniumSurface(
+                            background = resolvedThumbBackground,
+                            shape = thumbShape ?: thumbProperties.thumbShape,
+                            borderColor = animatedThumbBorderColor,
+                            borderWidth = thumbBorderWidth ?: thumbProperties.thumbBorderWidth,
+                            shadowElevation = animatedElevation,
+                            innerGlowColor = resolvedThumbGlowColor,
+                            bottomRimColor = thumbBottomRimColor ?: thumbProperties.thumbBottomRimColor
+                                ?: colors.highlight.copy(alpha = 0.6f),
+                        )
+                        .millenniumInteractionSurface(thumbState, thumbShape ?: thumbProperties.thumbShape, animationMillis = stateAnimationMillis ?: thumbProperties.stateAnimationMillis),
                     )
                 }
-            }
-        },
-        thumb = { state ->
-            val thumbState = when {
-                !enabled -> MillenniumControlState.Disabled
-                state.isDragging || state.isPressed -> MillenniumControlState.Pressed
-                focused -> MillenniumControlState.Focused
-                hovered -> MillenniumControlState.Hovered
-                else -> MillenniumControlState.Default
-            }
-            val thumbProperties = theme.states.resolve(thumbState)
-            val resolvedThumbBackground = thumbBackground ?: thumbProperties.thumbBackground
-                ?: millenniumBevelBrush(colors)
-            val resolvedThumbBorderColor = thumbBorderColor ?: thumbProperties.thumbBorderColor ?: when (thumbState) {
-                MillenniumControlState.Focused, MillenniumControlState.Selected,
-                MillenniumControlState.Hovered, MillenniumControlState.Pressed -> colors.accent
-                MillenniumControlState.Error -> colors.danger
-                else -> colors.border
-            }
-            val animatedThumbBorderColor by animateColorAsState(
-                targetValue = resolvedThumbBorderColor,
-                animationSpec = tween(stateAnimationMillis ?: thumbProperties.stateAnimationMillis),
-            )
-            val resolvedThumbGlowColor = thumbGlowColor ?: thumbProperties.thumbGlowColor
-                ?: colors.highlight.copy(alpha = 0.55f)
-            val targetSize = if (state.isPressed || state.isDragging) {
-                activeThumbSize ?: thumbProperties.activeThumbSize
-            } else {
-                thumbSize ?: thumbProperties.thumbSize
-            }
-            val animatedSize by animateDpAsState(
-                targetSize,
-                spring(dampingRatio = 0.62f, stiffness = Spring.StiffnessMedium),
-            )
-            val animatedElevation by animateDpAsState(
-                thumbElevation ?: thumbProperties.thumbElevation,
-                spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMediumLow),
-            )
-            Box(Modifier.size(baseThumbSize), contentAlignment = Alignment.Center) {
-                Box(
-                    Modifier.size(animatedSize).millenniumSurface(
-                        background = resolvedThumbBackground,
-                        shape = thumbShape ?: thumbProperties.thumbShape,
-                        borderColor = animatedThumbBorderColor,
-                        borderWidth = thumbBorderWidth ?: thumbProperties.thumbBorderWidth,
-                        shadowElevation = animatedElevation,
-                        innerGlowColor = resolvedThumbGlowColor,
-                        bottomRimColor = thumbBottomRimColor ?: thumbProperties.thumbBottomRimColor
-                            ?: colors.highlight.copy(alpha = 0.6f),
-                    )
-                    .millenniumInteractionSurface(thumbState, thumbShape ?: thumbProperties.thumbShape, animationMillis = stateAnimationMillis ?: thumbProperties.stateAnimationMillis),
-                )
-            }
-        },
-    )
+            },
+        )
+    }
 }
 
 @Preview
