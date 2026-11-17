@@ -73,6 +73,17 @@ import org.spotube.millennium.theme.millenniumPanelBrush
  * @property animationMillis Scrim fade-in duration in ms (default 220); the fade-out uses 80% of it
  * (minimum 120 ms). Panel motion is configured by [rememberMillenniumDrawerState] instead.
  * @property alpha Overall opacity multiplier (1 = opaque).
+ * @property scrimBrush Brush of the dimming scrim; wins over [scrimColor] (for example a gradient vignette).
+ * `null` paints the scrim colour.
+ * @property scrimExitAnimationMillis Scrim fade-out duration in ms; `null` derives 80% of [animationMillis]
+ * (minimum 120 ms).
+ * @property bottomRimColor Colour of the lower lip of the inner rim; `null` (default) draws none.
+ * @property orbColor Colour of a glass orb overlay on the panel; `null` (default) draws none.
+ * @property overlayBrush Brush drawn over [background] and below the content (gloss, texture); `null` draws none.
+ * @property shadowColor Shadow colour of the panel; `null` uses the default 16% black.
+ * @property textStyle Ambient text style of the drawer content (colour comes from [foreground]).
+ * @property openSpringDamping Damping ratio of the open spring in [rememberMillenniumDrawerState] (default 0.82).
+ * @property dismissAnimationMillis Duration of the dismiss tween in [rememberMillenniumDrawerState] (default 190).
  */
 @Immutable
 data class MillenniumDrawerThemeProperties(
@@ -89,6 +100,15 @@ data class MillenniumDrawerThemeProperties(
     val scrimColor: Color? = null,
     val animationMillis: Int = 220,
     val alpha: Float,
+    val scrimBrush: Brush? = null,
+    val scrimExitAnimationMillis: Int? = null,
+    val bottomRimColor: Color? = null,
+    val orbColor: Color? = null,
+    val overlayBrush: Brush? = null,
+    val shadowColor: Color? = null,
+    val textStyle: TextStyle = TextStyle.Default,
+    val openSpringDamping: Float = 0.82f,
+    val dismissAnimationMillis: Int = 190,
 )
 
 /**
@@ -168,11 +188,19 @@ enum class MillenniumDrawerValue {
  * }
  * ```
  *
+ * @param theme Drawer theme whose Default state supplies `openSpringDamping` and `dismissAnimationMillis`; read
+ * once when the state is first remembered.
  * @return A remembered [UnstyledDrawerState] keyed by [MillenniumDrawerValue].
  * @see MillenniumDrawer
  */
 @Composable
-fun rememberMillenniumDrawerState(): UnstyledDrawerState<MillenniumDrawerValue> = remember {
+fun rememberMillenniumDrawerState(
+    theme: MillenniumDrawerTheme = MillenniumTheme.drawerTheme,
+): UnstyledDrawerState<MillenniumDrawerValue> {
+    val motion = theme.states.resolve(MillenniumControlState.Default)
+    val openDamping = motion.openSpringDamping
+    val dismissMillis = motion.dismissAnimationMillis
+    return remember {
     UnstyledDrawerState(
         initialValue = MillenniumDrawerValue.Closed,
         snapPoints = DrawerSnapPoints {
@@ -180,11 +208,12 @@ fun rememberMillenniumDrawerState(): UnstyledDrawerState<MillenniumDrawerValue> 
             MillenniumDrawerValue.Open at DrawerSnapPoint.ContentSize
         },
         animationSpec = spring(
-            dampingRatio = 0.82f,
+            dampingRatio = openDamping,
             stiffness = Spring.StiffnessMediumLow,
         ),
-        dismissAnimationSpec = tween(durationMillis = 190, easing = FastOutLinearInEasing),
+        dismissAnimationSpec = tween(durationMillis = dismissMillis, easing = FastOutLinearInEasing),
     )
+    }
 }
 
 /**
@@ -272,9 +301,20 @@ fun MillenniumDrawer(
             Overlay(
                 modifier = Modifier.millenniumActionPointer(),
                 enter = fadeIn(tween(resolvedAnimationMillis, easing = FastOutSlowInEasing)),
-                exit = fadeOut(tween((resolvedAnimationMillis * 0.8f).toInt().coerceAtLeast(120), easing = FastOutLinearInEasing)),
+                exit = fadeOut(
+                    tween(
+                        properties.scrimExitAnimationMillis
+                            ?: (resolvedAnimationMillis * 0.8f).toInt().coerceAtLeast(120),
+                        easing = FastOutLinearInEasing,
+                    ),
+                ),
             ) {
-                Box(Modifier.fillMaxSize().background(resolvedScrimColor))
+                val scrimBrush = properties.scrimBrush
+                if (scrimBrush != null && scrimColor == null) {
+                    Box(Modifier.fillMaxSize().background(scrimBrush))
+                } else {
+                    Box(Modifier.fillMaxSize().background(resolvedScrimColor))
+                }
             }
         },
     ) {
@@ -288,7 +328,12 @@ fun MillenniumDrawer(
                         borderWidth = borderWidth ?: properties.borderWidth,
                         shadowElevation = shadowElevation ?: properties.shadowElevation,
                         innerGlowColor = resolvedGlowColor,
-                    ).alpha(alpha ?: properties.alpha),
+                        bottomRimColor = properties.bottomRimColor,
+                        orbColor = properties.orbColor,
+                        shadowColor = properties.shadowColor ?: Color.Black.copy(alpha = 0.16f),
+                    )
+                    .then(if (properties.overlayBrush != null) Modifier.background(properties.overlayBrush) else Modifier)
+                    .alpha(alpha ?: properties.alpha),
             ) {
                 Column(
                     Modifier.padding(contentPadding ?: properties.contentPadding).systemBarsPadding(),
@@ -296,7 +341,7 @@ fun MillenniumDrawer(
                         contentSpacing ?: properties.contentSpacing,
                     ),
                 ) {
-                    MillenniumStyledContent(TextStyle(color = resolvedForeground), resolvedForeground) {
+                    MillenniumStyledContent(properties.textStyle.copy(color = resolvedForeground), resolvedForeground) {
                         content()
                     }
                 }

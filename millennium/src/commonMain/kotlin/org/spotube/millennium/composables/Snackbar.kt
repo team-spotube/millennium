@@ -36,6 +36,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
@@ -46,6 +48,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.spotube.millennium.theme.MillenniumStyledContent
 import org.spotube.millennium.theme.MillenniumTheme
 import org.spotube.millennium.theme.millenniumPanelBrush
 import org.spotube.millennium.theme.millenniumSurface
@@ -96,6 +99,18 @@ enum class MillenniumSnackbarResult {
  * @property maxWidth Maximum pill width in dp (the pill is centered in the host).
  * @property actionSpacing Gap in dp between the message and the action button.
  * @property animationMillis Fade-in duration in ms; the exit animation uses 75% of it (minimum 120 ms).
+ * @property messageStyle Text style of the message (size, weight, family, shadow); `null` uses the body text
+ *   style.
+ * @property actionStyle Text style of the action label; `null` uses the button text style.
+ * @property actionButtonStyle Style of the action button. Default [MillenniumButtonStyle.Quiet].
+ * @property enterInitialScale Scale the pill grows from when entering (origin bottom centre). Default 0.92.
+ * @property exitTargetScale Scale the pill shrinks to when leaving. Default 0.95.
+ * @property enterSpringDamping Damping ratio of the enter slide and scale springs. Default 0.72.
+ * @property exitAnimationMillis Exit duration in ms; `null` derives it as 75% of [animationMillis] (minimum 120).
+ * @property bottomRimColor Colour of the lower lip of the inner rim; `null` (default) draws none.
+ * @property orbColor Colour of the glass orb overlay of the pill; `null` (default) draws none.
+ * @property overlayBrush Brush drawn over [background] and below the content (gloss, texture); `null` draws none.
+ * @property shadowColor Shadow colour of the pill; `null` uses the default 16% black.
  */
 @Immutable
 data class MillenniumSnackbarThemeProperties(
@@ -112,6 +127,17 @@ data class MillenniumSnackbarThemeProperties(
     val maxWidth: Dp,
     val actionSpacing: Dp,
     val animationMillis: Int,
+    val messageStyle: TextStyle? = null,
+    val actionStyle: TextStyle? = null,
+    val actionButtonStyle: MillenniumButtonStyle = MillenniumButtonStyle.Quiet,
+    val enterInitialScale: Float = 0.92f,
+    val exitTargetScale: Float = 0.95f,
+    val enterSpringDamping: Float = 0.72f,
+    val exitAnimationMillis: Int? = null,
+    val bottomRimColor: Color? = null,
+    val orbColor: Color? = null,
+    val overlayBrush: Brush? = null,
+    val shadowColor: Color? = null,
 )
 
 /**
@@ -308,7 +334,7 @@ fun MillenniumSnackbarHost(
     val visible = data != null
     val properties = theme.properties
     val resolvedMillis = animationMillis ?: properties.animationMillis
-    val closeMillis = (resolvedMillis * 0.75f).toInt().coerceAtLeast(120)
+    val closeMillis = properties.exitAnimationMillis ?: (resolvedMillis * 0.75f).toInt().coerceAtLeast(120)
     if (data != null) {
         LaunchedEffect(data) {
             if (data.duration != MillenniumSnackbarDuration.Indefinite) {
@@ -324,16 +350,16 @@ fun MillenniumSnackbarHost(
             enter = fadeIn(tween(resolvedMillis, easing = FastOutSlowInEasing)) +
                 slideInVertically(
                     animationSpec = spring(
-                        dampingRatio = 0.72f,
+                        dampingRatio = properties.enterSpringDamping,
                         stiffness = Spring.StiffnessMediumLow,
                     ),
                     initialOffsetY = { it / 2 },
                 ) +
                 scaleIn(
-                    initialScale = 0.92f,
+                    initialScale = properties.enterInitialScale,
                     transformOrigin = TransformOrigin(0.5f, 1f),
                     animationSpec = spring(
-                        dampingRatio = 0.72f,
+                        dampingRatio = properties.enterSpringDamping,
                         stiffness = Spring.StiffnessMediumLow,
                     ),
                 ),
@@ -343,7 +369,7 @@ fun MillenniumSnackbarHost(
                     targetOffsetY = { it / 2 },
                 ) +
                 scaleOut(
-                    targetScale = 0.95f,
+                    targetScale = properties.exitTargetScale,
                     transformOrigin = TransformOrigin(0.5f, 1f),
                     animationSpec = tween(closeMillis, easing = FastOutLinearInEasing),
                 ),
@@ -362,23 +388,30 @@ fun MillenniumSnackbarHost(
                         borderWidth = borderWidth ?: properties.borderWidth,
                         shadowElevation = shadowElevation ?: properties.shadowElevation,
                         innerGlowColor = innerGlowColor ?: properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.4f),
+                        bottomRimColor = properties.bottomRimColor,
+                        orbColor = properties.orbColor,
+                        shadowColor = properties.shadowColor ?: Color.Black.copy(alpha = 0.16f),
                     )
+                    .then(if (properties.overlayBrush != null) Modifier.background(properties.overlayBrush) else Modifier)
                     .padding(contentPadding ?: properties.contentPadding),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(actionSpacing ?: properties.actionSpacing),
             ) {
                 Box(Modifier.weight(1f)) {
-                    MillenniumText(showing.message, color = foreground ?: properties.foreground ?: colors.text)
+                    val messageColor = foreground ?: properties.foreground ?: colors.text
+                    MillenniumStyledContent(properties.messageStyle ?: TextStyle.Default, messageColor) {
+                        MillenniumText(showing.message, color = messageColor)
+                    }
                 }
                 if (showing.actionLabel != null) {
                     MillenniumButton(
                         onClick = { showing.performAction() },
-                        style = MillenniumButtonStyle.Quiet,
+                        style = properties.actionButtonStyle,
                     ) {
-                        MillenniumText(
-                            showing.actionLabel,
-                            color = actionForeground ?: properties.actionForeground ?: colors.accent,
-                        )
+                        val actionColor = actionForeground ?: properties.actionForeground ?: colors.accent
+                        MillenniumStyledContent(properties.actionStyle ?: TextStyle.Default, actionColor) {
+                            MillenniumText(showing.actionLabel, color = actionColor)
+                        }
                     }
                 }
             }

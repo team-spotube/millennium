@@ -57,7 +57,7 @@ import org.spotube.millennium.theme.millenniumPanelBrush
  * Appearance of one control state of [MillenniumModalBottomSheet].
  *
  * Normally produced by [defaultMillenniumModalBottomSheetTheme] and customised with `copy`. The composable
- * resolves only [MillenniumControlState.Default] from the owning [MillenniumModalBottomSheetTheme].
+ * resolves [MillenniumControlState.Default] (and the handle's Hovered/Pressed state) from the owning [MillenniumModalBottomSheetTheme].
  *
  * @property background Brush of the sheet; `null` derives the palette panel brush (pearl/smoke glass).
  * @property foreground Default content colour; `null` uses the palette text colour.
@@ -75,6 +75,19 @@ import org.spotube.millennium.theme.millenniumPanelBrush
  * @property scrimColor Colour of the dimming scrim behind the sheet; `null` uses the palette scrim colour.
  * @property animationMillis Scrim fade-in duration in ms; the fade-out uses 80% of it (minimum 120 ms).
  * @property alpha Overall opacity multiplier (1 = opaque).
+ * @property handleBrush Brush of the drag handle; wins over [handleColor]. `null` paints the handle colour.
+ * @property handleShape Shape of the drag handle (default [CircleShape]).
+ * @property bottomRimColor Colour of the lower lip of the inner rim; `null` (default) draws none.
+ * @property orbColor Colour of a glass orb overlay on the sheet; `null` (default) draws none.
+ * @property overlayBrush Brush drawn over [background] and below the content (gloss, texture); `null` draws none.
+ * @property shadowColor Shadow colour of the sheet; `null` uses the default 16% black.
+ * @property textStyle Ambient text style of the sheet content (colour comes from [foreground]).
+ * @property scrimBrush Brush of the dimming scrim; wins over [scrimColor]. `null` paints the scrim colour.
+ * @property scrimExitAnimationMillis Scrim fade-out duration in ms; `null` derives 80% of [animationMillis]
+ * (minimum 120 ms).
+ *
+ * The handle resolves its own state (Hovered, Pressed, Default) from the owning theme, so `handleSize`,
+ * `handleColor`, `handleBrush` and `handleShape` can differ per state.
  */
 @Immutable
 data class MillenniumModalBottomSheetThemeProperties(
@@ -93,6 +106,15 @@ data class MillenniumModalBottomSheetThemeProperties(
     val scrimColor: Color? = null,
     val animationMillis: Int,
     val alpha: Float,
+    val handleBrush: Brush? = null,
+    val handleShape: Shape = CircleShape,
+    val bottomRimColor: Color? = null,
+    val orbColor: Color? = null,
+    val overlayBrush: Brush? = null,
+    val shadowColor: Color? = null,
+    val textStyle: TextStyle = TextStyle.Default,
+    val scrimBrush: Brush? = null,
+    val scrimExitAnimationMillis: Int? = null,
 )
 
 /**
@@ -226,19 +248,32 @@ fun MillenniumModalBottomSheet(
     val properties = theme.states.resolve(MillenniumControlState.Default)
     val resolvedBackground = background ?: properties.background ?: millenniumPanelBrush(colors)
     val resolvedForeground = foreground ?: properties.foreground ?: colors.text
-    val resolvedHandleColor = handleColor ?: properties.handleColor ?: colors.muted
+    val handleProperties = theme.states.resolve(handleState)
+    val resolvedHandleColor = handleColor ?: handleProperties.handleColor ?: properties.handleColor ?: colors.muted
+    val resolvedHandleBrush = if (handleColor == null) handleProperties.handleBrush ?: properties.handleBrush else null
+    val resolvedHandleShape = handleProperties.handleShape
     val resolvedBorderColor = borderColor ?: properties.borderColor ?: colors.border
     val resolvedGlowColor = innerGlowColor ?: properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f)
     val resolvedScrimColor = scrimColor ?: properties.scrimColor ?: colors.scrim
     val resolvedAnimationMillis = animationMillis ?: properties.animationMillis
+    val useScrimBrush = properties.scrimBrush != null && scrimColor == null
     UnstyledModalBottomSheet(
         state = state,
         overlay = {
             Scrim(
-                modifier = Modifier.millenniumActionPointer(),
-                scrimColor = resolvedScrimColor,
+                modifier = if (useScrimBrush) {
+                    Modifier.millenniumActionPointer().background(properties.scrimBrush!!)
+                } else {
+                    Modifier.millenniumActionPointer()
+                },
+                scrimColor = if (useScrimBrush) Color.Transparent else resolvedScrimColor,
                 enter = fadeIn(animationSpec = tween(resolvedAnimationMillis, easing = FastOutSlowInEasing)),
-                exit = fadeOut(animationSpec = tween((resolvedAnimationMillis * 0.8f).toInt().coerceAtLeast(120), easing = FastOutLinearInEasing)),
+                exit = fadeOut(
+                    animationSpec = tween(
+                        properties.scrimExitAnimationMillis ?: (resolvedAnimationMillis * 0.8f).toInt().coerceAtLeast(120),
+                        easing = FastOutLinearInEasing,
+                    ),
+                ),
             )
         },
     ) {
@@ -251,7 +286,12 @@ fun MillenniumModalBottomSheet(
                     borderWidth = borderWidth ?: properties.borderWidth,
                     shadowElevation = shadowElevation ?: properties.shadowElevation,
                     innerGlowColor = resolvedGlowColor,
-                ).alpha(alpha ?: properties.alpha),
+                    bottomRimColor = properties.bottomRimColor,
+                    orbColor = properties.orbColor,
+                    shadowColor = properties.shadowColor ?: Color.Black.copy(alpha = 0.16f),
+                )
+                .then(if (properties.overlayBrush != null) Modifier.background(properties.overlayBrush) else Modifier)
+                .alpha(alpha ?: properties.alpha),
             ) {
                 Column(
                     Modifier.padding(contentPadding ?: properties.contentPadding).navigationBarsPadding(),
@@ -261,11 +301,18 @@ fun MillenniumModalBottomSheet(
                     horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
                 ) {
                     DragIndication(
-                        Modifier.millenniumActionPointer().size(handleSize ?: properties.handleSize).background(resolvedHandleColor, CircleShape)
-                            .millenniumInteractionSurface(handleState, CircleShape),
+                        Modifier.millenniumActionPointer().size(handleSize ?: handleProperties.handleSize)
+                            .then(
+                                if (resolvedHandleBrush != null) {
+                                    Modifier.background(resolvedHandleBrush, resolvedHandleShape)
+                                } else {
+                                    Modifier.background(resolvedHandleColor, resolvedHandleShape)
+                                },
+                            )
+                            .millenniumInteractionSurface(handleState, resolvedHandleShape),
                         interactionSource = handleInteraction,
                     )
-                    MillenniumStyledContent(TextStyle(color = resolvedForeground), resolvedForeground) {
+                    MillenniumStyledContent(properties.textStyle.copy(color = resolvedForeground), resolvedForeground) {
                         content()
                     }
                 }
