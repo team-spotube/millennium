@@ -83,6 +83,28 @@ import org.spotube.millennium.theme.millenniumInteractionSurface
  * @property alpha Opacity of the option; default `1f` (the default disabled state uses `0.45f`).
  * @property indicatorGlowColor Indicator inner highlight; `null` = palette highlight at 32% when selected, none otherwise.
  * @property indicatorElevation Indicator drop-shadow elevation; default `0.dp`.
+ * @property indicatorBottomRimColor Colour of the lower inner rim of the indicator; `null` = none.
+ * @property indicatorShadows Drop-shadow colour layers of the indicator (visible when [indicatorElevation] is
+ * above 0). `null` = a single 16% black layer.
+ * @property dotBrush Brush of the selection dot; `null` = [dotColor] (or on-accent) as a solid colour.
+ * @property dotShape Shape of the selection dot; default [CircleShape].
+ * @property indicatorHoverScale Indicator scale while hovered. Default `1.05f`.
+ * @property indicatorPressedScale Indicator scale while pressed. Default `0.90f`.
+ * @property indicatorScaleDampingRatio Damping ratio of the indicator scale spring. Default `0.65f`.
+ * @property indicatorScaleStiffness Stiffness of the indicator scale spring. Default [Spring.StiffnessMedium].
+ * @property dotEnterScale Initial scale of the dot popping in. Default `0.3f`.
+ * @property dotEnterDampingRatio Damping ratio of the dot pop-in spring. Default `0.52f`.
+ * @property dotExitScale Final scale of the dot shrinking away. Default `0.3f`.
+ * @property indicatorInteractionOverlay Brush painted over the indicator while this state is active,
+ * replacing the built-in hover/press lighting (see [MillenniumButtonThemeProperties.interactionOverlay]).
+ * `null` = built-in lighting; a transparent brush disables it.
+ * @property indicatorInteractionRim Brush stroked 1dp inside the indicator edge together with the overlay.
+ * `null` = the built-in rim when the overlay is also `null`, otherwise none.
+ * @property indicatorInteractionTint Accent of the built-in lighting; `null` = the palette accent.
+ *
+ * A selected option that is also hovered, focused or pressed resolves that interaction state; the nullable
+ * visuals (brushes, border, glow, dot, rim, interaction brushes) then fall back to the theme's `selected`
+ * entry before the built-in default.
  */
 @Immutable
 data class MillenniumRadioGroupThemeProperties(
@@ -105,6 +127,20 @@ data class MillenniumRadioGroupThemeProperties(
     val alpha: Float = 1f,
     val indicatorGlowColor: Color? = null,
     val indicatorElevation: Dp = 0.dp,
+    val indicatorBottomRimColor: Color? = null,
+    val indicatorShadows: List<Color>? = null,
+    val dotBrush: Brush? = null,
+    val dotShape: Shape = CircleShape,
+    val indicatorHoverScale: Float = 1.05f,
+    val indicatorPressedScale: Float = 0.90f,
+    val indicatorScaleDampingRatio: Float = 0.65f,
+    val indicatorScaleStiffness: Float = Spring.StiffnessMedium,
+    val dotEnterScale: Float = 0.3f,
+    val dotEnterDampingRatio: Float = 0.52f,
+    val dotExitScale: Float = 0.3f,
+    val indicatorInteractionOverlay: Brush? = null,
+    val indicatorInteractionRim: Brush? = null,
+    val indicatorInteractionTint: Color? = null,
 )
 
 /**
@@ -173,8 +209,8 @@ fun defaultMillenniumRadioGroupTheme(): MillenniumRadioGroupTheme {
  * Built on Compose Unstyled `UnstyledRadioGroup` and `RadioButton`, which provide the radio-group
  * semantics, per-option selection, [label] as the group's accessibility label and arrow-key
  * navigation behaviour of the primitive. Each option row has a 44dp default minimum height. Option
- * state resolves as pressed, keyboard-focused (`collectIsKeyboardFocusedAsState`, no ring after pointer
- * presses), hovered, selected, default. Feedback stays on the small indicator (spring scale, border
+ * state resolves as disabled, pressed, keyboard-focused (`collectIsKeyboardFocusedAsState`, no ring after
+ * pointer presses), error, hovered, selected, default. Feedback stays on the small indicator (spring scale, border
  * colour, interaction lighting) instead of washing the row; the selection dot pops in with a spring.
  * The hand cursor is shown over options.
  *
@@ -221,6 +257,8 @@ fun defaultMillenniumRadioGroupTheme(): MillenniumRadioGroupTheme {
  * @param alpha Overrides the option opacity; `null` falls back to the state's value.
  * @param enabled When `false` every option is dimmed, ignores input and resolves the disabled theme state.
  * @param theme Theme supplying state properties; defaults to [MillenniumTheme.radioGroupTheme].
+ * @param error Marks every option as invalid; resolves the theme's `error` state unless an option is
+ * disabled, pressed or keyboard-focused.
  * @see MillenniumCheckbox
  * @see MillenniumRadioGroupTheme
  */
@@ -253,6 +291,7 @@ fun <T> MillenniumRadioGroup(
     alpha: Float? = null,
     enabled: Boolean = true,
     theme: MillenniumRadioGroupTheme = MillenniumTheme.radioGroupTheme,
+    error: Boolean = false,
 ) {
     val colors = MillenniumTheme.colors
     val properties = theme.states.default
@@ -268,22 +307,25 @@ fun <T> MillenniumRadioGroup(
                 val pressed by interaction.collectIsPressedAsState()
                 val focused by interaction.collectIsKeyboardFocusedAsState()
                 val hovered by interaction.collectIsHoveredAsState()
-                val state = when {
-                    !enabled -> MillenniumControlState.Disabled
-                    pressed -> MillenniumControlState.Pressed
-                    focused -> MillenniumControlState.Focused
-                    hovered -> MillenniumControlState.Hovered
-                    selected -> MillenniumControlState.Selected
-                    else -> MillenniumControlState.Default
-                }
+                val state = millenniumResolveControlState(
+                    enabled = enabled,
+                    pressed = pressed,
+                    focused = focused,
+                    hovered = hovered,
+                    selected = selected,
+                    error = error,
+                )
                 val itemProperties = theme.states.resolve(state)
+                val selectedProperties = theme.states.selected
+                fun <V> pick(read: (MillenniumRadioGroupThemeProperties) -> V?): V? =
+                    read(itemProperties) ?: if (selected) read(selectedProperties) else null
                 val resolvedMillis = stateAnimationMillis ?: itemProperties.stateAnimationMillis
                 val animatedAlpha = animateFloatAsState(
                     targetValue = alpha ?: itemProperties.alpha,
                     animationSpec = tween(resolvedMillis),
                 ).value
                 val targetIndicatorBorderColor =
-                    indicatorBorderColor ?: itemProperties.indicatorBorderColor ?: when (state) {
+                    indicatorBorderColor ?: pick { it.indicatorBorderColor } ?: when (state) {
                         MillenniumControlState.Focused -> colors.accent
                         MillenniumControlState.Hovered, MillenniumControlState.Pressed -> colors.accent
                         MillenniumControlState.Selected -> colors.accent
@@ -296,13 +338,16 @@ fun <T> MillenniumRadioGroup(
                 )
                 val indicatorScale by animateFloatAsState(
                     targetValue = when {
-                        pressed -> 0.90f
-                        hovered -> 1.05f
+                        pressed -> itemProperties.indicatorPressedScale
+                        hovered -> itemProperties.indicatorHoverScale
                         else -> 1f
                     },
-                    animationSpec = spring(dampingRatio = 0.65f, stiffness = Spring.StiffnessMedium),
+                    animationSpec = spring(
+                        dampingRatio = itemProperties.indicatorScaleDampingRatio,
+                        stiffness = itemProperties.indicatorScaleStiffness,
+                    ),
                 )
-                val resolvedLabelColor = labelColor ?: itemProperties.labelColor
+                val resolvedLabelColor = labelColor ?: pick { it.labelColor }
                 ?: if (state == MillenniumControlState.Disabled) colors.muted else colors.text
                 val resolvedSelectedLabelColor =
                     selectedLabelColor ?: itemProperties.selectedLabelColor ?: colors.text
@@ -334,7 +379,7 @@ fun <T> MillenniumRadioGroup(
                                 .graphicsLayer { scaleX = indicatorScale; scaleY = indicatorScale }
                                 .millenniumSurface(
                                     background = if (selected) selectedIndicatorBackground
-                                        ?: itemProperties.selectedIndicatorBackground
+                                        ?: pick { it.selectedIndicatorBackground }
                                         ?: gelBrush(colors.accentTop, colors.accentBottom)
                                     else indicatorBackground ?: itemProperties.indicatorBackground
                                     ?: millenniumBevelBrush(colors, sunken = true),
@@ -344,31 +389,46 @@ fun <T> MillenniumRadioGroup(
                                         ?: itemProperties.indicatorBorderWidth,
                                     shadowElevation = indicatorElevation
                                         ?: itemProperties.indicatorElevation,
+                                    shadowColors = itemProperties.indicatorShadows
+                                        ?: listOf(Color.Black.copy(alpha = 0.16f)),
                                     innerGlowColor = indicatorGlowColor
-                                        ?: itemProperties.indicatorGlowColor
+                                        ?: pick { it.indicatorGlowColor }
                                         ?: if (selected) colors.highlight.copy(alpha = 0.32f) else null,
+                                    bottomRimColor = pick { it.indicatorBottomRimColor },
                                 )
-                                .millenniumInteractionSurface(state, indicatorShape ?: itemProperties.indicatorShape, animationMillis = resolvedMillis),
+                                .millenniumThemedInteraction(
+                                    state = state,
+                                    shape = indicatorShape ?: itemProperties.indicatorShape,
+                                    overlay = pick { it.indicatorInteractionOverlay },
+                                    rim = pick { it.indicatorInteractionRim },
+                                    tint = pick { it.indicatorInteractionTint },
+                                    animationMillis = resolvedMillis,
+                                ),
                             contentAlignment = Alignment.Center,
                         ) {
                             SelectedIndicator(
                                 enter = scaleIn(
-                                    initialScale = 0.3f,
+                                    initialScale = itemProperties.dotEnterScale,
                                     animationSpec = spring(
-                                        dampingRatio = 0.52f,
+                                        dampingRatio = itemProperties.dotEnterDampingRatio,
                                         stiffness = Spring.StiffnessMedium,
                                     ),
                                 ) + fadeIn(tween(resolvedMillis, easing = FastOutSlowInEasing)),
                                 exit = scaleOut(
-                                    targetScale = 0.3f,
+                                    targetScale = itemProperties.dotExitScale,
                                     animationSpec = tween((resolvedMillis * 0.75f).toInt().coerceAtLeast(70), easing = FastOutLinearInEasing),
                                 ) + fadeOut(tween((resolvedMillis * 0.75f).toInt().coerceAtLeast(70), easing = FastOutLinearInEasing)),
                             ) {
+                                val resolvedDotBrush = pick { it.dotBrush }
+                                val resolvedDotColor = dotColor ?: pick { it.dotColor } ?: colors.onAccent
                                 Box(
                                     Modifier.size(dotSize ?: itemProperties.dotSize)
-                                        .background(
-                                            dotColor ?: itemProperties.dotColor ?: colors.onAccent,
-                                            CircleShape
+                                        .then(
+                                            if (dotColor == null && resolvedDotBrush != null) {
+                                                Modifier.background(resolvedDotBrush, itemProperties.dotShape)
+                                            } else {
+                                                Modifier.background(resolvedDotColor, itemProperties.dotShape)
+                                            },
                                         ),
                                 )
                             }

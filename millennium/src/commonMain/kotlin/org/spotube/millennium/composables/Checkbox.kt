@@ -83,6 +83,33 @@ import org.spotube.millennium.theme.millenniumInteractionSurface
  * @property minimumTouchHeight Minimum height of the whole interactive row.
  * @property contentPadding Padding around the box and label row.
  * @property contentSpacing Gap between box and label.
+ * @property selectedFaceBorderColor Border colour while checked or indeterminate; wins over
+ * [faceBorderColor] for those values. `null` = [faceBorderColor], then the palette-derived colour.
+ * @property selectedFaceGlowColor Inner highlight while checked or indeterminate; wins over [faceGlowColor]
+ * for those values. `null` = [faceGlowColor], then the palette highlight at 55%.
+ * @property faceBottomRimColor Colour of the lower inner rim of the box; `null` = none.
+ * @property faceShadows Drop-shadow colour layers of the box (visible when [faceElevation] is above 0).
+ * `null` = a single 16% black layer.
+ * @property indeterminateFaceBackground Face brush for the indeterminate value; `null` = [selectedFaceBackground].
+ * @property dashBrush Brush of the indeterminate dash; `null` = [selectedFaceForeground].
+ * @property dashShape Shape of the indeterminate dash; default [CircleShape].
+ * @property faceHoverScale Box scale while hovered. Default `1.05f`.
+ * @property facePressedScale Box scale while pressed. Default `0.90f`.
+ * @property faceScaleDampingRatio Damping ratio of the box scale spring. Default `0.62f`.
+ * @property faceScaleStiffness Stiffness of the box scale spring. Default [Spring.StiffnessMedium].
+ * @property markEnterScale Initial scale of a mark popping in. Default `0.4f`.
+ * @property markEnterDampingRatio Damping ratio of the mark pop-in spring. Default `0.52f`.
+ * @property markExitScale Final scale of a mark shrinking away. Default `0.4f`.
+ * @property faceInteractionOverlay Brush painted over the box while this state is active, replacing the
+ * built-in hover/press lighting (see [MillenniumButtonThemeProperties.interactionOverlay]). `null` =
+ * built-in lighting; a transparent brush disables it.
+ * @property faceInteractionRim Brush stroked 1dp inside the box edge together with the overlay. `null` = the
+ * built-in rim when the overlay is also `null`, otherwise none.
+ * @property faceInteractionTint Accent of the built-in lighting; `null` = the palette accent.
+ *
+ * Every member added after [contentSpacing] has a default implementation, so existing implementors keep
+ * compiling. When the box is checked and also hovered, focused or pressed the interaction state is resolved
+ * and the nullable visuals fall back to the theme's `selected` entry (see the checkbox composables).
  */
 interface MillenniumCheckFaceStyle {
     val faceBackground: Brush?
@@ -103,6 +130,23 @@ interface MillenniumCheckFaceStyle {
     val minimumTouchHeight: Dp
     val contentPadding: PaddingValues
     val contentSpacing: Dp
+    val selectedFaceBorderColor: Color? get() = null
+    val selectedFaceGlowColor: Color? get() = null
+    val faceBottomRimColor: Color? get() = null
+    val faceShadows: List<Color>? get() = null
+    val indeterminateFaceBackground: Brush? get() = null
+    val dashBrush: Brush? get() = null
+    val dashShape: Shape get() = CircleShape
+    val faceHoverScale: Float get() = 1.05f
+    val facePressedScale: Float get() = 0.90f
+    val faceScaleDampingRatio: Float get() = 0.62f
+    val faceScaleStiffness: Float get() = Spring.StiffnessMedium
+    val markEnterScale: Float get() = 0.4f
+    val markEnterDampingRatio: Float get() = 0.52f
+    val markExitScale: Float get() = 0.4f
+    val faceInteractionOverlay: Brush? get() = null
+    val faceInteractionRim: Brush? get() = null
+    val faceInteractionTint: Color? get() = null
 }
 
 /**
@@ -133,6 +177,23 @@ data class MillenniumCheckboxThemeProperties(
     override val minimumTouchHeight: Dp,
     override val contentPadding: PaddingValues,
     override val contentSpacing: Dp,
+    override val selectedFaceBorderColor: Color? = null,
+    override val selectedFaceGlowColor: Color? = null,
+    override val faceBottomRimColor: Color? = null,
+    override val faceShadows: List<Color>? = null,
+    override val indeterminateFaceBackground: Brush? = null,
+    override val dashBrush: Brush? = null,
+    override val dashShape: Shape = CircleShape,
+    override val faceHoverScale: Float = 1.05f,
+    override val facePressedScale: Float = 0.90f,
+    override val faceScaleDampingRatio: Float = 0.62f,
+    override val faceScaleStiffness: Float = Spring.StiffnessMedium,
+    override val markEnterScale: Float = 0.4f,
+    override val markEnterDampingRatio: Float = 0.52f,
+    override val markExitScale: Float = 0.4f,
+    override val faceInteractionOverlay: Brush? = null,
+    override val faceInteractionRim: Brush? = null,
+    override val faceInteractionTint: Color? = null,
 ) : MillenniumCheckFaceStyle
 
 /**
@@ -212,10 +273,12 @@ internal fun MillenniumCheckFace(
     state: MillenniumControlState,
 ) {
     val colors = MillenniumTheme.colors
+    val selected = value != ToggleableState.Off
     val faceBackground = properties.faceBackground
         ?: if (value == ToggleableState.Off) millenniumBevelBrush(colors, sunken = true)
         else gelBrush(colors.accentTop, colors.accentBottom)
-    val targetBorderColor = properties.faceBorderColor
+    val targetBorderColor = (if (selected) properties.selectedFaceBorderColor else null)
+        ?: properties.faceBorderColor
         ?: when (state) {
             MillenniumControlState.Hovered, MillenniumControlState.Pressed, MillenniumControlState.Focused -> colors.accent
             else -> if (value == ToggleableState.Off) colors.border else colors.accentBottom
@@ -224,31 +287,46 @@ internal fun MillenniumCheckFace(
         targetValue = targetBorderColor,
         animationSpec = tween(properties.stateChangeMillis),
     )
-    val glowColor = properties.faceGlowColor ?: colors.highlight.copy(alpha = 0.55f)
+    val glowColor = (if (selected) properties.selectedFaceGlowColor else null)
+        ?: properties.faceGlowColor ?: colors.highlight.copy(alpha = 0.55f)
     val selectedForeground = properties.selectedFaceForeground ?: colors.onAccent
-    val selected = value != ToggleableState.Off
     val scale by animateFloatAsState(
         targetValue = when (state) {
-            MillenniumControlState.Pressed -> 0.90f
-            MillenniumControlState.Hovered -> 1.05f
+            MillenniumControlState.Pressed -> properties.facePressedScale
+            MillenniumControlState.Hovered -> properties.faceHoverScale
             else -> 1f
         },
-        animationSpec = spring(dampingRatio = 0.62f, stiffness = Spring.StiffnessMedium),
+        animationSpec = spring(
+            dampingRatio = properties.faceScaleDampingRatio,
+            stiffness = properties.faceScaleStiffness,
+        ),
     )
     Box(
         Modifier
             .size(properties.faceSize)
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .millenniumSurface(
-                background = if (selected) properties.selectedFaceBackground
-                    ?: gelBrush(colors.accentTop, colors.accentBottom) else faceBackground,
+                background = if (selected) {
+                    (if (value == ToggleableState.Indeterminate) properties.indeterminateFaceBackground else null)
+                        ?: properties.selectedFaceBackground
+                        ?: gelBrush(colors.accentTop, colors.accentBottom)
+                } else faceBackground,
                 shape = properties.faceShape,
                 borderColor = borderColor,
                 borderWidth = properties.faceBorderWidth,
                 shadowElevation = properties.faceElevation,
+                shadowColors = properties.faceShadows ?: listOf(Color.Black.copy(alpha = 0.16f)),
                 innerGlowColor = glowColor,
+                bottomRimColor = properties.faceBottomRimColor,
             )
-            .millenniumInteractionSurface(state, properties.faceShape, animationMillis = properties.stateChangeMillis)
+            .millenniumThemedInteraction(
+                state = state,
+                shape = properties.faceShape,
+                overlay = properties.faceInteractionOverlay,
+                rim = properties.faceInteractionRim,
+                tint = properties.faceInteractionTint,
+                animationMillis = properties.stateChangeMillis,
+            )
             .alpha(properties.faceAlpha),
         contentAlignment = Alignment.Center,
     ) {
@@ -256,9 +334,9 @@ internal fun MillenniumCheckFace(
             targetState = value,
             transitionSpec = {
                 (scaleIn(
-                    initialScale = 0.4f,
+                    initialScale = properties.markEnterScale,
                     animationSpec = spring(
-                        dampingRatio = 0.52f,
+                        dampingRatio = properties.markEnterDampingRatio,
                         stiffness = Spring.StiffnessMedium
                     ),
                 ) + fadeIn(
@@ -268,7 +346,7 @@ internal fun MillenniumCheckFace(
                     )
                 )) togetherWith
                         (scaleOut(
-                            targetScale = 0.4f,
+                            targetScale = properties.markExitScale,
                             animationSpec = tween(
                                 (properties.stateChangeMillis * 0.7f).toInt().coerceAtLeast(60),
                                 easing = FastOutLinearInEasing
@@ -292,7 +370,13 @@ internal fun MillenniumCheckFace(
                     ToggleableState.Indeterminate -> Box(
                         Modifier
                             .size(properties.dashSize)
-                            .background(selectedForeground, CircleShape),
+                            .then(
+                                if (properties.dashBrush != null) {
+                                    Modifier.background(properties.dashBrush!!, properties.dashShape)
+                                } else {
+                                    Modifier.background(selectedForeground, properties.dashShape)
+                                },
+                            ),
                     )
 
                     ToggleableState.Off -> Unit
@@ -303,6 +387,30 @@ internal fun MillenniumCheckFace(
 }
 
 /**
+ * Internal: for a checked box that resolves a hover/focus/press state, fills the nullable visuals that
+ * the state leaves unset from the theme's `selected` entry.
+ */
+internal fun MillenniumCheckboxThemeProperties.withSelectedFallback(
+    selected: MillenniumCheckboxThemeProperties,
+): MillenniumCheckboxThemeProperties = copy(
+    faceBackground = faceBackground ?: selected.faceBackground,
+    selectedFaceBackground = selectedFaceBackground ?: selected.selectedFaceBackground,
+    selectedFaceForeground = selectedFaceForeground ?: selected.selectedFaceForeground,
+    faceBorderColor = faceBorderColor ?: selected.faceBorderColor,
+    faceGlowColor = faceGlowColor ?: selected.faceGlowColor,
+    labelForeground = labelForeground ?: selected.labelForeground,
+    selectedFaceBorderColor = selectedFaceBorderColor ?: selected.selectedFaceBorderColor,
+    selectedFaceGlowColor = selectedFaceGlowColor ?: selected.selectedFaceGlowColor,
+    faceBottomRimColor = faceBottomRimColor ?: selected.faceBottomRimColor,
+    faceShadows = faceShadows ?: selected.faceShadows,
+    indeterminateFaceBackground = indeterminateFaceBackground ?: selected.indeterminateFaceBackground,
+    dashBrush = dashBrush ?: selected.dashBrush,
+    faceInteractionOverlay = faceInteractionOverlay ?: selected.faceInteractionOverlay,
+    faceInteractionRim = faceInteractionRim ?: selected.faceInteractionRim,
+    faceInteractionTint = faceInteractionTint ?: selected.faceInteractionTint,
+)
+
+/**
  * A beveled two-state checkbox with an optional text label.
  *
  * Use it for independent on/off choices. For a parent that summarises children use
@@ -311,7 +419,7 @@ internal fun MillenniumCheckFace(
  * Built on Compose Unstyled `UnstyledCheckbox`, which provides checkbox semantics, toggle on click and
  * Space, and [label] as the accessibility label. The whole row (box plus label) is the target with a
  * 44dp default minimum height. State resolves as disabled, pressed, keyboard-focused (via
- * `collectIsKeyboardFocusedAsState`, so no ring after a pointer press), hovered, selected, default.
+ * `collectIsKeyboardFocusedAsState`, so no ring after a pointer press), error, hovered, selected, default.
  * Feedback stays on the box (spring scale, border colour, interaction lighting), not the whole row;
  * the check mark pops in with a spring. The hand cursor is shown while enabled. State is caller-owned.
  *
@@ -351,6 +459,8 @@ internal fun MillenniumCheckFace(
  * @param contentPadding Overrides the padding around the row content; `null` falls back to the theme.
  * @param contentSpacing Overrides the gap between box and label; `null` falls back to the theme.
  * @param theme Theme supplying state properties; defaults to [MillenniumTheme.checkboxTheme].
+ * @param error Marks the box as invalid; resolves the theme's `error` state unless disabled, pressed or
+ * keyboard-focused.
  * @see MillenniumTriStateCheckbox
  * @see MillenniumCheckboxTheme
  */
@@ -380,20 +490,23 @@ fun MillenniumCheckbox(
     contentPadding: PaddingValues? = null,
     contentSpacing: Dp? = null,
     theme: MillenniumCheckboxTheme = MillenniumTheme.checkboxTheme,
+    error: Boolean = false,
 ) {
     val source = remember { MutableInteractionSource() }
     val pressed by source.collectIsPressedAsState()
     val focused by source.collectIsKeyboardFocusedAsState()
     val hovered by source.collectIsHoveredAsState()
-    val state = when {
-        !enabled -> MillenniumControlState.Disabled
-        pressed -> MillenniumControlState.Pressed
-        focused -> MillenniumControlState.Focused
-        hovered -> MillenniumControlState.Hovered
-        checked -> MillenniumControlState.Selected
-        else -> MillenniumControlState.Default
+    val state = millenniumResolveControlState(
+        enabled = enabled,
+        pressed = pressed,
+        focused = focused,
+        hovered = hovered,
+        selected = checked,
+        error = error,
+    )
+    val properties = theme.states.resolve(state).let {
+        if (checked && state != MillenniumControlState.Selected) it.withSelectedFallback(theme.states.selected) else it
     }
-    val properties = theme.states.resolve(state)
     val faceProperties = properties.copy(
         faceBackground = faceBackground ?: properties.faceBackground,
         selectedFaceBackground = selectedFaceBackground ?: properties.selectedFaceBackground,

@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -64,7 +66,48 @@ data class MillenniumTriStateCheckboxThemeProperties(
     override val minimumTouchHeight: Dp,
     override val contentPadding: PaddingValues,
     override val contentSpacing: Dp,
+    override val selectedFaceBorderColor: Color? = null,
+    override val selectedFaceGlowColor: Color? = null,
+    override val faceBottomRimColor: Color? = null,
+    override val faceShadows: List<Color>? = null,
+    override val indeterminateFaceBackground: Brush? = null,
+    override val dashBrush: Brush? = null,
+    override val dashShape: Shape = CircleShape,
+    override val faceHoverScale: Float = 1.05f,
+    override val facePressedScale: Float = 0.90f,
+    override val faceScaleDampingRatio: Float = 0.62f,
+    override val faceScaleStiffness: Float = Spring.StiffnessMedium,
+    override val markEnterScale: Float = 0.4f,
+    override val markEnterDampingRatio: Float = 0.52f,
+    override val markExitScale: Float = 0.4f,
+    override val faceInteractionOverlay: Brush? = null,
+    override val faceInteractionRim: Brush? = null,
+    override val faceInteractionTint: Color? = null,
 ) : MillenniumCheckFaceStyle
+
+/**
+ * Internal: for a checked box that resolves a hover/focus/press state, fills the nullable visuals that
+ * the state leaves unset from the theme's `selected` entry.
+ */
+internal fun MillenniumTriStateCheckboxThemeProperties.withSelectedFallback(
+    selected: MillenniumTriStateCheckboxThemeProperties,
+): MillenniumTriStateCheckboxThemeProperties = copy(
+    faceBackground = faceBackground ?: selected.faceBackground,
+    selectedFaceBackground = selectedFaceBackground ?: selected.selectedFaceBackground,
+    selectedFaceForeground = selectedFaceForeground ?: selected.selectedFaceForeground,
+    faceBorderColor = faceBorderColor ?: selected.faceBorderColor,
+    faceGlowColor = faceGlowColor ?: selected.faceGlowColor,
+    labelForeground = labelForeground ?: selected.labelForeground,
+    selectedFaceBorderColor = selectedFaceBorderColor ?: selected.selectedFaceBorderColor,
+    selectedFaceGlowColor = selectedFaceGlowColor ?: selected.selectedFaceGlowColor,
+    faceBottomRimColor = faceBottomRimColor ?: selected.faceBottomRimColor,
+    faceShadows = faceShadows ?: selected.faceShadows,
+    indeterminateFaceBackground = indeterminateFaceBackground ?: selected.indeterminateFaceBackground,
+    dashBrush = dashBrush ?: selected.dashBrush,
+    faceInteractionOverlay = faceInteractionOverlay ?: selected.faceInteractionOverlay,
+    faceInteractionRim = faceInteractionRim ?: selected.faceInteractionRim,
+    faceInteractionTint = faceInteractionTint ?: selected.faceInteractionTint,
+)
 
 /**
  * Theme for [MillenniumTriStateCheckbox]: one [MillenniumTriStateCheckboxThemeProperties] per control
@@ -127,7 +170,7 @@ fun defaultMillenniumTriStateCheckboxTheme(): MillenniumTriStateCheckboxTheme {
  * Built on Compose Unstyled `UnstyledTriStateCheckbox`, which supplies tri-state toggle semantics,
  * click/Space activation and [label] as the accessibility label. The row has a 44dp default minimum
  * height. State resolves as disabled, pressed, keyboard-focused (`collectIsKeyboardFocusedAsState`, no
- * ring after pointer presses), hovered, selected (any non-off value), default. The box shows a check for
+ * ring after pointer presses), error, hovered, selected (any non-off value), default. The box shows a check for
  * `On` and a dash for `Indeterminate`, animating between them with a spring pop.
  *
  * Nullable parameters override single theme properties (`param ?: themeValue ?: fallback`).
@@ -174,6 +217,8 @@ fun defaultMillenniumTriStateCheckboxTheme(): MillenniumTriStateCheckboxTheme {
  * @param contentPadding Overrides the padding around the row content; `null` falls back to the theme.
  * @param contentSpacing Overrides the gap between box and label; `null` falls back to the theme.
  * @param theme Theme supplying state properties; defaults to [MillenniumTheme.triStateCheckboxTheme].
+ * @param error Marks the box as invalid; resolves the theme's `error` state unless disabled, pressed or
+ * keyboard-focused.
  * @see MillenniumCheckbox
  * @see MillenniumTriStateCheckboxTheme
  */
@@ -203,20 +248,25 @@ fun MillenniumTriStateCheckbox(
     contentPadding: PaddingValues? = null,
     contentSpacing: Dp? = null,
     theme: MillenniumTriStateCheckboxTheme = MillenniumTheme.triStateCheckboxTheme,
+    error: Boolean = false,
 ) {
     val source = remember { MutableInteractionSource() }
     val pressed by source.collectIsPressedAsState()
     val focused by source.collectIsKeyboardFocusedAsState()
     val hovered by source.collectIsHoveredAsState()
-    val state = when {
-        !enabled -> MillenniumControlState.Disabled
-        pressed -> MillenniumControlState.Pressed
-        focused -> MillenniumControlState.Focused
-        hovered -> MillenniumControlState.Hovered
-        value != ToggleableState.Off -> MillenniumControlState.Selected
-        else -> MillenniumControlState.Default
+    val state = millenniumResolveControlState(
+        enabled = enabled,
+        pressed = pressed,
+        focused = focused,
+        hovered = hovered,
+        selected = value != ToggleableState.Off,
+        error = error,
+    )
+    val properties = theme.states.resolve(state).let {
+        if (value != ToggleableState.Off && state != MillenniumControlState.Selected) {
+            it.withSelectedFallback(theme.states.selected)
+        } else it
     }
-    val properties = theme.states.resolve(state)
     val faceProperties = properties.copy(
         faceBackground = faceBackground ?: properties.faceBackground,
         selectedFaceBackground = selectedFaceBackground ?: properties.selectedFaceBackground,

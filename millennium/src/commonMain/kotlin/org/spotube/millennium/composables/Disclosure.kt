@@ -16,7 +16,11 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import org.spotube.millennium.theme.collectIsKeyboardFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -75,6 +79,32 @@ import org.spotube.millennium.theme.millenniumInteractionSurface
  * @property contentSpacing Vertical spacing between body children (12dp).
  * @property animationMillis Base duration in milliseconds for colour, elevation and fade transitions (180).
  * @property alpha Whole-disclosure opacity (0.45 in the default disabled bag).
+ * @property headerBackground Brush painted behind the header row (inside the surface); `null` = none.
+ * @property contentBackground Brush painted behind the expanded body; `null` = none.
+ * @property chevronForeground Chevron colour; `null` = [foreground] (or the palette text colour).
+ * @property chevronSize Size of the chevron icon; `null` = the icon's intrinsic size.
+ * @property chevronRotation Rotation in degrees of the chevron when expanded. Default `180f`.
+ * @property chevronDampingRatio Damping ratio of the chevron rotation spring. Default `0.68f`.
+ * @property chevronStiffness Stiffness of the chevron rotation spring. Default [Spring.StiffnessMediumLow].
+ * @property headerPressedScale Scale of the whole disclosure while pressed. Default `0.992f`.
+ * @property headerScaleDampingRatio Damping ratio of the press-scale spring. Default `0.72f`.
+ * @property headerScaleStiffness Stiffness of the press-scale spring. Default [Spring.StiffnessMedium].
+ * @property contentEnterDampingRatio Damping ratio of the body's expand spring. Default `0.80f`.
+ * @property contentEnterStiffness Stiffness of the body's expand spring. Default [Spring.StiffnessMediumLow].
+ * @property shadows Drop-shadow colour layers (visible when [shadowElevation] is above 0). `null` = a single
+ * 16% black layer.
+ * @property innerGlowWidth Thickness of the inner highlight. Default `1.dp`.
+ * @property innerGlowTop Offset of the highlight from the top edge. Default `1.dp`.
+ * @property bottomRimColor Colour of the lower inner rim; `null` = none.
+ * @property headerInteractionOverlay Brush painted over the header while this state is active, replacing the
+ * built-in hover/press lighting (see [MillenniumButtonThemeProperties.interactionOverlay]). `null` =
+ * built-in lighting; a transparent brush disables it.
+ * @property headerInteractionRim Brush stroked 1dp inside the header edge together with the overlay. `null` =
+ * the built-in rim when the overlay is also `null`, otherwise none.
+ * @property headerInteractionTint Accent of the built-in lighting; `null` = the palette accent.
+ *
+ * An expanded disclosure that is also hovered, focused or pressed resolves that interaction state; the
+ * nullable visuals then fall back to the theme's `selected` entry before the built-in default.
  * @see MillenniumDisclosureTheme
  * @see defaultMillenniumDisclosureTheme
  */
@@ -96,13 +126,32 @@ data class MillenniumDisclosureThemeProperties(
     val contentSpacing: Dp,
     val animationMillis: Int,
     val alpha: Float = 1f,
+    val headerBackground: Brush? = null,
+    val contentBackground: Brush? = null,
+    val chevronForeground: Color? = null,
+    val chevronSize: Dp? = null,
+    val chevronRotation: Float = 180f,
+    val chevronDampingRatio: Float = 0.68f,
+    val chevronStiffness: Float = Spring.StiffnessMediumLow,
+    val headerPressedScale: Float = 0.992f,
+    val headerScaleDampingRatio: Float = 0.72f,
+    val headerScaleStiffness: Float = Spring.StiffnessMedium,
+    val contentEnterDampingRatio: Float = 0.80f,
+    val contentEnterStiffness: Float = Spring.StiffnessMediumLow,
+    val shadows: List<Color>? = null,
+    val innerGlowWidth: Dp = 1.dp,
+    val innerGlowTop: Dp = 1.dp,
+    val bottomRimColor: Color? = null,
+    val headerInteractionOverlay: Brush? = null,
+    val headerInteractionRim: Brush? = null,
+    val headerInteractionTint: Color? = null,
 )
 
 /**
  * Per-state theme of [MillenniumDisclosure].
  *
- * @property states Properties per [MillenniumControlState]. [MillenniumDisclosure] resolves Pressed, keyboard
- * Focused, Hovered, Selected (expanded) or Default.
+ * @property states Properties per [MillenniumControlState]. [MillenniumDisclosure] resolves Disabled, Pressed,
+ * keyboard Focused, Error, Hovered, Selected (expanded) or Default.
  */
 @Immutable
 data class MillenniumDisclosureTheme(
@@ -188,6 +237,10 @@ fun defaultMillenniumDisclosureTheme(): MillenniumDisclosureTheme {
  * @param animationMillis Overrides the base animation duration; null uses the theme.
  * @param alpha Overrides the opacity; null uses the state's theme value.
  * @param theme Per-state theme; defaults to `MillenniumTheme.disclosureTheme`.
+ * @param enabled When `false` the header ignores input, the theme's disabled state applies and the surface is
+ * exposed as disabled.
+ * @param error Marks the disclosure as invalid; resolves the theme's `error` state unless disabled, pressed or
+ * keyboard-focused.
  * @param content Body content, shown when [expanded] is true.
  * @see MillenniumDisclosureTheme
  * @see MillenniumIcons.Chevron
@@ -214,23 +267,29 @@ fun MillenniumDisclosure(
     animationMillis: Int? = null,
     alpha: Float? = null,
     theme: MillenniumDisclosureTheme = MillenniumTheme.disclosureTheme,
+    enabled: Boolean = true,
+    error: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val focused by interaction.collectIsKeyboardFocusedAsState()
     val hovered by interaction.collectIsHoveredAsState()
-    val state = when {
-        pressed -> MillenniumControlState.Pressed
-        focused -> MillenniumControlState.Focused
-        hovered -> MillenniumControlState.Hovered
-        expanded -> MillenniumControlState.Selected
-        else -> MillenniumControlState.Default
-    }
+    val state = millenniumResolveControlState(
+        enabled = enabled,
+        pressed = pressed,
+        focused = focused,
+        hovered = hovered,
+        selected = expanded,
+        error = error,
+    )
     val properties = theme.states.resolve(state)
+    val selectedProperties = theme.states.selected
+    fun <V> pick(read: (MillenniumDisclosureThemeProperties) -> V?): V? =
+        read(properties) ?: if (expanded) read(selectedProperties) else null
     val colors = MillenniumTheme.colors
-    val resolvedForeground = foreground ?: properties.foreground ?: colors.text
-    val targetBorderColor = borderColor ?: properties.borderColor ?: when (state) {
+    val resolvedForeground = foreground ?: pick { it.foreground } ?: colors.text
+    val targetBorderColor = borderColor ?: pick { it.borderColor } ?: when (state) {
         MillenniumControlState.Hovered, MillenniumControlState.Focused, MillenniumControlState.Selected -> colors.accent
         MillenniumControlState.Error -> colors.danger
         else -> colors.border
@@ -245,35 +304,53 @@ fun MillenniumDisclosure(
         animationSpec = tween(resolvedAnimationMillis),
     )
     val headerScale by animateFloatAsState(
-        targetValue = if (pressed) 0.992f else 1f,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMedium),
+        targetValue = if (pressed) properties.headerPressedScale else 1f,
+        animationSpec = spring(
+            dampingRatio = properties.headerScaleDampingRatio,
+            stiffness = properties.headerScaleStiffness,
+        ),
     )
     val arrowRotation by animateFloatAsState(
-        targetValue = if (expanded) 180f else 0f,
+        targetValue = if (expanded) properties.chevronRotation else 0f,
         animationSpec = spring(
-            dampingRatio = 0.68f,
-            stiffness = Spring.StiffnessMediumLow,
+            dampingRatio = properties.chevronDampingRatio,
+            stiffness = properties.chevronStiffness,
         ),
     )
     UnstyledDisclosure(
         expanded = expanded,
-        onExpandedChange = onExpandedChange,
+        onExpandedChange = { if (enabled) onExpandedChange(it) },
         modifier = modifier
+            .then(if (enabled) Modifier else Modifier.semantics { disabled() })
             .graphicsLayer { scaleX = headerScale; scaleY = headerScale }
             .millenniumSurface(
-                background = background ?: properties.background ?: millenniumBevelBrush(colors),
+                background = background ?: pick { it.background } ?: millenniumBevelBrush(colors),
                 shape = shape ?: properties.shape,
                 borderColor = resolvedBorderColor,
                 borderWidth = borderWidth ?: properties.borderWidth,
                 shadowElevation = resolvedElevation,
-                innerGlowColor = innerGlowColor ?: properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.5f),
+                shadowColors = pick { it.shadows } ?: listOf(Color.Black.copy(alpha = 0.16f)),
+                innerGlowColor = innerGlowColor ?: pick { it.innerGlowColor } ?: colors.highlight.copy(alpha = 0.5f),
+                innerGlowWidth = properties.innerGlowWidth,
+                innerGlowTop = properties.innerGlowTop,
+                bottomRimColor = pick { it.bottomRimColor },
             ).alpha(alpha ?: properties.alpha),
     ) {
         Column {
             DisclosureButton(
-                modifier = Modifier.millenniumActionPointer().fillMaxWidth()
+                modifier = Modifier.millenniumActionPointer(enabled).fillMaxWidth()
                     .heightIn(min = minimumHeaderHeight ?: properties.minimumHeaderHeight)
-                    .millenniumInteractionSurface(state, shape ?: properties.shape, animationMillis = resolvedAnimationMillis)
+                    .then(
+                        pick { it.headerBackground }?.let { Modifier.background(it) } ?: Modifier,
+                    )
+                    .millenniumThemedInteraction(
+                        state = state,
+                        shape = shape ?: properties.shape,
+                        overlay = pick { it.headerInteractionOverlay },
+                        rim = pick { it.headerInteractionRim },
+                        tint = pick { it.headerInteractionTint },
+                        animationMillis = resolvedAnimationMillis,
+                    )
                     .padding(headerPadding ?: properties.headerPadding),
                 contentPadding = PaddingValues(0.dp),
                 indication = null,
@@ -287,16 +364,18 @@ fun MillenniumDisclosure(
                     Text(title, modifier = Modifier.weight(1f), style = titleStyle ?: properties.titleStyle, color = resolvedForeground)
                     MillenniumIcon(
                         MillenniumIcons.Chevron,
-                        modifier = Modifier.rotate(arrowRotation),
-                        tint = resolvedForeground,
+                        modifier = Modifier
+                            .then(properties.chevronSize?.let { Modifier.size(it) } ?: Modifier)
+                            .rotate(arrowRotation),
+                        tint = pick { it.chevronForeground } ?: resolvedForeground,
                     )
                 }
             }
             DisclosedContent(
                 enter = expandVertically(
                     animationSpec = spring(
-                        dampingRatio = 0.80f,
-                        stiffness = Spring.StiffnessMediumLow,
+                        dampingRatio = properties.contentEnterDampingRatio,
+                        stiffness = properties.contentEnterStiffness,
                     ),
                     expandFrom = Alignment.Top,
                 ) + fadeIn(animationSpec = tween(resolvedAnimationMillis, easing = FastOutSlowInEasing)),
@@ -306,7 +385,9 @@ fun MillenniumDisclosure(
                 ) + fadeOut(animationSpec = tween((resolvedAnimationMillis * 0.7f).toInt().coerceAtLeast(90), easing = FastOutLinearInEasing)),
             ) {
                 Column(
-                    Modifier.padding(contentPadding ?: properties.contentPadding),
+                    Modifier
+                        .then(pick { it.contentBackground }?.let { Modifier.background(it) } ?: Modifier)
+                        .padding(contentPadding ?: properties.contentPadding),
                     verticalArrangement = Arrangement.spacedBy(contentSpacing ?: properties.contentSpacing),
                 ) {
                     MillenniumStyledContent(contentStyle ?: properties.contentStyle, resolvedForeground, content)

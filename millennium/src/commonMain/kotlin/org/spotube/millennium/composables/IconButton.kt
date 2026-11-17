@@ -88,8 +88,8 @@ enum class MillenniumIconButtonStyle {
  * @property shape Outline of the surface; default [CircleShape].
  * @property size Fixed width and height of the button; default 44 x 44dp (the minimum accessible target).
  * @property iconSize Size of an [ImageVector] icon; default `20.dp`.
- * @property contentPadding Padding value kept for theme completeness; the button currently lays content
- * out with zero padding and centers it.
+ * @property contentPadding Padding between the fixed-size button edge and the centered icon/content.
+ * Default `0.dp` (the icon is centered in the fixed [size]).
  * @property borderWidth Border thickness (0 for Quiet at rest, 1dp otherwise, 2dp when focused).
  * @property borderColor Border colour. `null` = accent when focused/selected, danger in error, else a
  * variant-specific colour. For orbs a metallic rim is drawn when `null` and not keyboard-focused.
@@ -103,8 +103,27 @@ enum class MillenniumIconButtonStyle {
  * @property orbStrength Alpha of the white reflections when [orbColor] is `null`; raised on hover and
  * reduced on press in the defaults.
  * @property alpha Overall opacity (the default disabled state uses `0.45f`).
- * @property motion Motion settings; defaults to no hover scale-up in the theme (the composable still
- * enforces at least `1.04f` on hover) and a `0.94f` press scale.
+ * @property motion Motion settings; the theme default grows the button to `1.04f` on hover and shrinks it
+ * to `0.94f` on press, with a `0.62f` scale-spring damping ratio.
+ * @property interactionOverlay Brush painted over the face (below the content, clipped to [shape]) while
+ * this state is active, replacing the built-in hover/press lighting; faded with
+ * [MillenniumButtonMotion.stateChangeMillis]. `null` = built-in lighting; a transparent brush disables it.
+ * @property interactionRim Brush stroked 1dp inside the edge together with [interactionOverlay]. `null` = the
+ * built-in rim when [interactionOverlay] is also `null`, otherwise no rim.
+ * @property interactionTint Accent of the built-in lighting. `null` = accent, or danger for Danger.
+ * @property orbLowerGlowColor Colour of the light pool and inner rim at the lower lip of the orb. `null` =
+ * a cyan-leaning blend for blue accents and a lightened accent otherwise. Its alpha is replaced by the orb
+ * reflection alpha.
+ * @property orbDomeBrush Brush of the glossy dome at the top of the orb; `null` = a radial gradient of the
+ * orb reflection colour. The dome path itself is geometry and stays built in.
+ * @property orbLowerGlowBrush Brush of the light pool under the orb; `null` = the radial default derived
+ * from [orbLowerGlowColor]. Painted over the whole face.
+ * @property orbRimBrush Brush of the orb's outer rim when no border colour applies; `null` = the built-in
+ * metallic blue-grey gradient.
+ * @property orbInnerRimBrush Brush of the thin inner rim of the orb; `null` = reflection colour at the top
+ * fading to the lower glow at the bottom.
+ * @property loadingTrackColor Track colour of the spinner shown while `loading`. `null` = the foreground
+ * at 25% alpha.
  */
 @Immutable
 data class MillenniumIconButtonThemeProperties(
@@ -125,7 +144,20 @@ data class MillenniumIconButtonThemeProperties(
     val orbColor: Color? = null,
     val orbStrength: Float = 0.55f,
     val alpha: Float = 1f,
-    val motion: MillenniumButtonMotion = MillenniumButtonMotion(hoverScale = 1.04f, pressedScale = 0.94f),
+    val motion: MillenniumButtonMotion = MillenniumButtonMotion(
+        hoverScale = 1.04f,
+        pressedScale = 0.94f,
+        scaleDampingRatio = 0.62f,
+    ),
+    val interactionOverlay: Brush? = null,
+    val interactionRim: Brush? = null,
+    val interactionTint: Color? = null,
+    val orbLowerGlowColor: Color? = null,
+    val orbDomeBrush: Brush? = null,
+    val orbLowerGlowBrush: Brush? = null,
+    val orbRimBrush: Brush? = null,
+    val orbInnerRimBrush: Brush? = null,
+    val loadingTrackColor: Color? = null,
 )
 
 /**
@@ -177,7 +209,7 @@ fun defaultMillenniumIconButtonTheme(): MillenniumIconButtonTheme {
             shape = CircleShape,
             size = DpSize(44.dp, 44.dp),
             iconSize = 20.dp,
-            contentPadding = PaddingValues(10.dp),
+            contentPadding = PaddingValues(0.dp),
             borderWidth = when {
                 style == MillenniumIconButtonStyle.Quiet -> 0.dp
                 filled -> 1.dp
@@ -220,9 +252,10 @@ private fun MillenniumIconButtonTheme.forStyle(style: MillenniumIconButtonStyle)
  * [MillenniumIconButtonStyle.Quiet] is transparent at rest and becomes glassy enamel on hover/press.
  *
  * Built on Compose Unstyled `UnstyledButton`, so click, keyboard activation and button semantics come
- * from the primitive. The state resolves as disabled, pressed, keyboard-focused, hovered, default; the
+ * from the primitive. The state resolves as disabled, pressed, keyboard-focused, error, hovered, selected,
+ * default; the
  * focus ring uses `collectIsKeyboardFocusedAsState` and is therefore not drawn after pointer presses.
- * The default target is 44 x 44dp. Hover scales up (at least `1.04f`) and press shrinks via springs;
+ * The default target is 44 x 44dp. Hover scales up (theme default `1.04f`) and press shrinks via springs;
  * colours cross-fade. [contentDescription] is applied as the semantics description when non-null;
  * icon-only buttons should always supply one.
  *
@@ -264,6 +297,10 @@ private fun MillenniumIconButtonTheme.forStyle(style: MillenniumIconButtonStyle)
  * @param alpha Overrides the overall opacity; `null` falls back to the state's value.
  * @param motion Overrides scale and tween settings; `null` falls back to the theme.
  * @param theme Theme supplying variant/state properties; defaults to [MillenniumTheme.iconButtonTheme].
+ * @param selected Marks the button as chosen; resolves the theme's `selected` state when nothing with higher
+ * priority (disabled, pressed, keyboard focus, error, hover) applies.
+ * @param error Marks the button as invalid; resolves the theme's `error` state unless disabled, pressed or
+ * keyboard-focused.
  * @see MillenniumButton
  * @see MillenniumIconButtonStyle
  */
@@ -293,6 +330,8 @@ fun MillenniumIconButton(
     alpha: Float? = null,
     motion: MillenniumButtonMotion? = null,
     theme: MillenniumIconButtonTheme = MillenniumTheme.iconButtonTheme,
+    selected: Boolean = false,
+    error: Boolean = false,
 ) {
     IconButtonContainer(
         onClick = onClick,
@@ -320,6 +359,8 @@ fun MillenniumIconButton(
         orbStrength = orbStrength,
         alpha = alpha,
         motion = motion,
+        selected = selected,
+        error = error,
     )
 }
 
@@ -364,6 +405,8 @@ fun MillenniumIconButton(
  * @param alpha Overrides the overall opacity; `null` falls back to the state's value.
  * @param motion Overrides scale and tween settings; `null` falls back to the theme.
  * @param theme Theme supplying variant/state properties; defaults to [MillenniumTheme.iconButtonTheme].
+ * @param selected Marks the button as chosen (theme `selected` state when nothing else applies).
+ * @param error Marks the button as invalid (theme `error` state when nothing higher applies).
  * @param content Composable content centered in the button.
  * @see MillenniumIconButton
  */
@@ -392,6 +435,8 @@ fun MillenniumIconButton(
     alpha: Float? = null,
     motion: MillenniumButtonMotion? = null,
     theme: MillenniumIconButtonTheme = MillenniumTheme.iconButtonTheme,
+    selected: Boolean = false,
+    error: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     IconButtonContainer(
@@ -420,6 +465,8 @@ fun MillenniumIconButton(
         orbStrength = orbStrength,
         alpha = alpha,
         motion = motion,
+        selected = selected,
+        error = error,
     )
 }
 
@@ -451,19 +498,22 @@ private fun IconButtonContainer(
     orbStrength: Float?,
     alpha: Float?,
     motion: MillenniumButtonMotion?,
+    selected: Boolean,
+    error: Boolean,
 ) {
     val interactive = enabled && !loading
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val focused by interaction.collectIsKeyboardFocusedAsState()
     val hovered by interaction.collectIsHoveredAsState()
-    val state = when {
-        !interactive -> MillenniumControlState.Disabled
-        pressed -> MillenniumControlState.Pressed
-        focused -> MillenniumControlState.Focused
-        hovered -> MillenniumControlState.Hovered
-        else -> MillenniumControlState.Default
-    }
+    val state = millenniumResolveControlState(
+        enabled = interactive,
+        pressed = pressed,
+        focused = focused,
+        hovered = hovered,
+        selected = selected,
+        error = error,
+    )
     val colors = MillenniumTheme.colors
     val properties = theme.forStyle(style).resolve(state)
     val resolvedOrb = orb ?: properties.orb
@@ -533,11 +583,17 @@ private fun IconButtonContainer(
             hovered -> resolvedMotion.hoverScale
             else -> 1f
         },
-        animationSpec = spring(dampingRatio = 0.62f, stiffness = Spring.StiffnessMedium),
+        animationSpec = spring(
+            dampingRatio = resolvedMotion.scaleDampingRatio,
+            stiffness = resolvedMotion.scaleStiffness,
+        ),
     )
     val elevation by animateDpAsState(
         shadowElevation ?: properties.shadowElevation,
-        spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow),
+        spring(
+            dampingRatio = resolvedMotion.elevationDampingRatio,
+            stiffness = resolvedMotion.elevationStiffness,
+        ),
     )
     val animatedBorderColor by animateColorAsState(
         targetValue = resolvedBorderColor,
@@ -553,7 +609,7 @@ private fun IconButtonContainer(
         enabled = interactive,
         interactionSource = interaction,
         indication = null,
-        contentPadding = PaddingValues(0.dp),
+        contentPadding = properties.contentPadding,
         contentAlignment = Alignment.Center,
         modifier = modifier
             .millenniumActionPointer(interactive)
@@ -580,13 +636,29 @@ private fun IconButtonContainer(
                     shape = shape ?: properties.shape,
                     borderWidth = borderWidth ?: properties.borderWidth,
                     borderColor = if (borderColor != null || properties.borderColor != null || focused) animatedBorderColor else null,
+                    lowerGlowColor = properties.orbLowerGlowColor,
+                    domeBrush = properties.orbDomeBrush,
+                    lowerGlowBrush = properties.orbLowerGlowBrush,
+                    rimBrush = properties.orbRimBrush,
+                    innerRimBrush = properties.orbInnerRimBrush,
                 ) else Modifier,
             )
-            .millenniumInteractionSurface(state, shape ?: properties.shape,
-                tint = if (style == MillenniumIconButtonStyle.Danger) colors.danger else colors.accent,
-                animationMillis = resolvedMotion.stateChangeMillis),
+            .millenniumThemedInteraction(
+                state = state,
+                shape = shape ?: properties.shape,
+                overlay = properties.interactionOverlay,
+                rim = properties.interactionRim,
+                tint = properties.interactionTint
+                    ?: if (style == MillenniumIconButtonStyle.Danger) colors.danger else colors.accent,
+                animationMillis = resolvedMotion.stateChangeMillis,
+            ),
     ) {
-        MillenniumLoadingContent(loading, animatedForeground, spinnerSize = iconSize ?: properties.iconSize) {
+        MillenniumLoadingContent(
+            loading,
+            animatedForeground,
+            spinnerSize = iconSize ?: properties.iconSize,
+            trackColor = properties.loadingTrackColor,
+        ) {
             if (icon != null) {
                 UnstyledIcon(icon, null, Modifier.size(iconSize ?: properties.iconSize), animatedForeground)
             } else {
@@ -632,6 +704,11 @@ private fun Modifier.millenniumIconOrb(
     shape: Shape,
     borderWidth: Dp,
     borderColor: Color?,
+    lowerGlowColor: Color? = null,
+    domeBrush: Brush? = null,
+    lowerGlowBrush: Brush? = null,
+    rimBrush: Brush? = null,
+    innerRimBrush: Brush? = null,
 ): Modifier = drawWithCache {
     val width = size.width
     val height = size.height
@@ -645,7 +722,7 @@ private fun Modifier.millenniumIconOrb(
         cubicTo(width * 0.08f, height * 0.45f, width * 0.07f, height * 0.41f, width * 0.08f, height * 0.37f)
         close()
     }
-    val domeBrush = Brush.radialGradient(
+    val resolvedDomeBrush = domeBrush ?: Brush.radialGradient(
         0f to reflection,
         0.50f to reflection.copy(alpha = reflection.alpha * 0.42f),
         1f to reflection.copy(alpha = reflection.alpha * 0.03f),
@@ -653,12 +730,12 @@ private fun Modifier.millenniumIconOrb(
         radius = size.minDimension * 0.63f,
     )
     // A light pool below the sphere, not a white smile painted across its face.
-    val glowTint = if (tint.blue > tint.red && tint.blue > tint.green) {
+    val glowTint = lowerGlowColor ?: if (tint.blue > tint.red && tint.blue > tint.green) {
         lerp(tint, Color(0xFF65E8FF), 0.65f)
     } else {
         lerp(tint, Color.White, 0.25f)
     }
-    val lowerGlow = Brush.radialGradient(
+    val resolvedLowerGlow = lowerGlowBrush ?: Brush.radialGradient(
         0f to glowTint.copy(alpha = reflection.alpha * 0.95f),
         0.40f to glowTint.copy(alpha = reflection.alpha * 0.65f),
         0.78f to glowTint.copy(alpha = reflection.alpha * 0.10f),
@@ -666,7 +743,7 @@ private fun Modifier.millenniumIconOrb(
         center = Offset(width * 0.5f, height * 1.12f),
         radius = size.minDimension * 0.66f,
     )
-    val rimBrush = Brush.linearGradient(
+    val resolvedRimBrush = rimBrush ?: Brush.linearGradient(
         0f to Color(0xFF26364F),
         0.28f to Color(0xFF66748A),
         0.62f to Color(0xFFC6D4DA),
@@ -674,25 +751,25 @@ private fun Modifier.millenniumIconOrb(
         start = Offset.Zero,
         end = Offset(width * 0.65f, height),
     )
-    val innerRim = Brush.verticalGradient(
+    val resolvedInnerRim = innerRimBrush ?: Brush.verticalGradient(
         0f to reflection.copy(alpha = reflection.alpha * 0.70f),
         0.35f to Color.Transparent,
         0.75f to Color.Transparent,
         1f to glowTint.copy(alpha = reflection.alpha * 0.75f),
     )
     onDrawWithContent {
-        drawRect(lowerGlow)
-        drawPath(dome, domeBrush)
+        drawRect(resolvedLowerGlow)
+        drawPath(dome, resolvedDomeBrush)
         if (borderWidth > 0.dp) {
             if (borderColor != null) drawOutline(outline, borderColor, style = Stroke(rim * 2f))
-            else drawOutline(outline, rimBrush, style = Stroke(rim * 2f))
+            else drawOutline(outline, resolvedRimBrush, style = Stroke(rim * 2f))
         }
         val innerInset = rim * 1.7f
         if (size.minDimension > innerInset * 2f) {
             val innerSize = Size(width - innerInset * 2f, height - innerInset * 2f)
             val innerOutline = shape.createOutline(innerSize, layoutDirection, this)
             inset(innerInset) {
-                drawOutline(innerOutline, innerRim, style = Stroke(size.minDimension * 0.018f))
+                drawOutline(innerOutline, resolvedInnerRim, style = Stroke(size.minDimension * 0.018f))
             }
         }
         drawContent()

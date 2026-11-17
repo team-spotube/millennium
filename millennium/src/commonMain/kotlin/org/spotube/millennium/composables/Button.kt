@@ -19,6 +19,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,6 +34,10 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.inset
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -102,12 +108,21 @@ typealias MillenniumButtonVariant = MillenniumButtonStyle
  * Default `1.015f`.
  * @property pressedScale Target scale while pressed (enabled only). Values below `1f` give the
  * restrained "push in" feel. Default `0.985f`.
+ * @property scaleDampingRatio Damping ratio of the hover/press scale spring (lower = bouncier).
+ * Default `0.65f`; [defaultMillenniumIconButtonTheme] uses `0.62f`.
+ * @property scaleStiffness Stiffness of the hover/press scale spring. Default [Spring.StiffnessMedium].
+ * @property elevationDampingRatio Damping ratio of the shadow-elevation spring. Default `0.78f`.
+ * @property elevationStiffness Stiffness of the shadow-elevation spring. Default [Spring.StiffnessMediumLow].
  */
 @Immutable
 data class MillenniumButtonMotion(
     val stateChangeMillis: Int = 150,
     val hoverScale: Float = 1.015f,
     val pressedScale: Float = 0.985f,
+    val scaleDampingRatio: Float = 0.65f,
+    val scaleStiffness: Float = Spring.StiffnessMedium,
+    val elevationDampingRatio: Float = 0.78f,
+    val elevationStiffness: Float = Spring.StiffnessMediumLow,
 )
 
 /**
@@ -144,6 +159,21 @@ data class MillenniumButtonMotion(
  * instead of drawing a straight line.
  * @property bottomRimColor Colour of the lower inner rim. `null` = faint palette highlight for
  * every style except Quiet (which has none).
+ * @property interactionOverlay Brush painted over the face (below the content, clipped to [shape])
+ * while this state is active, replacing the built-in hover/press lighting. It fades in and out with
+ * [MillenniumButtonMotion.stateChangeMillis]. `null` = the built-in glass lighting for the state; use a
+ * transparent brush to switch the lighting off. Because every state has its own properties, set it on
+ * `hovered`, `focused` and `pressed` to theme each separately.
+ * @property interactionRim Brush stroked 1dp inside the edge together with [interactionOverlay]
+ * (the bevel rim of the hover/press lighting). `null` = the built-in rim when [interactionOverlay] is also
+ * `null`, otherwise no rim.
+ * @property interactionTint Accent colour of the built-in lighting (ignored when [interactionOverlay]
+ * or [interactionRim] is set). `null` = accent, or danger for the Danger variant.
+ * @property labelShadow When `true` (default) Primary labels get the built-in 1dp accent-bottom text
+ * shadow unless [textStyle] already carries a `shadow`. Set `false` for no automatic shadow; any shadow
+ * set on [textStyle] is always honoured.
+ * @property loadingSpinnerSize Diameter of the spinner shown while `loading`. Default `18.dp`.
+ * @property loadingTrackColor Track colour of the loading spinner. `null` = the foreground at 25% alpha.
  */
 @Immutable
 data class MillenniumButtonThemeProperties(
@@ -166,6 +196,12 @@ data class MillenniumButtonThemeProperties(
     val motion: MillenniumButtonMotion = MillenniumButtonMotion(),
     val innerGlowFollowsShape: Boolean = true,
     val bottomRimColor: Color? = null,
+    val interactionOverlay: Brush? = null,
+    val interactionRim: Brush? = null,
+    val interactionTint: Color? = null,
+    val labelShadow: Boolean = true,
+    val loadingSpinnerSize: Dp = 18.dp,
+    val loadingTrackColor: Color? = null,
 )
 
 /**
@@ -246,6 +282,80 @@ fun defaultMillenniumButtonTheme(): MillenniumButtonTheme {
     )
 }
 
+/**
+ * Internal: the shared control-state precedence used by the button family and the choice controls:
+ * disabled, pressed, keyboard focus, error, hovered, selected, default.
+ */
+internal fun millenniumResolveControlState(
+    enabled: Boolean = true,
+    pressed: Boolean = false,
+    focused: Boolean = false,
+    hovered: Boolean = false,
+    selected: Boolean = false,
+    error: Boolean = false,
+): MillenniumControlState = when {
+    !enabled -> MillenniumControlState.Disabled
+    pressed -> MillenniumControlState.Pressed
+    focused -> MillenniumControlState.Focused
+    error -> MillenniumControlState.Error
+    hovered -> MillenniumControlState.Hovered
+    selected -> MillenniumControlState.Selected
+    else -> MillenniumControlState.Default
+}
+
+/**
+ * Internal: hover/press lighting that honours the theme. With no [overlay] and no [rim] this is the
+ * built-in [millenniumInteractionSurface]; otherwise the theme's brushes are drawn (below the content,
+ * clipped to [shape]) and faded with the interaction level, so a theme can supply any brush per state.
+ */
+@Composable
+internal fun Modifier.millenniumThemedInteraction(
+    state: MillenniumControlState,
+    shape: Shape,
+    overlay: Brush?,
+    rim: Brush?,
+    tint: Color?,
+    animationMillis: Int,
+): Modifier {
+    if (overlay == null && rim == null) {
+        return millenniumInteractionSurface(
+            state = state,
+            shape = shape,
+            tint = tint ?: MillenniumTheme.colors.accent,
+            animationMillis = animationMillis,
+        )
+    }
+    val held = remember { arrayOfNulls<Brush>(2) }
+    if (overlay != null) held[0] = overlay
+    if (rim != null) held[1] = rim
+    val active = state == MillenniumControlState.Hovered ||
+        state == MillenniumControlState.Focused ||
+        state == MillenniumControlState.Pressed
+    val level by animateFloatAsState(if (active) 1f else 0f, tween(animationMillis))
+    return drawWithCache {
+        val outline = shape.createOutline(size, layoutDirection, this)
+        onDrawWithContent {
+            val faceBrush = held[0]
+            val rimBrush = held[1]
+            if (level > 0f) {
+                if (faceBrush != null) drawOutline(outline, faceBrush, alpha = level)
+                val stroke = 1.dp.toPx()
+                if (rimBrush != null && size.minDimension > stroke * 4f) {
+                    inset(stroke) {
+                        drawOutline(
+                            shape.createOutline(size, layoutDirection, this),
+                            rimBrush,
+                            alpha = level,
+                            style = Stroke(stroke),
+                        )
+                    }
+                }
+            }
+            drawContent()
+        }
+    }
+}
+
 private fun MillenniumButtonTheme.forStyle(style: MillenniumButtonStyle) = when (style) {
     MillenniumButtonStyle.Primary -> primary
     MillenniumButtonStyle.Secondary -> secondary
@@ -261,7 +371,8 @@ private fun MillenniumButtonTheme.forStyle(style: MillenniumButtonStyle) = when 
  * primitive; Millennium adds the gel/enamel surface, hover and press lighting and spring motion.
  *
  * Behaviour:
- * - The interaction state resolves in the order disabled, pressed, keyboard-focused, hovered, default.
+ * - The interaction state resolves in the order disabled, pressed, keyboard-focused, error, hovered,
+ *   selected, default.
  *   The focus ring uses `collectIsKeyboardFocusedAsState`, so it appears only for keyboard/directional
  *   navigation and not after a mouse or touch press.
  * - The surface scales with a spring (hover grows, press shrinks, per [MillenniumButtonMotion]); the
@@ -319,6 +430,10 @@ private fun MillenniumButtonTheme.forStyle(style: MillenniumButtonStyle) = when 
  * @param alpha Overrides the overall opacity; `null` falls back to the state's value.
  * @param motion Overrides hover/press scale and tween duration; `null` falls back to the theme.
  * @param theme Theme supplying the variant/state properties; defaults to [MillenniumTheme.buttonTheme].
+ * @param selected Marks the button as chosen (toggled look); resolves the theme's `selected` state when
+ * nothing with higher priority (disabled, pressed, keyboard focus, error, hover) applies.
+ * @param error Marks the button as invalid; resolves the theme's `error` state (border, etc.) unless it is
+ * disabled, pressed or keyboard-focused.
  * @param content Button content, laid out in a centered row; usually `Text` and/or an icon.
  * @see MillenniumIconButton
  * @see MillenniumButtonStyle
@@ -351,6 +466,8 @@ fun MillenniumButton(
     alpha: Float? = null,
     motion: MillenniumButtonMotion? = null,
     theme: MillenniumButtonTheme = MillenniumTheme.buttonTheme,
+    selected: Boolean = false,
+    error: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val interactive = enabled && !loading
@@ -358,13 +475,14 @@ fun MillenniumButton(
     val pressed by interaction.collectIsPressedAsState()
     val focused by interaction.collectIsKeyboardFocusedAsState()
     val hovered by interaction.collectIsHoveredAsState()
-    val state = when {
-        !interactive -> MillenniumControlState.Disabled
-        pressed -> MillenniumControlState.Pressed
-        focused -> MillenniumControlState.Focused
-        hovered -> MillenniumControlState.Hovered
-        else -> MillenniumControlState.Default
-    }
+    val state = millenniumResolveControlState(
+        enabled = interactive,
+        pressed = pressed,
+        focused = focused,
+        hovered = hovered,
+        selected = selected,
+        error = error,
+    )
     val properties = theme.forStyle(style).resolve(state)
     val colors = MillenniumTheme.colors
     val resolvedMotion = motion ?: properties.motion
@@ -412,11 +530,17 @@ fun MillenniumButton(
     }
     val scale by animateFloatAsState(
         targetValue = targetScale,
-        animationSpec = spring(dampingRatio = 0.65f, stiffness = Spring.StiffnessMedium),
+        animationSpec = spring(
+            dampingRatio = resolvedMotion.scaleDampingRatio,
+            stiffness = resolvedMotion.scaleStiffness,
+        ),
     )
     val elevation by animateDpAsState(
         targetValue = shadowElevation ?: properties.shadowElevation,
-        animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow),
+        animationSpec = spring(
+            dampingRatio = resolvedMotion.elevationDampingRatio,
+            stiffness = resolvedMotion.elevationStiffness,
+        ),
     )
     val animatedBorderColor by animateColorAsState(
         targetValue = resolvedBorderColor,
@@ -453,16 +577,27 @@ fun MillenniumButton(
                 bottomRimColor = bottomRimColor ?: properties.bottomRimColor
                     ?: if (style != MillenniumButtonStyle.Quiet) colors.highlight.copy(alpha = 0.28f) else null,
             )
-            .millenniumInteractionSurface(state, shape ?: properties.shape,
-                tint = if (style == MillenniumButtonStyle.Danger) colors.danger else colors.accent,
-                animationMillis = resolvedMotion.stateChangeMillis),
+            .millenniumThemedInteraction(
+                state = state,
+                shape = shape ?: properties.shape,
+                overlay = properties.interactionOverlay,
+                rim = properties.interactionRim,
+                tint = properties.interactionTint
+                    ?: if (style == MillenniumButtonStyle.Danger) colors.danger else colors.accent,
+                animationMillis = resolvedMotion.stateChangeMillis,
+            ),
         contentPadding = padding ?: properties.padding,
     ) {
-        val labelStyle = if (style == MillenniumButtonStyle.Primary && resolvedTextStyle.shadow == null) {
+        val labelStyle = if (style == MillenniumButtonStyle.Primary && properties.labelShadow && resolvedTextStyle.shadow == null) {
             resolvedTextStyle.copy(shadow = Shadow(colors.accentBottom, Offset(0f, 1f), 1f))
         } else resolvedTextStyle
         MillenniumStyledContent(labelStyle, resolvedForeground) {
-            MillenniumLoadingContent(loading, resolvedForeground, spinnerSize = 18.dp) {
+            MillenniumLoadingContent(
+                loading,
+                resolvedForeground,
+                spinnerSize = properties.loadingSpinnerSize,
+                trackColor = properties.loadingTrackColor,
+            ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(contentSpacing ?: properties.contentSpacing),
@@ -482,6 +617,7 @@ internal fun MillenniumLoadingContent(
     loading: Boolean,
     color: Color,
     spinnerSize: Dp,
+    trackColor: Color? = null,
     content: @Composable () -> Unit,
 ) {
     Box(contentAlignment = Alignment.Center) {
@@ -492,7 +628,7 @@ internal fun MillenniumLoadingContent(
                     size = spinnerSize,
                     thickness = spinnerSize / 7,
                     color = color,
-                    trackColor = color.copy(alpha = 0.25f),
+                    trackColor = trackColor ?: color.copy(alpha = 0.25f),
                 )
             }
         }

@@ -55,8 +55,8 @@ object MillenniumSegmentedButtonDefaults {
      * A single segment's shape: only the outer edges of the row are rounded.
      *
      * The first segment (`index == 0`) rounds its start corners and the last (`index == count - 1`) its
-     * end corners, each with a 10dp radius; middle segments are square. A single segment
-     * (`count == 1`) is rounded on all four corners.
+     * end corners, each with a [cornerRadius] (10dp by default); middle segments are square. A single
+     * segment (`count == 1`) is rounded on all four corners.
      *
      * ```kotlin
      * val shape = MillenniumSegmentedButtonDefaults.itemShape(index = 1, count = 3)
@@ -64,18 +64,24 @@ object MillenniumSegmentedButtonDefaults {
      *
      * @param index Zero-based position of the segment inside the row.
      * @param count Total number of segments in the row.
+     * @param cornerRadius Radius of the rounded outer corners. Default `10.dp`.
      * @return The shape to pass as `shape` to [MillenniumSegmentedButton].
      */
-    fun itemShape(index: Int, count: Int): Shape = RoundedCornerShape(
-        topStart = if (index == 0) 10.dp else 0.dp,
-        bottomStart = if (index == 0) 10.dp else 0.dp,
-        topEnd = if (index == count - 1) 10.dp else 0.dp,
-        bottomEnd = if (index == count - 1) 10.dp else 0.dp,
+    fun itemShape(index: Int, count: Int, cornerRadius: Dp = 10.dp): Shape = RoundedCornerShape(
+        topStart = if (index == 0) cornerRadius else 0.dp,
+        bottomStart = if (index == 0) cornerRadius else 0.dp,
+        topEnd = if (index == count - 1) cornerRadius else 0.dp,
+        bottomEnd = if (index == count - 1) cornerRadius else 0.dp,
     )
 }
 
 /**
  * Complete, state-specific segment appearance and layout configuration.
+ *
+ * A selected segment that is also hovered, focused or pressed resolves that interaction state; for the
+ * nullable visuals (background, foreground, border colour, inner glow, bottom rim and the interaction
+ * brushes) it then falls back to the theme's `selected` entry before the built-in default, so `selected`
+ * styling is never lost to hover.
  *
  * @property background Face brush. `null` = accent gel when selected, sunken bevel when disabled or
  * pressed, otherwise the raised enamel bevel.
@@ -89,7 +95,18 @@ object MillenniumSegmentedButtonDefaults {
  * @property innerGlowColor Top inner highlight. `null` = palette highlight at 50% (selected) or 30%.
  * @property alpha Overall opacity; `0.45f` when disabled.
  * @property motion Motion settings; the theme default grows unselected hovered segments to `1.015f` and
- * shrinks pressed ones to `0.97f`.
+ * shrinks pressed ones to `0.97f`. Also carries the scale and elevation spring parameters.
+ * @property innerGlowWidth Thickness of the inner highlight. Default `1.dp`.
+ * @property innerGlowTop Offset of the highlight from the top edge. Default `1.dp`.
+ * @property bottomRimColor Colour of the lower inner rim; `null` = none.
+ * @property shadowElevation Drop-shadow elevation of the segment; default `0.dp` (flat).
+ * @property shadows Drop-shadow colour layers. `null` = a single 16% black layer.
+ * @property interactionOverlay Brush painted over the face while this state is active, replacing the
+ * built-in hover/press lighting (see [MillenniumButtonThemeProperties.interactionOverlay]). `null` =
+ * built-in lighting; a transparent brush disables it.
+ * @property interactionRim Brush stroked 1dp inside the edge together with [interactionOverlay]. `null` =
+ * the built-in rim when [interactionOverlay] is also `null`, otherwise no rim.
+ * @property interactionTint Accent of the built-in lighting; `null` = the palette accent.
  */
 @Immutable
 data class MillenniumSegmentedButtonThemeProperties(
@@ -103,6 +120,14 @@ data class MillenniumSegmentedButtonThemeProperties(
     val innerGlowColor: Color? = null,
     val alpha: Float = 1f,
     val motion: MillenniumButtonMotion = MillenniumButtonMotion(hoverScale = 1.015f, pressedScale = 0.97f),
+    val innerGlowWidth: Dp = 1.dp,
+    val innerGlowTop: Dp = 1.dp,
+    val bottomRimColor: Color? = null,
+    val shadowElevation: Dp = 0.dp,
+    val shadows: List<Color>? = null,
+    val interactionOverlay: Brush? = null,
+    val interactionRim: Brush? = null,
+    val interactionTint: Color? = null,
 )
 
 /**
@@ -193,7 +218,7 @@ fun MillenniumSegmentedButtonRow(
  *
  * Behaviour: built on Compose Unstyled `UnstyledButton` (click, keyboard activation, button
  * semantics, disabled state). The state resolves as disabled, pressed, keyboard-focused (ring only
- * through `collectIsKeyboardFocusedAsState`), hovered, selected, default. Selected segments get the
+ * through `collectIsKeyboardFocusedAsState`), error, hovered, selected, default. Selected segments get the
  * accent gel and an on-accent label; others use the enamel bevel (sunken when pressed or disabled).
  * Foreground and border colours cross-fade; the segment scales with a spring (press uses the motion's
  * `pressedScale`, hover grows 1.5% for unselected segments). The minimum height is 44dp and the
@@ -232,6 +257,8 @@ fun MillenniumSegmentedButtonRow(
  * @param alpha Overrides the overall opacity; `null` falls back to the state's value.
  * @param motion Overrides tween duration and press scale; `null` falls back to the theme.
  * @param theme Theme supplying state properties; defaults to [MillenniumTheme.segmentedButtonTheme].
+ * @param error Marks the segment as invalid; resolves the theme's `error` state unless disabled, pressed or
+ * keyboard-focused.
  * @param content Segment label content, typically `Text`.
  * @see MillenniumSegmentedButtonRow
  * @see MillenniumSegmentedButtonTheme
@@ -254,6 +281,7 @@ fun RowScope.MillenniumSegmentedButton(
     alpha: Float? = null,
     motion: MillenniumButtonMotion? = null,
     theme: MillenniumSegmentedButtonTheme = MillenniumTheme.segmentedButtonTheme,
+    error: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val colors = MillenniumTheme.colors
@@ -261,27 +289,30 @@ fun RowScope.MillenniumSegmentedButton(
     val pressed by interaction.collectIsPressedAsState()
     val hovered by interaction.collectIsHoveredAsState()
     val focused by interaction.collectIsKeyboardFocusedAsState()
-    val state = when {
-        !enabled -> MillenniumControlState.Disabled
-        pressed -> MillenniumControlState.Pressed
-        focused -> MillenniumControlState.Focused
-        hovered -> MillenniumControlState.Hovered
-        selected -> MillenniumControlState.Selected
-        else -> MillenniumControlState.Default
-    }
+    val state = millenniumResolveControlState(
+        enabled = enabled,
+        pressed = pressed,
+        focused = focused,
+        hovered = hovered,
+        selected = selected,
+        error = error,
+    )
     val properties = theme.states.resolve(state)
+    val selectedProperties = theme.states.selected
+    fun <V> pick(read: (MillenniumSegmentedButtonThemeProperties) -> V?): V? =
+        read(properties) ?: if (selected) read(selectedProperties) else null
     val resolvedMotion = motion ?: properties.motion
-    val resolvedBackground = background ?: properties.background ?: when {
+    val resolvedBackground = background ?: pick { it.background } ?: when {
         selected -> gelBrush(colors.accentTop, colors.accentBottom)
         !enabled || pressed -> millenniumBevelBrush(colors, sunken = true)
         else -> millenniumBevelBrush(colors)
     }
-    val targetForeground = foreground ?: properties.foreground ?: if (selected) colors.onAccent else colors.text
+    val targetForeground = foreground ?: pick { it.foreground } ?: if (selected) colors.onAccent else colors.text
     val resolvedForeground by animateColorAsState(
         targetValue = targetForeground,
         animationSpec = tween(resolvedMotion.stateChangeMillis),
     )
-    val targetBorderColor = borderColor ?: properties.borderColor ?: when {
+    val targetBorderColor = borderColor ?: pick { it.borderColor } ?: when {
         focused -> colors.accent
         selected -> colors.accentBottom
         else -> colors.border
@@ -297,7 +328,10 @@ fun RowScope.MillenniumSegmentedButton(
             hovered && !selected -> resolvedMotion.hoverScale
             else -> 1f
         },
-        animationSpec = spring(dampingRatio = 0.65f, stiffness = Spring.StiffnessMedium),
+        animationSpec = spring(
+            dampingRatio = resolvedMotion.scaleDampingRatio,
+            stiffness = resolvedMotion.scaleStiffness,
+        ),
     )
     UnstyledButton(
         onClick = onClick,
@@ -316,10 +350,22 @@ fun RowScope.MillenniumSegmentedButton(
                 shape = shape,
                 borderColor = resolvedBorderColor,
                 borderWidth = borderWidth ?: properties.borderWidth,
-                innerGlowColor = innerGlowColor ?: properties.innerGlowColor
+                shadowElevation = properties.shadowElevation,
+                shadowColors = properties.shadows ?: listOf(Color.Black.copy(alpha = 0.16f)),
+                innerGlowColor = innerGlowColor ?: pick { it.innerGlowColor }
                     ?: colors.highlight.copy(alpha = if (selected) 0.5f else 0.3f),
+                innerGlowWidth = properties.innerGlowWidth,
+                innerGlowTop = properties.innerGlowTop,
+                bottomRimColor = pick { it.bottomRimColor },
             )
-            .millenniumInteractionSurface(state, shape, animationMillis = resolvedMotion.stateChangeMillis),
+            .millenniumThemedInteraction(
+                state = state,
+                shape = shape,
+                overlay = pick { it.interactionOverlay },
+                rim = pick { it.interactionRim },
+                tint = pick { it.interactionTint },
+                animationMillis = resolvedMotion.stateChangeMillis,
+            ),
     ) {
         Row(
             Modifier.padding(contentPadding ?: properties.contentPadding),

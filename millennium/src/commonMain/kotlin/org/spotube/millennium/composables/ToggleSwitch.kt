@@ -77,6 +77,33 @@ import org.spotube.millennium.theme.millenniumInteractionSurface
  * @property thumbBorderColor Thumb border; `null` = palette border.
  * @property thumbBorderWidth Thumb border thickness; default `1.dp`.
  * @property thumbGlowColor Thumb inner highlight; `null` = palette highlight at 36%.
+ * @property selectedThumbBackground Thumb brush while the switch is on; `null` = [thumbBackground] (or its default).
+ * @property trackBottomRimColor Colour of the lower inner rim of the track; `null` = none.
+ * @property thumbBottomRimColor Colour of the lower inner rim of the thumb; `null` = none.
+ * @property trackShadowElevation Drop-shadow elevation of the track; default `0.dp` (flat).
+ * @property trackShadows Drop-shadow colour layers of the track. `null` = a single 16% black layer.
+ * @property thumbShadows Drop-shadow colour layers of the thumb. `null` = a single 16% black layer.
+ * @property trackInteractionOverlay Brush painted over the track while this state is active, replacing the
+ * built-in hover/press lighting (see [MillenniumButtonThemeProperties.interactionOverlay]). `null` =
+ * built-in lighting; a transparent brush disables it.
+ * @property trackInteractionRim Brush stroked 1dp inside the track edge together with the overlay. `null` =
+ * the built-in rim when the overlay is also `null`, otherwise none.
+ * @property trackInteractionTint Accent of the built-in track lighting; `null` = the palette accent.
+ * @property thumbInteractionOverlay Same as [trackInteractionOverlay], for the thumb.
+ * @property thumbInteractionRim Same as [trackInteractionRim], for the thumb.
+ * @property thumbInteractionTint Same as [trackInteractionTint], for the thumb.
+ * @property thumbHoverScaleX Horizontal thumb scale while hovered (enabled only). Default `1.04f`.
+ * @property thumbHoverScaleY Vertical thumb scale while hovered. Default `1.04f`.
+ * @property thumbPressedScaleX Horizontal thumb scale while pressed (the "squish"). Default `1.12f`.
+ * @property thumbPressedScaleY Vertical thumb scale while pressed. Default `0.92f`.
+ * @property thumbScaleDampingRatio Damping ratio of the thumb scale spring. Default `0.62f`.
+ * @property thumbScaleStiffness Stiffness of the thumb scale spring. Default [Spring.StiffnessMedium].
+ * @property thumbSlideDampingRatio Damping ratio of the thumb slide spring. Default `0.68f`.
+ * @property thumbSlideStiffness Stiffness of the thumb slide spring. Default [Spring.StiffnessMediumLow].
+ *
+ * When the switch is on and also hovered, focused or pressed, that interaction state is resolved; the
+ * nullable visuals (track/thumb brushes, border and glow colours, label colour, rims, interaction brushes)
+ * then fall back to the theme's `selected` entry before the built-in default.
  */
 @Immutable
 data class MillenniumToggleSwitchThemeProperties(
@@ -102,6 +129,26 @@ data class MillenniumToggleSwitchThemeProperties(
     val thumbBorderColor: Color? = null,
     val thumbBorderWidth: Dp = 1.dp,
     val thumbGlowColor: Color? = null,
+    val selectedThumbBackground: Brush? = null,
+    val trackBottomRimColor: Color? = null,
+    val thumbBottomRimColor: Color? = null,
+    val trackShadowElevation: Dp = 0.dp,
+    val trackShadows: List<Color>? = null,
+    val thumbShadows: List<Color>? = null,
+    val trackInteractionOverlay: Brush? = null,
+    val trackInteractionRim: Brush? = null,
+    val trackInteractionTint: Color? = null,
+    val thumbInteractionOverlay: Brush? = null,
+    val thumbInteractionRim: Brush? = null,
+    val thumbInteractionTint: Color? = null,
+    val thumbHoverScaleX: Float = 1.04f,
+    val thumbHoverScaleY: Float = 1.04f,
+    val thumbPressedScaleX: Float = 1.12f,
+    val thumbPressedScaleY: Float = 0.92f,
+    val thumbScaleDampingRatio: Float = 0.62f,
+    val thumbScaleStiffness: Float = Spring.StiffnessMedium,
+    val thumbSlideDampingRatio: Float = 0.68f,
+    val thumbSlideStiffness: Float = Spring.StiffnessMediumLow,
 )
 
 /**
@@ -171,7 +218,7 @@ fun defaultMillenniumToggleSwitchTheme(): MillenniumToggleSwitchTheme {
  * Built on Compose Unstyled `UnstyledSwitch` with `Track` and `Thumb`, so switch semantics, toggle on
  * click/Space and [label] as the accessibility label come from the primitive. The row has a 44dp
  * default minimum height. State resolves as disabled, pressed, keyboard-focused
- * (`collectIsKeyboardFocusedAsState`, no ring after pointer presses), hovered, selected, default.
+ * (`collectIsKeyboardFocusedAsState`, no ring after pointer presses), error, hovered, selected, default.
  * The thumb slides on a spring and squishes (wider/shorter when pressed, slightly larger on hover);
  * feedback is drawn only on the track and thumb, not the whole labelled row. The hand cursor is
  * shown while enabled. State is caller-owned.
@@ -211,6 +258,8 @@ fun defaultMillenniumToggleSwitchTheme(): MillenniumToggleSwitchTheme {
  * @param thumbAnimationMillis Overrides the border/elevation/lighting tween duration; `null` falls back to the theme.
  * @param alpha Overrides the overall opacity; `null` falls back to the state's value.
  * @param theme Theme supplying state properties; defaults to [MillenniumTheme.toggleSwitchTheme].
+ * @param error Marks the switch as invalid; resolves the theme's `error` state unless disabled, pressed or
+ * keyboard-focused.
  * @see MillenniumCheckbox
  * @see MillenniumToggleSwitchTheme
  */
@@ -244,26 +293,30 @@ fun MillenniumSwitch(
     thumbAnimationMillis: Int? = null,
     alpha: Float? = null,
     theme: MillenniumToggleSwitchTheme = MillenniumTheme.toggleSwitchTheme,
+    error: Boolean = false,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val focused by interaction.collectIsKeyboardFocusedAsState()
     val hovered by interaction.collectIsHoveredAsState()
-    val state = when {
-        !enabled -> MillenniumControlState.Disabled
-        pressed -> MillenniumControlState.Pressed
-        focused -> MillenniumControlState.Focused
-        hovered -> MillenniumControlState.Hovered
-        checked -> MillenniumControlState.Selected
-        else -> MillenniumControlState.Default
-    }
+    val state = millenniumResolveControlState(
+        enabled = enabled,
+        pressed = pressed,
+        focused = focused,
+        hovered = hovered,
+        selected = checked,
+        error = error,
+    )
     val properties = theme.states.resolve(state)
+    val selectedProperties = theme.states.selected
+    fun <V> pick(read: (MillenniumToggleSwitchThemeProperties) -> V?): V? =
+        read(properties) ?: if (checked) read(selectedProperties) else null
     val colors = MillenniumTheme.colors
     val resolvedTrackBackground =
-        trackBackground ?: properties.trackBackground ?: millenniumBevelBrush(colors, sunken = true)
+        trackBackground ?: pick { it.trackBackground } ?: millenniumBevelBrush(colors, sunken = true)
     val resolvedSelectedTrackBackground = selectedTrackBackground
-        ?: properties.selectedTrackBackground ?: gelBrush(colors.accentTop, colors.accentBottom)
-    val resolvedTrackBorderColor = trackBorderColor ?: properties.trackBorderColor ?: when (state) {
+        ?: pick { it.selectedTrackBackground } ?: gelBrush(colors.accentTop, colors.accentBottom)
+    val resolvedTrackBorderColor = trackBorderColor ?: pick { it.trackBorderColor } ?: when (state) {
         MillenniumControlState.Focused, MillenniumControlState.Selected -> colors.accent
         MillenniumControlState.Hovered, MillenniumControlState.Pressed -> colors.accent
         MillenniumControlState.Error -> colors.danger
@@ -274,11 +327,12 @@ fun MillenniumSwitch(
         targetValue = resolvedTrackBorderColor,
         animationSpec = tween(resolvedMillis),
     )
-    val resolvedTrackGlowColor = trackGlowColor ?: properties.trackGlowColor
+    val resolvedTrackGlowColor = trackGlowColor ?: pick { it.trackGlowColor }
     ?: if (checked) colors.highlight.copy(alpha = 0.35f) else null
-    val resolvedThumbBackground =
-        thumbBackground ?: properties.thumbBackground ?: gelBrush(colors.raised, colors.inset)
-    val resolvedLabelForeground = labelForeground ?: properties.labelForeground
+    val resolvedThumbBackground = thumbBackground
+        ?: (if (checked) pick { it.selectedThumbBackground } else null)
+        ?: pick { it.thumbBackground } ?: gelBrush(colors.raised, colors.inset)
+    val resolvedLabelForeground = labelForeground ?: pick { it.labelForeground }
     ?: if (state == MillenniumControlState.Disabled) colors.muted else colors.text
     val animatedThumbElevation by animateDpAsState(
         targetValue = thumbElevation ?: properties.thumbElevation,
@@ -287,20 +341,26 @@ fun MillenniumSwitch(
     val thumbScaleX by animateFloatAsState(
         targetValue = when {
             !enabled -> 1f
-            pressed -> 1.12f
-            hovered -> 1.04f
+            pressed -> properties.thumbPressedScaleX
+            hovered -> properties.thumbHoverScaleX
             else -> 1f
         },
-        animationSpec = spring(dampingRatio = 0.62f, stiffness = Spring.StiffnessMedium),
+        animationSpec = spring(
+            dampingRatio = properties.thumbScaleDampingRatio,
+            stiffness = properties.thumbScaleStiffness,
+        ),
     )
     val thumbScaleY by animateFloatAsState(
         targetValue = when {
             !enabled -> 1f
-            pressed -> 0.92f
-            hovered -> 1.04f
+            pressed -> properties.thumbPressedScaleY
+            hovered -> properties.thumbHoverScaleY
             else -> 1f
         },
-        animationSpec = spring(dampingRatio = 0.62f, stiffness = Spring.StiffnessMedium),
+        animationSpec = spring(
+            dampingRatio = properties.thumbScaleDampingRatio,
+            stiffness = properties.thumbScaleStiffness,
+        ),
     )
     UnstyledSwitch(
         checked = checked,
@@ -331,14 +391,24 @@ fun MillenniumSwitch(
                         shape = trackShape ?: properties.trackShape,
                         borderColor = animatedTrackBorderColor,
                         borderWidth = trackBorderWidth ?: properties.trackBorderWidth,
+                        shadowElevation = properties.trackShadowElevation,
+                        shadowColors = properties.trackShadows ?: listOf(Color.Black.copy(alpha = 0.16f)),
                         innerGlowColor = resolvedTrackGlowColor,
+                        bottomRimColor = pick { it.trackBottomRimColor },
                     )
-                    .millenniumInteractionSurface(state, trackShape ?: properties.trackShape, animationMillis = resolvedMillis),
+                    .millenniumThemedInteraction(
+                        state = state,
+                        shape = trackShape ?: properties.trackShape,
+                        overlay = pick { it.trackInteractionOverlay },
+                        rim = pick { it.trackInteractionRim },
+                        tint = pick { it.trackInteractionTint },
+                        animationMillis = resolvedMillis,
+                    ),
             ) {
                 Thumb(
                     animationSpec = spring(
-                        dampingRatio = 0.68f,
-                        stiffness = Spring.StiffnessMediumLow,
+                        dampingRatio = properties.thumbSlideDampingRatio,
+                        stiffness = properties.thumbSlideStiffness,
                     ),
                     modifier = Modifier
                         .padding(thumbInset ?: properties.thumbInset)
@@ -348,13 +418,22 @@ fun MillenniumSwitch(
                             background = resolvedThumbBackground,
                             shape = thumbShape ?: properties.thumbShape,
                             shadowElevation = animatedThumbElevation,
-                            borderColor = thumbBorderColor ?: properties.thumbBorderColor
+                            shadowColors = properties.thumbShadows ?: listOf(Color.Black.copy(alpha = 0.16f)),
+                            borderColor = thumbBorderColor ?: pick { it.thumbBorderColor }
                             ?: colors.border,
                             borderWidth = thumbBorderWidth ?: properties.thumbBorderWidth,
-                            innerGlowColor = thumbGlowColor ?: properties.thumbGlowColor
+                            innerGlowColor = thumbGlowColor ?: pick { it.thumbGlowColor }
                             ?: colors.highlight.copy(alpha = 0.36f),
+                            bottomRimColor = pick { it.thumbBottomRimColor },
                         )
-                        .millenniumInteractionSurface(state, thumbShape ?: properties.thumbShape, animationMillis = resolvedMillis),
+                        .millenniumThemedInteraction(
+                            state = state,
+                            shape = thumbShape ?: properties.thumbShape,
+                            overlay = pick { it.thumbInteractionOverlay },
+                            rim = pick { it.thumbInteractionRim },
+                            tint = pick { it.thumbInteractionTint },
+                            animationMillis = resolvedMillis,
+                        ),
                 )
             }
             if (!label.isNullOrBlank()) {
