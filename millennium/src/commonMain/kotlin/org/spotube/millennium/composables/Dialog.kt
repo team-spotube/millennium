@@ -47,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -66,6 +67,7 @@ import com.composeunstyled.UnstyledButton
 import com.composeunstyled.UnstyledDialog
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
+import org.spotube.millennium.theme.MillenniumColors
 import org.spotube.millennium.theme.MillenniumPreview
 import org.spotube.millennium.theme.MillenniumStyledContent
 import org.spotube.millennium.theme.MillenniumTheme
@@ -112,6 +114,40 @@ import org.spotube.millennium.theme.millenniumSurface
  * @property footerBorderColor Footer divider colour. Null uses `colors.border`.
  * @property closeTargetSize Touch target of [MillenniumDialogClose] (44dp).
  * @property closeCapSize Visible size of the red close cap.
+ * @property scrimBrush Brush of the backdrop; wins over [scrimColor]. Null paints the scrim colour.
+ * @property panelBottomRimColor Colour of the lower lip of the panel's inner rim; null draws none.
+ * @property panelOrbColor Colour of a glass orb overlay on the panel; null draws none.
+ * @property panelOverlayBrush Brush drawn over [panelBackground] and below the content (gloss, texture); null draws
+ *   none.
+ * @property panelShadowColor Shadow colour of the panel; null uses the default 16% black.
+ * @property enterSpringDamping Damping ratio of the panel scale-in spring (0.72).
+ * @property enterSlideSpringDamping Damping ratio of the panel slide-in spring (0.76).
+ * @property enterSlideFraction Fraction of the panel height the panel slides up while entering (0.1).
+ * @property exitSlideFraction Fraction of the panel height the panel slides while leaving (about 0.071).
+ * @property titleBarSpacing Gap between the header's children (12dp).
+ * @property titleBarDividerBrush Brush of the header divider; wins over [titleBarBorderColor]. Null paints the colour.
+ * @property titleBarDividerThickness Thickness of the header divider (1dp).
+ * @property footerDividerBrush Brush of the footer divider; wins over [footerBorderColor]. Null paints the colour.
+ * @property footerDividerThickness Thickness of the footer divider (1dp).
+ * @property descriptionForeground Colour of [MillenniumDialogDescription]; null uses the palette muted colour.
+ * @property closeScaleHover Scale of the close target while hovered or keyboard-focused (1.08).
+ * @property closeScalePressed Scale of the close target while pressed (0.90).
+ * @property closeScaleDamping Damping ratio of the close target scale spring (0.62).
+ * @property closeCapBackground Fill of the close cap; null derives a gel from the palette danger colour.
+ * @property closeCapShape Shape of the close cap (5dp rounded).
+ * @property closeCapBorderColor Border colour of the close cap; null uses on-accent at 62% (85% while hovered).
+ * @property closeCapBorderWidth Border width of the close cap (1dp; keyboard focus keeps a 2dp border).
+ * @property closeCapFocusBorderColor Border colour of the focused close cap; null uses the palette accent.
+ * @property closeCapGlowColor Inner glow of the close cap; null uses the palette highlight at 45% (65% while hovered).
+ * @property closeCapForeground Colour of the default close glyph; null uses the palette surface colour.
+ * @property closeCapGlyphStyle Text style of the default close glyph (21sp medium).
+ * @property closeCapElevation Resting shadow of the close cap (1dp).
+ * @property closeCapRaisedElevation Shadow of the close cap while hovered or focused (3dp).
+ * @property closeCapPressedElevation Shadow of the close cap while pressed (0dp).
+ * @property closeCapTint Interaction lighting tint of the close cap; null uses the palette danger colour.
+ *
+ * The close target and cap resolve their own state (Pressed, Focused, Hovered, Default) from the owning theme, so the
+ * `closeCap*` and `closeScale*` properties can differ per state.
  *
  * @see MillenniumDialogTheme
  * @see defaultMillenniumDialogTheme
@@ -148,6 +184,36 @@ data class MillenniumDialogThemeProperties(
     val footerBorderColor: Color? = null,
     val closeTargetSize: Dp = 44.dp,
     val closeCapSize: Dp = 28.dp,
+    val scrimBrush: Brush? = null,
+    val panelBottomRimColor: Color? = null,
+    val panelOrbColor: Color? = null,
+    val panelOverlayBrush: Brush? = null,
+    val panelShadowColor: Color? = null,
+    val enterSpringDamping: Float = 0.72f,
+    val enterSlideSpringDamping: Float = 0.76f,
+    val enterSlideFraction: Float = 1f / 10f,
+    val exitSlideFraction: Float = 1f / 14f,
+    val titleBarSpacing: Dp = 12.dp,
+    val titleBarDividerBrush: Brush? = null,
+    val titleBarDividerThickness: Dp = 1.dp,
+    val footerDividerBrush: Brush? = null,
+    val footerDividerThickness: Dp = 1.dp,
+    val descriptionForeground: Color? = null,
+    val closeScaleHover: Float = 1.08f,
+    val closeScalePressed: Float = 0.90f,
+    val closeScaleDamping: Float = 0.62f,
+    val closeCapBackground: Brush? = null,
+    val closeCapShape: Shape = RoundedCornerShape(5.dp),
+    val closeCapBorderColor: Color? = null,
+    val closeCapBorderWidth: Dp = 1.dp,
+    val closeCapFocusBorderColor: Color? = null,
+    val closeCapGlowColor: Color? = null,
+    val closeCapForeground: Color? = null,
+    val closeCapGlyphStyle: TextStyle = TextStyle(fontSize = 21.sp, fontWeight = FontWeight.Medium),
+    val closeCapElevation: Dp = 1.dp,
+    val closeCapRaisedElevation: Dp = 3.dp,
+    val closeCapPressedElevation: Dp = 0.dp,
+    val closeCapTint: Color? = null,
 )
 
 /**
@@ -324,9 +390,15 @@ fun MillenniumDialog(
         visible = visible,
         onDismissRequest = onDismissRequest,
         overlay = {
+            val scrimBrush = properties.scrimBrush
+            val useScrimBrush = scrimBrush != null && scrimColor == null
             Scrim(
-                modifier = Modifier.millenniumActionPointer(),
-                scrimColor = resolvedScrimColor,
+                modifier = if (useScrimBrush) {
+                    Modifier.millenniumActionPointer().background(scrimBrush!!)
+                } else {
+                    Modifier.millenniumActionPointer()
+                },
+                scrimColor = if (useScrimBrush) Color.Transparent else resolvedScrimColor,
                 enter = fadeIn(animationSpec = tween(resolvedAnimationMillis, easing = FastOutSlowInEasing)),
                 exit = fadeOut(animationSpec = tween(resolvedCloseMillis, easing = FastOutLinearInEasing)),
             )
@@ -346,16 +418,26 @@ fun MillenniumDialog(
                         borderWidth = panelBorderWidth ?: properties.panelBorderWidth,
                         shadowElevation = panelShadowElevation ?: properties.panelShadowElevation,
                         innerGlowColor = resolvedPanelGlowColor,
+                        bottomRimColor = properties.panelBottomRimColor,
+                        orbColor = properties.panelOrbColor,
+                        shadowColor = properties.panelShadowColor ?: Color.Black.copy(alpha = 0.16f),
+                    )
+                    .then(
+                        if (properties.panelOverlayBrush != null) {
+                            Modifier.background(properties.panelOverlayBrush)
+                        } else {
+                            Modifier
+                        },
                     ),
                 paneTitle = paneTitle,
                 enter = fadeIn(animationSpec = tween(resolvedAnimationMillis, easing = FastOutSlowInEasing)) +
                     scaleIn(
                         initialScale = enterScale ?: properties.enterScale,
-                        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow),
+                        animationSpec = spring(dampingRatio = properties.enterSpringDamping, stiffness = Spring.StiffnessMediumLow),
                     ) +
                     slideInVertically(
-                        animationSpec = spring(dampingRatio = 0.76f, stiffness = Spring.StiffnessMediumLow),
-                        initialOffsetY = { it / 10 },
+                        animationSpec = spring(dampingRatio = properties.enterSlideSpringDamping, stiffness = Spring.StiffnessMediumLow),
+                        initialOffsetY = { (it * properties.enterSlideFraction).toInt() },
                     ),
                 exit = fadeOut(animationSpec = tween(resolvedCloseMillis, easing = FastOutLinearInEasing)) +
                     scaleOut(
@@ -364,7 +446,7 @@ fun MillenniumDialog(
                     ) +
                     slideOutVertically(
                         animationSpec = tween(resolvedCloseMillis, easing = FastOutLinearInEasing),
-                        targetOffsetY = { it / 14 },
+                        targetOffsetY = { (it * properties.exitSlideFraction).toInt() },
                     ),
             ) {
                 CompositionLocalProvider(LocalMillenniumDialog provides scope) {
@@ -557,6 +639,21 @@ fun MillenniumAlertDialog(
     }
 }
 
+/**
+ * Resolves a divider brush: an explicit [override] colour wins, then the theme [brush], then the theme [color],
+ * then the palette border.
+ */
+internal fun dialogDividerBrush(
+    override: Color?,
+    brush: Brush?,
+    color: Color?,
+    colors: MillenniumColors,
+): Brush = when {
+    override != null -> SolidColor(override)
+    brush != null -> brush
+    else -> SolidColor(color ?: colors.border)
+}
+
 // ---------------------------------------------------------------------------
 // Header, title, close
 // ---------------------------------------------------------------------------
@@ -593,7 +690,7 @@ fun MillenniumDialogHeader(
     foreground: Color? = null,
     minimumHeight: Dp? = null,
     contentPadding: PaddingValues? = null,
-    contentSpacing: Dp = 12.dp,
+    contentSpacing: Dp? = null,
     showDivider: Boolean = true,
     dividerColor: Color? = null,
     theme: MillenniumDialogTheme = MillenniumTheme.dialogTheme,
@@ -609,15 +706,17 @@ fun MillenniumDialogHeader(
                 .heightIn(min = minimumHeight ?: properties.titleBarHeight)
                 .then(if (resolvedBackground != null) Modifier.background(resolvedBackground) else Modifier)
                 .padding(contentPadding ?: properties.titleBarPadding),
-            horizontalArrangement = Arrangement.spacedBy(contentSpacing),
+            horizontalArrangement = Arrangement.spacedBy(contentSpacing ?: properties.titleBarSpacing),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             MillenniumStyledContent(TextStyle.Default, resolvedForeground) { content() }
         }
-        if (showDivider) {
+        if (showDivider && properties.titleBarDividerThickness > 0.dp) {
             Box(
-                Modifier.fillMaxWidth().height(1.dp)
-                    .background(dividerColor ?: properties.titleBarBorderColor ?: colors.border),
+                Modifier.fillMaxWidth().height(properties.titleBarDividerThickness)
+                    .background(
+                        dialogDividerBrush(dividerColor, properties.titleBarDividerBrush, properties.titleBarBorderColor, colors),
+                    ),
             )
         }
     }
@@ -720,13 +819,14 @@ fun MillenniumDialogClose(
         hovered -> MillenniumControlState.Hovered
         else -> MillenniumControlState.Default
     }
+    val closeProperties = theme.states.resolve(state)
     val scale by animateFloatAsState(
         targetValue = when {
-            pressed -> 0.90f
-            hovered || focused -> 1.08f
+            pressed -> closeProperties.closeScalePressed
+            hovered || focused -> closeProperties.closeScaleHover
             else -> 1f
         },
-        animationSpec = spring(dampingRatio = 0.62f, stiffness = Spring.StiffnessMedium),
+        animationSpec = spring(dampingRatio = closeProperties.closeScaleDamping, stiffness = Spring.StiffnessMedium),
     )
     UnstyledButton(
         onClick = { (onClick ?: dismiss)?.invoke() },
@@ -766,34 +866,41 @@ fun MillenniumDialogCloseCap(
     size: Dp? = null,
     theme: MillenniumDialogTheme = MillenniumTheme.dialogTheme,
     content: @Composable () -> Unit = {
-        Text("×", color = MillenniumTheme.colors.surface, fontSize = 21.sp, fontWeight = FontWeight.Medium)
+        val glyph = theme.states.resolve(state)
+        Text(
+            "×",
+            color = glyph.closeCapForeground ?: MillenniumTheme.colors.surface,
+            fontSize = glyph.closeCapGlyphStyle.fontSize,
+            fontWeight = glyph.closeCapGlyphStyle.fontWeight,
+        )
     },
 ) {
     val colors = MillenniumTheme.colors
+    val cap = theme.states.resolve(state)
     val hovered = state == MillenniumControlState.Hovered
     val focused = state == MillenniumControlState.Focused
     val pressed = state == MillenniumControlState.Pressed
     val elevation by animateDpAsState(
         targetValue = when {
-            pressed -> 0.dp
-            hovered || focused -> 3.dp
-            else -> 1.dp
+            pressed -> cap.closeCapPressedElevation
+            hovered || focused -> cap.closeCapRaisedElevation
+            else -> cap.closeCapElevation
         },
         animationSpec = tween(120),
     )
-    val capShape = RoundedCornerShape(5.dp)
+    val capShape = cap.closeCapShape
     Box(
         modifier.size(size ?: theme.states.default.closeCapSize)
             .millenniumSurface(
-                background = gelBrush(colors.danger, colors.danger.copy(alpha = 0.78f)),
+                background = cap.closeCapBackground ?: gelBrush(colors.danger, colors.danger.copy(alpha = 0.78f)),
                 shape = capShape,
-                borderColor = if (focused) colors.accent
-                else colors.onAccent.copy(alpha = if (hovered) 0.85f else 0.62f),
-                borderWidth = if (focused) 2.dp else 1.dp,
+                borderColor = if (focused) cap.closeCapFocusBorderColor ?: colors.accent
+                else cap.closeCapBorderColor ?: colors.onAccent.copy(alpha = if (hovered) 0.85f else 0.62f),
+                borderWidth = if (focused) maxOf(2.dp, cap.closeCapBorderWidth) else cap.closeCapBorderWidth,
                 shadowElevation = elevation,
-                innerGlowColor = colors.highlight.copy(alpha = if (hovered) 0.65f else 0.45f),
+                innerGlowColor = cap.closeCapGlowColor ?: colors.highlight.copy(alpha = if (hovered) 0.65f else 0.45f),
             )
-            .millenniumInteractionSurface(state, capShape, tint = colors.danger),
+            .millenniumInteractionSurface(state, capShape, tint = cap.closeCapTint ?: colors.danger),
         contentAlignment = Alignment.Center,
     ) { content() }
 }
@@ -866,7 +973,7 @@ fun MillenniumDialogDescription(
     Box(modifier) {
         MillenniumStyledContent(
             textStyle ?: theme.states.default.descriptionStyle,
-            foreground ?: MillenniumTheme.colors.muted,
+            foreground ?: theme.states.default.descriptionForeground ?: MillenniumTheme.colors.muted,
             content,
         )
     }
@@ -929,10 +1036,12 @@ fun MillenniumDialogFooter(
     val properties = theme.states.default
     val resolvedBackground = background ?: properties.footerBackground
     Column(modifier.fillMaxWidth()) {
-        if (showDivider) {
+        if (showDivider && properties.footerDividerThickness > 0.dp) {
             Box(
-                Modifier.fillMaxWidth().height(1.dp)
-                    .background(dividerColor ?: properties.footerBorderColor ?: colors.border),
+                Modifier.fillMaxWidth().height(properties.footerDividerThickness)
+                    .background(
+                        dialogDividerBrush(dividerColor, properties.footerDividerBrush, properties.footerBorderColor, colors),
+                    ),
             )
         }
         Row(

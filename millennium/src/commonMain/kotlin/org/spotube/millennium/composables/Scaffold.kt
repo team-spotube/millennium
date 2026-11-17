@@ -36,6 +36,12 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.foundation.layout.height
+import org.spotube.millennium.theme.MillenniumColors
+import org.spotube.millennium.theme.millenniumSurface
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -68,6 +74,22 @@ import org.spotube.millennium.theme.millenniumPanelBrush
  * @property leadingSpacing Gap between the leading slot and the title; only applied when a leading
  *   slot is supplied.
  * @property actionsSpacing Gap before the actions row and between sibling actions.
+ * @property containerBrush Brush painted behind the whole scaffold; `null` paints the `containerColor`
+ *   parameter or, when that is unspecified, the palette background (solid).
+ * @property topBarSeparatorColor Colour of the hairline under the top bar; `null` keeps the themed
+ *   [MillenniumSeparator] (when no other separator property is set).
+ * @property topBarSeparatorBrush Brush of the hairline under the top bar; wins over [topBarSeparatorColor].
+ * @property topBarSeparatorThickness Thickness of the hairline under the top bar; 0.dp hides it. `null` keeps
+ *   the themed [MillenniumSeparator] unless a colour or brush is set (then 1.dp).
+ * @property topBarShape Shape the top bar background is clipped to. Default [RectangleShape].
+ * @property topBarShadowElevation Drop shadow under the top bar; 0.dp (default) draws none.
+ * @property topBarBorderColor Outline colour of the top bar when [topBarBorderWidth] is above 0.dp.
+ * @property topBarBorderWidth Outline thickness of the top bar. Default 0.dp.
+ * @property topBarInnerGlowColor Colour of the inner top rim of the top bar; `null` draws none.
+ * @property topBarBottomRimColor Colour of the lower lip of the inner rim; `null` draws none.
+ * @property topBarOverlayBrush Brush drawn over [topBarBackground] and below the bar content; `null` draws none.
+ * @property bottomBarBackground Brush painted behind the `bottomBar` slot; `null` (default) paints nothing so the
+ *   bar draws itself.
  * @see MillenniumScaffold
  * @see defaultMillenniumScaffoldTheme
  */
@@ -80,6 +102,18 @@ data class MillenniumScaffoldThemeProperties(
     val topBarMinimumHeight: Dp,
     val leadingSpacing: Dp,
     val actionsSpacing: Dp,
+    val containerBrush: Brush? = null,
+    val topBarSeparatorColor: Color? = null,
+    val topBarSeparatorBrush: Brush? = null,
+    val topBarSeparatorThickness: Dp? = null,
+    val topBarShape: Shape = RectangleShape,
+    val topBarShadowElevation: Dp = 0.dp,
+    val topBarBorderColor: Color? = null,
+    val topBarBorderWidth: Dp = 0.dp,
+    val topBarInnerGlowColor: Color? = null,
+    val topBarBottomRimColor: Color? = null,
+    val topBarOverlayBrush: Brush? = null,
+    val bottomBarBackground: Brush? = null,
 )
 
 /**
@@ -356,7 +390,7 @@ fun MillenniumScaffold(
     Box(
         modifier
             .fillMaxSize()
-            .background(if (containerColor == Color.Unspecified) colors.background else containerColor),
+            .background(scaffoldContainerBrush(properties, containerColor, colors)),
     ) {
         CompositionLocalProvider(LocalMillenniumScaffoldState provides state) {
             Box(Modifier.fillMaxSize().consumeWindowInsets(innerPadding)) {
@@ -381,9 +415,17 @@ fun MillenniumScaffold(
                         .onSizeChanged { bottomBarSize = it },
                 ) {
                     Box(
-                        Modifier.windowInsetsPadding(
-                            windowInsets.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal),
-                        ),
+                        Modifier
+                            .then(
+                                if (properties.bottomBarBackground != null) {
+                                    Modifier.background(properties.bottomBarBackground)
+                                } else {
+                                    Modifier
+                                },
+                            )
+                            .windowInsetsPadding(
+                                windowInsets.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal),
+                            ),
                     ) { bottomBar() }
                 }
             }
@@ -402,9 +444,29 @@ private fun ScaffoldTopBar(
     modifier: Modifier = Modifier,
 ) {
     val colors = MillenniumTheme.colors
+    val barBackground = properties.topBarBackground ?: millenniumPanelBrush(colors)
+    val decorated = properties.topBarShape != RectangleShape || properties.topBarShadowElevation > 0.dp ||
+        properties.topBarBorderColor != null || properties.topBarInnerGlowColor != null ||
+        properties.topBarBottomRimColor != null
+    val overlay = properties.topBarOverlayBrush
     Column(
         modifier
-            .background(properties.topBarBackground ?: millenniumPanelBrush(colors))
+            .then(
+                if (decorated) {
+                    Modifier.millenniumSurface(
+                        background = barBackground,
+                        shape = properties.topBarShape,
+                        borderColor = properties.topBarBorderColor,
+                        borderWidth = properties.topBarBorderWidth,
+                        shadowElevation = properties.topBarShadowElevation,
+                        innerGlowColor = properties.topBarInnerGlowColor,
+                        bottomRimColor = properties.topBarBottomRimColor,
+                    )
+                } else {
+                    Modifier.background(barBackground)
+                },
+            )
+            .then(if (overlay != null) Modifier.background(overlay) else Modifier)
             .windowInsetsPadding(windowInsets),
     ) {
         Row(
@@ -429,8 +491,44 @@ private fun ScaffoldTopBar(
                 ) { actions() }
             }
         }
-        MillenniumSeparator()
+        val separator = scaffoldSeparatorBrush(properties, colors)
+        if (separator == null) {
+            if (properties.topBarSeparatorThickness == null) MillenniumSeparator()
+        } else {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(properties.topBarSeparatorThickness ?: 1.dp)
+                    .background(separator),
+            )
+        }
     }
+}
+
+/**
+ * Brush behind the whole scaffold: the theme's `containerBrush`, else the explicit [containerColor], else the
+ * palette background.
+ */
+internal fun scaffoldContainerBrush(
+    properties: MillenniumScaffoldThemeProperties,
+    containerColor: Color,
+    colors: MillenniumColors,
+): Brush = properties.containerBrush
+    ?: SolidColor(if (containerColor == Color.Unspecified) colors.background else containerColor)
+
+/**
+ * Brush of a custom top bar hairline, or `null` when the themed [MillenniumSeparator] should be used (nothing
+ * customised) or the hairline is hidden (zero thickness; check [MillenniumScaffoldThemeProperties.topBarSeparatorThickness]).
+ */
+internal fun scaffoldSeparatorBrush(
+    properties: MillenniumScaffoldThemeProperties,
+    colors: MillenniumColors,
+): Brush? = when {
+    properties.topBarSeparatorThickness == 0.dp -> null
+    properties.topBarSeparatorBrush != null -> properties.topBarSeparatorBrush
+    properties.topBarSeparatorColor != null -> SolidColor(properties.topBarSeparatorColor)
+    properties.topBarSeparatorThickness != null -> SolidColor(colors.border)
+    else -> null
 }
 
 /**

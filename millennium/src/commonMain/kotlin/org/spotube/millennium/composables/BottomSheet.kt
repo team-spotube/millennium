@@ -53,7 +53,7 @@ import org.spotube.millennium.theme.millenniumPanelBrush
  * Appearance of one control state of [MillenniumBottomSheet].
  *
  * Normally produced by [defaultMillenniumBottomSheetTheme] and customised with `copy`. The composable
- * resolves only [MillenniumControlState.Default] from the owning [MillenniumBottomSheetTheme].
+ * resolves [MillenniumControlState.Default] (and the handle's Hovered/Pressed state) from the owning [MillenniumBottomSheetTheme].
  *
  * @property background Brush of the sheet; `null` derives the palette panel brush (pearl/smoke glass).
  * @property foreground Default content colour; `null` uses the palette text colour.
@@ -69,6 +69,16 @@ import org.spotube.millennium.theme.millenniumPanelBrush
  * @property shadowElevation Shadow elevation in dp.
  * @property innerGlowColor Inner highlight colour; `null` uses the palette highlight at 55% alpha.
  * @property alpha Overall opacity multiplier (1 = opaque).
+ * @property handleBrush Brush of the drag handle; wins over [handleColor]. `null` paints the handle colour.
+ * @property handleShape Shape of the drag handle (default [CircleShape]).
+ * @property bottomRimColor Colour of the lower lip of the inner rim; `null` (default) draws none.
+ * @property orbColor Colour of a glass orb overlay on the sheet; `null` (default) draws none.
+ * @property overlayBrush Brush drawn over [background] and below the content (gloss, texture); `null` draws none.
+ * @property shadowColor Shadow colour of the sheet; `null` uses the default 16% black.
+ * @property textStyle Ambient text style of the sheet content (colour comes from [foreground]).
+ *
+ * The handle resolves its own state (Hovered, Pressed, Default) from the owning theme, so `handleSize`,
+ * `handleColor`, `handleBrush` and `handleShape` can differ per state.
  */
 @Immutable
 data class MillenniumBottomSheetThemeProperties(
@@ -85,6 +95,13 @@ data class MillenniumBottomSheetThemeProperties(
     val shadowElevation: Dp,
     val innerGlowColor: Color? = null,
     val alpha: Float,
+    val handleBrush: Brush? = null,
+    val handleShape: Shape = CircleShape,
+    val bottomRimColor: Color? = null,
+    val orbColor: Color? = null,
+    val overlayBrush: Brush? = null,
+    val shadowColor: Color? = null,
+    val textStyle: TextStyle = TextStyle.Default,
 )
 
 /**
@@ -216,7 +233,10 @@ fun MillenniumBottomSheet(
     val properties = theme.states.resolve(MillenniumControlState.Default)
     val resolvedBackground = background ?: properties.background ?: millenniumPanelBrush(colors)
     val resolvedForeground = foreground ?: properties.foreground ?: colors.text
-    val resolvedHandleColor = handleColor ?: properties.handleColor ?: colors.muted
+    val handleProperties = theme.states.resolve(handleState)
+    val resolvedHandleColor = handleColor ?: handleProperties.handleColor ?: properties.handleColor ?: colors.muted
+    val resolvedHandleBrush = if (handleColor == null) handleProperties.handleBrush ?: properties.handleBrush else null
+    val resolvedHandleShape = handleProperties.handleShape
     val resolvedBorderColor = borderColor ?: properties.borderColor ?: colors.border
     val resolvedGlowColor = innerGlowColor ?: properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f)
     UnstyledBottomSheet(state, modifier) {
@@ -229,7 +249,12 @@ fun MillenniumBottomSheet(
                     borderWidth = borderWidth ?: properties.borderWidth,
                     shadowElevation = shadowElevation ?: properties.shadowElevation,
                     innerGlowColor = resolvedGlowColor,
-                ).alpha(alpha ?: properties.alpha),
+                    bottomRimColor = properties.bottomRimColor,
+                    orbColor = properties.orbColor,
+                    shadowColor = properties.shadowColor ?: Color.Black.copy(alpha = 0.16f),
+                )
+                .then(if (properties.overlayBrush != null) Modifier.background(properties.overlayBrush) else Modifier)
+                .alpha(alpha ?: properties.alpha),
             ) {
                 Column(
                     Modifier.padding(contentPadding ?: properties.contentPadding).navigationBarsPadding(),
@@ -239,11 +264,18 @@ fun MillenniumBottomSheet(
                     horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
                 ) {
                     DragIndication(
-                        Modifier.millenniumActionPointer().size(handleSize ?: properties.handleSize).background(resolvedHandleColor, CircleShape)
-                            .millenniumInteractionSurface(handleState, CircleShape),
+                        Modifier.millenniumActionPointer().size(handleSize ?: handleProperties.handleSize)
+                            .then(
+                                if (resolvedHandleBrush != null) {
+                                    Modifier.background(resolvedHandleBrush, resolvedHandleShape)
+                                } else {
+                                    Modifier.background(resolvedHandleColor, resolvedHandleShape)
+                                },
+                            )
+                            .millenniumInteractionSurface(handleState, resolvedHandleShape),
                         interactionSource = handleInteraction,
                     )
-                    MillenniumStyledContent(TextStyle(color = resolvedForeground), resolvedForeground) {
+                    MillenniumStyledContent(properties.textStyle.copy(color = resolvedForeground), resolvedForeground) {
                         content()
                     }
                 }

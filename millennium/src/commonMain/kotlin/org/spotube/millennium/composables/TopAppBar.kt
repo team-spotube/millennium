@@ -20,6 +20,11 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.SolidColor
+import org.spotube.millennium.theme.MillenniumColors
+import org.spotube.millennium.theme.millenniumSurface
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -56,6 +61,17 @@ import org.spotube.millennium.theme.millenniumPanelBrush
  * @property actionSpacing Horizontal gap between sibling actions.
  * @property separatorColor Color of the 1dp hairline along the bottom edge; `null` uses the
  *   palette's border color.
+ * @property separatorBrush Brush of the bottom separator; `null` paints [separatorColor] (solid).
+ * @property separatorThickness Thickness of the bottom separator; 0.dp hides it. Default 1.dp.
+ * @property titleSubtitleSpacing Vertical gap between the title and the subtitle. Default 1.dp.
+ * @property shape Shape the bar background is clipped to. Default [RectangleShape] (no clipping).
+ * @property shadowElevation Drop shadow under the bar; 0.dp (default) draws none.
+ * @property borderColor Outline colour drawn around the bar when [borderWidth] is above 0.dp; `null` draws none.
+ * @property borderWidth Outline thickness around the bar. Default 0.dp (no outline).
+ * @property innerGlowColor Colour of the inner top rim of the bar; `null` (default) draws none.
+ * @property bottomRimColor Colour of the lower lip of the inner rim; `null` (default) draws none.
+ * @property overlayBrush Brush drawn on top of [background] and below the content (gloss, texture); `null`
+ *   draws none.
  * @see MillenniumTopAppBar
  * @see defaultMillenniumTopAppBarTheme
  */
@@ -73,6 +89,16 @@ data class MillenniumTopAppBarThemeProperties(
     val navigationSpacing: Dp,
     val actionSpacing: Dp,
     val separatorColor: Color? = null,
+    val separatorBrush: Brush? = null,
+    val separatorThickness: Dp = 1.dp,
+    val titleSubtitleSpacing: Dp = 1.dp,
+    val shape: Shape = RectangleShape,
+    val shadowElevation: Dp = 0.dp,
+    val borderColor: Color? = null,
+    val borderWidth: Dp = 0.dp,
+    val innerGlowColor: Color? = null,
+    val bottomRimColor: Color? = null,
+    val overlayBrush: Brush? = null,
 )
 
 /**
@@ -206,10 +232,29 @@ fun MillenniumTopAppBar(
     val colors = MillenniumTheme.colors
     val properties = theme.properties
     val resolvedTitleStyle = titleStyle ?: properties.titleStyle
+    val resolvedBackground = background ?: properties.background ?: millenniumPanelBrush(colors)
+    val decorated = properties.shape != RectangleShape || properties.shadowElevation > 0.dp ||
+        properties.borderColor != null || properties.innerGlowColor != null || properties.bottomRimColor != null
+    val overlay = properties.overlayBrush
     Column(
         modifier
             .fillMaxWidth()
-            .background(background ?: properties.background ?: millenniumPanelBrush(colors))
+            .then(
+                if (decorated) {
+                    Modifier.millenniumSurface(
+                        background = resolvedBackground,
+                        shape = properties.shape,
+                        borderColor = properties.borderColor,
+                        borderWidth = properties.borderWidth,
+                        shadowElevation = properties.shadowElevation,
+                        innerGlowColor = properties.innerGlowColor,
+                        bottomRimColor = properties.bottomRimColor,
+                    )
+                } else {
+                    Modifier.background(resolvedBackground)
+                },
+            )
+            .then(if (overlay != null) Modifier.background(overlay) else Modifier)
             .windowInsetsPadding(windowInsets),
     ) {
         Row(
@@ -226,7 +271,7 @@ fun MillenniumTopAppBar(
             Spacer(Modifier.width(navigationSpacing ?: properties.navigationSpacing))
             Column(
                 Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(1.dp),
+                verticalArrangement = Arrangement.spacedBy(properties.titleSubtitleSpacing),
             ) {
                 MillenniumStyledContent(
                     resolvedTitleStyle,
@@ -249,13 +294,29 @@ fun MillenniumTopAppBar(
                 ) { actions() }
             }
         }
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(separatorColor ?: properties.separatorColor ?: colors.border),
-        )
+        if (properties.separatorThickness > 0.dp) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(properties.separatorThickness)
+                    .background(topAppBarSeparatorBrush(properties, separatorColor, colors)),
+            )
+        }
     }
+}
+
+/**
+ * Resolves the separator brush: an explicit [override] colour wins, then the theme's
+ * [MillenniumTopAppBarThemeProperties.separatorBrush], then its separator colour, then the palette border.
+ */
+internal fun topAppBarSeparatorBrush(
+    properties: MillenniumTopAppBarThemeProperties,
+    override: Color?,
+    colors: MillenniumColors,
+): Brush = when {
+    override != null -> SolidColor(override)
+    properties.separatorBrush != null -> properties.separatorBrush
+    else -> SolidColor(properties.separatorColor ?: colors.border)
 }
 
 /** Design-time preview of [MillenniumTopAppBar] with navigation, subtitle and two actions. */

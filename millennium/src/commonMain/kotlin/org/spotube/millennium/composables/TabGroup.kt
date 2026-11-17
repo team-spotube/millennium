@@ -44,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -99,6 +100,32 @@ import org.spotube.millennium.theme.millenniumInteractionSurface
  * @property tabBorderWidth Border width of the selection pill (1dp); keyboard focus draws at least 2dp.
  * @property tabElevation Shadow depth of the selection pill (2dp).
  * @property tabGlowColor Inner highlight of the selection pill; null uses the palette highlight at 50%.
+ * @property selectedTabBorderColor Border colour of the selection pill; null falls back to the Selected state's
+ *   `listBorderColor`, then the palette accent-bottom colour.
+ * @property selectedTabBottomRimColor Colour of the pill's lower rim lip; null uses the palette highlight at 30%.
+ * @property selectedTabOrbColor Colour of a glass orb overlay on the pill; null (default) draws none.
+ * @property selectedTabOverlayBrush Brush drawn over the pill fill (gloss, texture); null (default) draws none.
+ * @property selectedTabItemBackground Fill of the selected tab's own cell (above the pill, below the label); null is
+ *   transparent.
+ * @property tabHoverBackground Fill of an unselected tab while hovered when `unselectedTabBackground` is null; null
+ *   uses an 8% to 3% accent wash.
+ * @property tabPressedBackground Fill of an unselected tab while pressed when `unselectedTabBackground` is null; null
+ *   uses a 14% to 7% accent wash.
+ * @property tabHoverBorderColor Outline colour of a hovered unselected tab; null uses the palette border colour.
+ * @property tabHoverBorderWidth Outline width of a hovered unselected tab (1dp).
+ * @property tabFocusBorderColor Outline colour of a keyboard-focused tab; null uses the palette accent.
+ * @property tabFocusBorderWidth Minimum outline width of a keyboard-focused tab (2dp).
+ * @property tabHoverScale Scale of a hovered unselected tab (1.015).
+ * @property tabPressedScale Scale of a pressed tab (0.96).
+ * @property tabScaleDamping Damping ratio of the hover/press scale spring (0.70).
+ * @property indicatorSpringDamping Damping ratio of the sliding selection pill spring (0.78).
+ * @property panelSpringDamping Damping ratio of the panel enter springs (0.82).
+ * @property panelEnterScale Initial scale of the entering panel (0.985).
+ * @property panelExitScale Target scale of the leaving panel (0.99).
+ * @property listInnerGlowColor Inner top rim colour of the list track; null draws none.
+ * @property listBottomRimColor Lower lip colour of the list rim; null draws none.
+ * @property listInsetShadeColor Colour of the shade along the inner top edge of the track; null draws none.
+ * @property listShadowElevation Drop shadow of the list track; 0.dp (default) draws none.
  * @see MillenniumTabGroupTheme
  * @see defaultMillenniumTabGroupTheme
  */
@@ -125,6 +152,28 @@ data class MillenniumTabGroupThemeProperties(
     val tabBorderWidth: Dp = 1.dp,
     val tabElevation: Dp = 2.dp,
     val tabGlowColor: Color? = null,
+    val selectedTabBorderColor: Color? = null,
+    val selectedTabBottomRimColor: Color? = null,
+    val selectedTabOrbColor: Color? = null,
+    val selectedTabOverlayBrush: Brush? = null,
+    val selectedTabItemBackground: Brush? = null,
+    val tabHoverBackground: Brush? = null,
+    val tabPressedBackground: Brush? = null,
+    val tabHoverBorderColor: Color? = null,
+    val tabHoverBorderWidth: Dp = 1.dp,
+    val tabFocusBorderColor: Color? = null,
+    val tabFocusBorderWidth: Dp = 2.dp,
+    val tabHoverScale: Float = 1.015f,
+    val tabPressedScale: Float = 0.96f,
+    val tabScaleDamping: Float = 0.70f,
+    val indicatorSpringDamping: Float = 0.78f,
+    val panelSpringDamping: Float = 0.82f,
+    val panelEnterScale: Float = 0.985f,
+    val panelExitScale: Float = 0.99f,
+    val listInnerGlowColor: Color? = null,
+    val listBottomRimColor: Color? = null,
+    val listInsetShadeColor: Color? = null,
+    val listShadowElevation: Dp = 0.dp,
 )
 
 /**
@@ -283,6 +332,10 @@ fun <T> MillenniumTabGroup(
                     shape = listShape ?: groupProperties.listShape,
                     borderColor = resolvedListBorderColor,
                     borderWidth = listBorderWidth ?: groupProperties.listBorderWidth,
+                    shadowElevation = groupProperties.listShadowElevation,
+                    innerGlowColor = groupProperties.listInnerGlowColor,
+                    bottomRimColor = groupProperties.listBottomRimColor,
+                    insetShadeColor = groupProperties.listInsetShadeColor,
                 ).padding(listPadding ?: groupProperties.listPadding),
             ) {
                 BoxWithConstraints(Modifier.fillMaxWidth()) {
@@ -292,7 +345,7 @@ fun <T> MillenniumTabGroup(
                     val indicatorOffset by animateDpAsState(
                         targetValue = (slotWidth + resolvedListInnerSpacing) * selectedIndex,
                         animationSpec = spring(
-                            dampingRatio = 0.78f,
+                            dampingRatio = groupProperties.indicatorSpringDamping,
                             stiffness = Spring.StiffnessMediumLow,
                         ),
                     )
@@ -300,7 +353,7 @@ fun <T> MillenniumTabGroup(
                     val resolvedSelectedBackground = selectedTabBackground
                         ?: selectedProps.selectedTabBackground
                         ?: gelBrush(colors.accentTop, colors.accentBottom)
-                    val resolvedSelectedBorder = listBorderColor ?: selectedProps.listBorderColor ?: colors.accentBottom
+                    val resolvedSelectedBorder = listBorderColor ?: selectedProps.selectedTabBorderColor ?: selectedProps.listBorderColor ?: colors.accentBottom
                     if (tabs.isNotEmpty() && selectedTab in tabs) {
                         Box(
                             Modifier
@@ -315,7 +368,15 @@ fun <T> MillenniumTabGroup(
                                     shadowElevation = resolvedTabElevation,
                                     innerGlowColor = tabGlowColor ?: selectedProps.tabGlowColor
                                         ?: colors.highlight.copy(alpha = 0.50f),
-                                    bottomRimColor = colors.highlight.copy(alpha = 0.30f),
+                                    bottomRimColor = selectedProps.selectedTabBottomRimColor ?: colors.highlight.copy(alpha = 0.30f),
+                                    orbColor = selectedProps.selectedTabOrbColor,
+                                )
+                                .then(
+                                    if (selectedProps.selectedTabOverlayBrush != null) {
+                                        Modifier.background(selectedProps.selectedTabOverlayBrush)
+                                    } else {
+                                        Modifier
+                                    },
                                 ),
                         )
                     }
@@ -349,33 +410,34 @@ fun <T> MillenniumTabGroup(
                             )
                             val tabScale by animateFloatAsState(
                                 targetValue = when {
-                                    pressed -> 0.96f
-                                    hovered && !isSelected -> 1.015f
+                                    pressed -> properties.tabPressedScale
+                                    hovered && !isSelected -> properties.tabHoverScale
                                     else -> 1f
                                 },
                                 animationSpec = spring(
-                                    dampingRatio = 0.70f,
+                                    dampingRatio = properties.tabScaleDamping,
                                     stiffness = Spring.StiffnessMedium,
                                 ),
                             )
                             val resolvedTabBackground = if (isSelected) {
-                                Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
+                                selectedProps.selectedTabItemBackground ?: TransparentTabBrush
                             } else {
                                 unselectedTabBackground
                                     ?: properties.unselectedTabBackground
-                                    ?: if (hovered || pressed) {
-                                        Brush.verticalGradient(
-                                            listOf(
-                                                colors.accent.copy(alpha = if (pressed) 0.14f else 0.08f),
-                                                colors.accent.copy(alpha = if (pressed) 0.07f else 0.03f),
-                                            ),
+                                    ?: if (pressed) {
+                                        properties.tabPressedBackground ?: Brush.verticalGradient(
+                                            listOf(colors.accent.copy(alpha = 0.14f), colors.accent.copy(alpha = 0.07f)),
+                                        )
+                                    } else if (hovered) {
+                                        properties.tabHoverBackground ?: Brush.verticalGradient(
+                                            listOf(colors.accent.copy(alpha = 0.08f), colors.accent.copy(alpha = 0.03f)),
                                         )
                                     } else {
-                                        Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
+                                        TransparentTabBrush
                                     }
                             }
                             val targetTabForeground = if (isSelected) {
-                                selectedTabForeground ?: properties.selectedTabForeground ?: colors.onAccent
+                                selectedTabForeground ?: selectedProps.selectedTabForeground ?: properties.selectedTabForeground ?: colors.onAccent
                             } else {
                                 unselectedTabForeground ?: properties.unselectedTabForeground
                                     ?: if (hovered || focused) colors.text else colors.muted
@@ -392,8 +454,20 @@ fun <T> MillenniumTabGroup(
                                     .millenniumSurface(
                                         background = resolvedTabBackground,
                                         shape = resolvedTabShape,
-                                        borderColor = if (focused) colors.accent else if (hovered && !isSelected) colors.border else null,
-                                        borderWidth = if (focused) maxOf(2.dp, resolvedTabBorderWidth) else if (hovered && !isSelected) 1.dp else 0.dp,
+                                        borderColor = if (focused) {
+                                            properties.tabFocusBorderColor ?: colors.accent
+                                        } else if (hovered && !isSelected) {
+                                            properties.tabHoverBorderColor ?: colors.border
+                                        } else {
+                                            null
+                                        },
+                                        borderWidth = if (focused) {
+                                            maxOf(properties.tabFocusBorderWidth, resolvedTabBorderWidth)
+                                        } else if (hovered && !isSelected) {
+                                            properties.tabHoverBorderWidth
+                                        } else {
+                                            0.dp
+                                        },
                                     )
                                     .millenniumInteractionSurface(state, resolvedTabShape, animationMillis = resolvedStateMillis)
                                     .padding(tabPadding ?: properties.tabPadding),
@@ -419,15 +493,15 @@ fun <T> MillenniumTabGroup(
                     (fadeIn(tween(resolvedPanelMillis, easing = FastOutSlowInEasing)) +
                         slideInHorizontally(
                             animationSpec = spring(
-                                dampingRatio = 0.82f,
+                                dampingRatio = groupProperties.panelSpringDamping,
                                 stiffness = Spring.StiffnessMediumLow,
                             ),
                             initialOffsetX = { width -> if (forward) width / 12 else -width / 12 },
                         ) +
                         scaleIn(
-                            initialScale = 0.985f,
+                            initialScale = groupProperties.panelEnterScale,
                             animationSpec = spring(
-                                dampingRatio = 0.82f,
+                                dampingRatio = groupProperties.panelSpringDamping,
                                 stiffness = Spring.StiffnessMediumLow,
                             ),
                         )) togetherWith
@@ -440,7 +514,7 @@ fun <T> MillenniumTabGroup(
                                 targetOffsetX = { width -> if (forward) -width / 16 else width / 16 },
                             ) +
                             scaleOut(
-                                targetScale = 0.99f,
+                                targetScale = groupProperties.panelExitScale,
                                 animationSpec = tween((resolvedPanelMillis * 0.75f).toInt().coerceAtLeast(90)),
                             ))
                 },
@@ -450,6 +524,8 @@ fun <T> MillenniumTabGroup(
         }
     }
 }
+
+private val TransparentTabBrush: Brush = Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
 
 @Preview
 @Composable

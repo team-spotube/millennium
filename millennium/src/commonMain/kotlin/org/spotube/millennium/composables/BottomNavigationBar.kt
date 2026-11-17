@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -56,6 +57,11 @@ import org.spotube.millennium.theme.*
  * @property borderWidth Hairline border width (default 1dp).
  * @property shadowElevation Drop shadow elevation (default 8dp).
  * @property innerGlowColor Inner top glow; `null` uses the palette highlight at 55 percent alpha.
+ * @property bottomRimColor Colour of the lower lip of the inner rim; `null` (default) draws none.
+ * @property orbColor Colour of a glass orb overlay on the container; `null` (default) draws none.
+ * @property overlayBrush Brush drawn over [background] and below the items (gloss, texture); `null` draws none.
+ * @property shadowColor Shadow colour of the container; `null` uses the default 16 percent black.
+ * @property textStyle Ambient text style provided to the items' content (default unspecified).
  * @see MillenniumBottomNavigationBar
  * @see defaultMillenniumBottomNavigationBarTheme
  */
@@ -71,6 +77,11 @@ data class MillenniumBottomNavigationBarThemeProperties(
     val borderWidth: Dp = 1.dp,
     val shadowElevation: Dp = 8.dp,
     val innerGlowColor: Color? = null,
+    val bottomRimColor: Color? = null,
+    val orbColor: Color? = null,
+    val overlayBrush: Brush? = null,
+    val shadowColor: Color? = null,
+    val textStyle: TextStyle = TextStyle.Default,
 )
 
 /**
@@ -99,6 +110,14 @@ data class MillenniumBottomNavigationBarThemeProperties(
  * @property alpha Overall item opacity (the default theme dims disabled items to 0.45).
  * @property animationMillis Duration in milliseconds of the foreground, border and alpha tweens
  *   (default 150).
+ * @property bottomRimColor Colour of the lower lip of the item's inner rim; `null` (default) draws none.
+ * @property orbColor Colour of a glass orb overlay on the item; `null` (default) draws none.
+ * @property overlayBrush Brush drawn over the item fill and below its content (gloss, texture); `null` draws none.
+ * @property shadowColor Shadow colour of the item; `null` uses the default 16 percent black.
+ * @property pressedScale Scale of the item while pressed (default 0.96).
+ * @property hoverScale Scale of an unselected item while hovered (default 1.02).
+ * @property scaleSpringDamping Damping ratio of the press/hover scale spring (default 0.68).
+ * @property elevationSpringDamping Damping ratio of the shadow elevation spring (default 0.76).
  * @see MillenniumBottomNavigationItem
  */
 @Immutable
@@ -118,6 +137,14 @@ data class MillenniumBottomNavigationItemThemeProperties(
     val innerGlowColor: Color? = null,
     val alpha: Float = 1f,
     val animationMillis: Int = 150,
+    val bottomRimColor: Color? = null,
+    val orbColor: Color? = null,
+    val overlayBrush: Brush? = null,
+    val shadowColor: Color? = null,
+    val pressedScale: Float = 0.96f,
+    val hoverScale: Float = 1.02f,
+    val scaleSpringDamping: Float = 0.68f,
+    val elevationSpringDamping: Float = 0.76f,
 )
 
 /**
@@ -248,7 +275,11 @@ fun MillenniumBottomNavigationBar(
                 borderWidth = borderWidth ?: properties.borderWidth,
                 shadowElevation = shadowElevation ?: properties.shadowElevation,
                 innerGlowColor = innerGlowColor ?: properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f),
+                bottomRimColor = properties.bottomRimColor,
+                orbColor = properties.orbColor,
+                shadowColor = properties.shadowColor ?: Color.Black.copy(alpha = 0.16f),
             )
+            .then(if (properties.overlayBrush != null) Modifier.background(properties.overlayBrush) else Modifier)
             .windowInsetsPadding(windowInsets)
             .heightIn(min = minimumHeight ?: properties.minimumHeight)
             .padding(contentPadding ?: properties.contentPadding)
@@ -256,7 +287,7 @@ fun MillenniumBottomNavigationBar(
         horizontalArrangement = Arrangement.spacedBy(itemSpacing ?: properties.itemSpacing),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        MillenniumStyledContent(TextStyle.Default, foreground ?: properties.foreground ?: colors.text) { content() }
+        MillenniumStyledContent(properties.textStyle, foreground ?: properties.foreground ?: colors.text) { content() }
     }
 }
 
@@ -442,14 +473,17 @@ fun RowScope.MillenniumBottomNavigationItem(
         else -> MillenniumControlState.Default
     }
     val properties = theme.item.resolve(state)
-    val targetForeground = foreground ?: properties.foreground
+    // A selected item that is also hovered, pressed or focused still honours the Selected state theme where the
+    // active state leaves a value unset.
+    val selectedProperties = if (selected) theme.item.resolve(MillenniumControlState.Selected) else properties
+    val targetForeground = foreground ?: properties.foreground ?: selectedProperties.foreground
         ?: bottomNavigationItemForeground(colors, selected, enabled)
     val resolvedAnimationMillis = animationMillis ?: properties.animationMillis
     val resolvedForeground by animateColorAsState(
         targetValue = targetForeground,
         animationSpec = tween(resolvedAnimationMillis),
     )
-    val resolvedBackground = background ?: properties.background ?: when {
+    val resolvedBackground = background ?: properties.background ?: selectedProperties.background ?: when {
         selected -> gelBrush(colors.accentTop, colors.accentBottom)
         pressed -> millenniumBevelBrush(colors, sunken = true)
         hovered || focused -> millenniumBevelBrush(colors)
@@ -457,19 +491,19 @@ fun RowScope.MillenniumBottomNavigationItem(
     }
     val elevation by animateDpAsState(
         shadowElevation ?: properties.shadowElevation,
-        spring(dampingRatio = 0.76f, stiffness = Spring.StiffnessMediumLow),
+        spring(dampingRatio = properties.elevationSpringDamping, stiffness = Spring.StiffnessMediumLow),
     )
     val animatedAlpha by animateFloatAsState(alpha ?: properties.alpha, tween(resolvedAnimationMillis))
     val itemScale by animateFloatAsState(
         targetValue = when {
             !enabled -> 1f
-            pressed -> 0.96f
-            hovered && !selected -> 1.02f
+            pressed -> properties.pressedScale
+            hovered && !selected -> properties.hoverScale
             else -> 1f
         },
-        animationSpec = spring(dampingRatio = 0.68f, stiffness = Spring.StiffnessMedium),
+        animationSpec = spring(dampingRatio = properties.scaleSpringDamping, stiffness = Spring.StiffnessMedium),
     )
-    val targetBorderColor = borderColor ?: properties.borderColor ?: when {
+    val targetBorderColor = borderColor ?: properties.borderColor ?: selectedProperties.borderColor ?: when {
         focused -> colors.accent
         selected -> colors.accentBottom
         hovered || pressed -> colors.border
@@ -501,10 +535,15 @@ fun RowScope.MillenniumBottomNavigationItem(
                 borderColor = animatedBorderColor,
                 borderWidth = borderWidth ?: properties.borderWidth,
                 shadowElevation = elevation,
-                innerGlowColor = innerGlowColor ?: properties.innerGlowColor ?: if (selected || hovered || focused) {
-                    colors.highlight.copy(alpha = 0.35f)
-                } else null,
+                innerGlowColor = innerGlowColor ?: properties.innerGlowColor ?: selectedProperties.innerGlowColor
+                    ?: if (selected || hovered || focused) {
+                        colors.highlight.copy(alpha = 0.35f)
+                    } else null,
+                bottomRimColor = properties.bottomRimColor,
+                orbColor = properties.orbColor,
+                shadowColor = properties.shadowColor ?: Color.Black.copy(alpha = 0.16f),
             )
+            .then(if (properties.overlayBrush != null) Modifier.background(properties.overlayBrush) else Modifier)
             .millenniumInteractionSurface(state, shape ?: properties.shape, animationMillis = resolvedAnimationMillis),
     ) {
         Column(
