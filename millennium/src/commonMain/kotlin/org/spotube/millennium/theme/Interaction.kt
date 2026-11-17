@@ -3,6 +3,8 @@ package org.spotube.millennium.theme
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
@@ -14,6 +16,29 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.inset
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.dp
+
+/**
+ * App-wide look of the hover and press lighting that Millennium draws on controls which have no
+ * lighting property of their own (sidebar, dropdown and bottom-navigation rows, tabs, dialog buttons...).
+ *
+ * The default is the glossy Aqua lighting. A flat design turns it off ([enabled] = false) and lets the
+ * per-state backgrounds carry the feedback, or replaces it with its own [hoverBrush] / [pressBrush].
+ * Provide it above the content with [LocalMillenniumInteractionStyle].
+ *
+ * @property enabled `false` draws no lighting at all.
+ * @property hoverBrush Brush painted over the control's face while hovered or focused, faded in and out with the
+ *   hover level; when either brush is set the default gloss is not drawn.
+ * @property pressBrush Brush painted over the face while pressed, faded with the press level.
+ */
+@Immutable
+data class MillenniumInteractionStyle(
+    val enabled: Boolean = true,
+    val hoverBrush: Brush? = null,
+    val pressBrush: Brush? = null,
+)
+
+/** The [MillenniumInteractionStyle] in effect; defaults to the glossy built-in lighting. */
+val LocalMillenniumInteractionStyle = staticCompositionLocalOf { MillenniumInteractionStyle() }
 
 /**
  * Maps a control state to (hover level, press level), each 0 or 1: hovered and focused give
@@ -47,9 +72,21 @@ internal fun Modifier.millenniumInteractionSurface(
     tint: Color = MillenniumTheme.colors.accent,
     animationMillis: Int = 120,
 ): Modifier {
+    val style = LocalMillenniumInteractionStyle.current
     val (hoverTarget, pressTarget) = millenniumInteractionLevels(state)
     val hover by animateFloatAsState(hoverTarget, tween(animationMillis))
     val press by animateFloatAsState(pressTarget, tween(animationMillis))
+    if (!style.enabled) return this
+    if (style.hoverBrush != null || style.pressBrush != null) {
+        return drawWithCache {
+            val outline = shape.createOutline(size, layoutDirection, this)
+            onDrawWithContent {
+                if (hover > 0f) style.hoverBrush?.let { drawOutline(outline, it, alpha = hover) }
+                if (press > 0f) style.pressBrush?.let { drawOutline(outline, it, alpha = press) }
+                drawContent()
+            }
+        }
+    }
     return drawWithCache {
         val face = Brush.verticalGradient(
             0f to Color.White.copy(alpha = 0.20f * hover),

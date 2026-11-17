@@ -114,6 +114,7 @@ internal fun progressControlState(enabled: Boolean, isError: Boolean): Millenniu
 }
 
 /** The recessed track surface shared by both progress bars. */
+@Composable
 private fun Modifier.progressTrackSurface(
     properties: MillenniumProgressThemeProperties,
     colors: MillenniumColors,
@@ -134,6 +135,7 @@ private fun Modifier.progressTrackSurface(
 )
 
 /** The indicator fill; a plain background unless the theme asks for a border or rims. */
+@Composable
 private fun Modifier.progressFillSurface(
     properties: MillenniumProgressThemeProperties,
     brush: Brush,

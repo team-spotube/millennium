@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
@@ -263,6 +264,25 @@ fun millenniumPanelBrush(colors: MillenniumColors): Brush = Brush.verticalGradie
 )
 
 /**
+ * App-wide switches for the depth effects [millenniumSurface] draws, so a flat design can drop them everywhere at
+ * once, including surfaces built by the host app rather than by a Millennium component.
+ *
+ * Provide it above the content with [LocalMillenniumSurfaceStyle]. Turning shadows off also saves the cost of a
+ * shadow layer per surface.
+ *
+ * @property shadows `false` draws no drop shadows, whatever elevation a surface asks for.
+ * @property glow `false` draws no inner glow, bottom rim, inset shade or glass orb.
+ */
+@Immutable
+data class MillenniumSurfaceStyle(
+    val shadows: Boolean = true,
+    val glow: Boolean = true,
+)
+
+/** The [MillenniumSurfaceStyle] in effect; the default keeps every effect. */
+val LocalMillenniumSurfaceStyle = staticCompositionLocalOf { MillenniumSurfaceStyle() }
+
+/**
  * Applies one complete surface layer (shadow, clip, fill, border and optional rim/orb effects) in a
  * single pass, avoiding a second background/bevel pass.
  *
@@ -324,6 +344,7 @@ fun millenniumPanelBrush(colors: MillenniumColors): Brush = Brush.verticalGradie
  * @see gelBrush
  * @see millenniumPanelBrush
  */
+@Composable
 fun Modifier.millenniumSurface(
     background: Brush,
     shape: Shape,
@@ -344,8 +365,9 @@ fun Modifier.millenniumSurface(
     orbBottomFraction: Float = 0.55f,
     orbDepthFraction: Float = 0.16f,
 ): Modifier {
+    val style = LocalMillenniumSurfaceStyle.current
     var result = this
-    if (shadowElevation > 0.dp && opaqueFill) {
+    if (style.shadows && shadowElevation > 0.dp && opaqueFill) {
         val colors = shadowColors?.takeIf { it.isNotEmpty() } ?: listOf(shadowColor)
         colors.forEach { color ->
             result = result.shadow(
@@ -360,7 +382,8 @@ fun Modifier.millenniumSurface(
     if (borderColor != null && borderWidth > 0.dp) {
         result = result.border(borderWidth, borderColor, shape)
     }
-    if (innerGlowColor != null || bottomRimColor != null || insetShadeColor != null || orbColor != null) {
+    val hasGlow = style.glow && (innerGlowColor != null || bottomRimColor != null || insetShadeColor != null || orbColor != null)
+    if (hasGlow) {
         result = result.drawWithContent {
             // The Aqua glass orb sits above the fill but below the content: a hazy
             // top dome with a curved meniscus edge, a bright inner top rim and a

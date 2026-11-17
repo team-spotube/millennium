@@ -62,6 +62,9 @@ import org.spotube.millennium.theme.*
  * @property overlayBrush Brush drawn over [background] and below the items (gloss, texture); `null` draws none.
  * @property shadowColor Shadow colour of the container; `null` uses the default 16 percent black.
  * @property textStyle Ambient text style provided to the items' content (default unspecified).
+ * @property margin Space outside the container, so the bar can float as an inset, rounded dock (default none).
+ * @property insetsInsideSurface When true (default) the window insets (navigation bar) pad inside the container, which
+ *   then extends under the system bar; when false they pad outside it, which a floating dock with a [margin] wants.
  * @see MillenniumBottomNavigationBar
  * @see defaultMillenniumBottomNavigationBarTheme
  */
@@ -82,6 +85,8 @@ data class MillenniumBottomNavigationBarThemeProperties(
     val overlayBrush: Brush? = null,
     val shadowColor: Color? = null,
     val textStyle: TextStyle = TextStyle.Default,
+    val margin: PaddingValues = PaddingValues(0.dp),
+    val insetsInsideSurface: Boolean = true,
 )
 
 /**
@@ -268,6 +273,8 @@ fun MillenniumBottomNavigationBar(
     val properties = theme.states.default
     Row(
         modifier = modifier.fillMaxWidth()
+            .then(if (!properties.insetsInsideSurface) Modifier.windowInsetsPadding(windowInsets) else Modifier)
+            .padding(properties.margin)
             .millenniumSurface(
                 background = background ?: properties.background ?: gelBrush(colors.raised, colors.surface),
                 shape = shape ?: properties.shape,
@@ -280,7 +287,7 @@ fun MillenniumBottomNavigationBar(
                 shadowColor = properties.shadowColor ?: Color.Black.copy(alpha = 0.16f),
             )
             .then(if (properties.overlayBrush != null) Modifier.background(properties.overlayBrush) else Modifier)
-            .windowInsetsPadding(windowInsets)
+            .then(if (properties.insetsInsideSurface) Modifier.windowInsetsPadding(windowInsets) else Modifier)
             .heightIn(min = minimumHeight ?: properties.minimumHeight)
             .padding(contentPadding ?: properties.contentPadding)
             .selectableGroup(),

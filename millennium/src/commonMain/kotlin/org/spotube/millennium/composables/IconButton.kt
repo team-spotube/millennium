@@ -660,7 +660,7 @@ private fun IconButtonContainer(
             trackColor = properties.loadingTrackColor,
         ) {
             if (icon != null) {
-                UnstyledIcon(icon, null, Modifier.size(iconSize ?: properties.iconSize), animatedForeground)
+                UnstyledIcon(LocalMillenniumIconResolver.current(icon), null, Modifier.size(iconSize ?: properties.iconSize), animatedForeground)
             } else {
                 MillenniumStyledContent(TextStyle.Default, animatedForeground) { content?.invoke() }
             }

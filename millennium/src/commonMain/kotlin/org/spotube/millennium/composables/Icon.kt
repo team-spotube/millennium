@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawWithContent
@@ -22,6 +23,7 @@ import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.composeunstyled.LocalTextStyle
 import com.composeunstyled.UnstyledIcon
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
@@ -89,6 +91,18 @@ fun defaultMillenniumIconTheme(): MillenniumIconTheme {
 }
 
 /**
+ * Lets the host app swap the vector of any icon the library itself draws ([MillenniumIcon], the icon of
+ * [MillenniumIconButton], sidebar and dropdown icons), for example to re-skin an icon set from a theme.
+ * The default returns the vector unchanged. The function receives the requested vector and returns the
+ * one to draw; match on [ImageVector.name].
+ *
+ * ```kotlin
+ * CompositionLocalProvider(LocalMillenniumIconResolver provides { v -> replacements[v.name] ?: v }) { ... }
+ * ```
+ */
+val LocalMillenniumIconResolver = staticCompositionLocalOf<(ImageVector) -> ImageVector> { { it } }
+
+/**
  * A themed vector icon built on Compose Unstyled's `UnstyledIcon`.
  *
  * Use it for glyphs inside buttons, rows and chips. The icon does not handle input itself; pass the [state] of the
@@ -111,7 +125,8 @@ fun defaultMillenniumIconTheme(): MillenniumIconTheme {
  * @param imageVector The vector to draw, for example one from [MillenniumIcons] or any Compose `ImageVector`.
  * @param contentDescription Text read by screen readers; null marks the icon decorative.
  * @param modifier Modifier applied after the size and alpha are set.
- * @param tint Overrides the tint; null uses the theme, then a state-derived palette colour.
+ * @param tint Overrides the tint; null uses the theme, then a state-derived palette colour (at rest: the ambient content
+ *   colour, so an icon inside a button follows the button foreground).
  * @param state Control state used to resolve theme properties and the default tint.
  * @param size Overrides the icon size; null uses the theme (20dp).
  * @param alpha Overrides the opacity; null uses the state's theme value.
@@ -139,7 +154,9 @@ fun MillenniumIcon(
         MillenniumControlState.Pressed -> colors.accentBottom
         MillenniumControlState.Disabled -> colors.muted
         MillenniumControlState.Error -> colors.danger
-        MillenniumControlState.Default -> colors.text
+        // Follow the ambient content colour: a button, list row or menu item publishes its foreground there, so an
+        // icon inside a filled button is readable on the fill. At the root this is the palette text colour.
+        MillenniumControlState.Default -> LocalTextStyle.current.color.takeIf { it != Color.Unspecified } ?: colors.text
     }
     val animatedTint = animateColorAsState(
         targetTint,
@@ -147,7 +164,7 @@ fun MillenniumIcon(
     ).value
     val tintBrush = properties.tintBrush
     UnstyledIcon(
-        imageVector,
+        LocalMillenniumIconResolver.current(imageVector),
         contentDescription,
         modifier.size(size ?: properties.size).alpha(alpha ?: properties.alpha).then(
             if (tintBrush != null) {
