@@ -68,6 +68,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.layout.height
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
@@ -141,6 +142,47 @@ import org.spotube.millennium.theme.millenniumPanelBrush
  * @property groupLabelStyle Typography of [MillenniumDropdownMenuLabel].
  * @property groupLabelPadding Padding around a group label.
  * @property sectionPadding Padding inside [MillenniumDropdownMenuHeader] and [MillenniumDropdownMenuFooter].
+ * @property panelBottomRimColor Colour of the lower lip of the panel's inner rim; null draws none.
+ * @property panelOrbColor Colour of a glass orb overlay on the panel; null draws none.
+ * @property panelOverlayBrush Brush drawn over [panelBackground] and below the rows (gloss, texture); null draws none.
+ * @property panelShadowColor Shadow colour of the panel; null uses the default 16% black.
+ * @property panelForeground Default text colour of the panel content; null uses `colors.text`.
+ * @property enterSpringDamping Damping ratio of the panel scale-in spring (0.76).
+ * @property enterSlideSpringDamping Damping ratio of the panel slide-in spring (0.78).
+ * @property expandSpringDamping Damping ratio of the panel expand spring (0.80).
+ * @property enterSlideFraction Fraction of the panel size it slides while entering (about 0.167).
+ * @property exitSlideFraction Fraction of the panel size it slides while leaving (0.125).
+ * @property itemActiveBackground Row fill while hovered, focused or pressed (for non-destructive rows) when
+ * [itemBackground] is null; null uses the accent bevel.
+ * @property itemSelectedBackground Row fill of a selected row at rest when [itemBackground] is null; null uses a 14% to
+ * 7% accent wash. A selected row that is also hovered keeps this fill unless the active state sets its own.
+ * @property itemDestructiveBackground Row fill of a destructive row while active when [itemBackground] is null; null
+ * uses an 18% to 10% danger wash.
+ * @property itemActiveForeground Label colour of a filled (active, non-destructive) row; null uses on-accent.
+ * @property itemDestructiveForeground Label colour of destructive rows; null uses the palette danger colour.
+ * @property itemDisabledForeground Label colour of disabled rows; null uses the palette muted colour.
+ * @property itemMutedForeground Colour of descriptions and shortcut hints; null derives it from the state (muted, or
+ * 82% on-accent while filled, or 80% danger).
+ * @property itemIconTint Tint of row icons and indicators; null derives it from the state (muted, accent when
+ * selected, on-accent while filled, danger when destructive).
+ * @property itemActiveBorderColor Border colour of an active row when [itemBorderColor] is null; null uses the palette
+ * accent-bottom colour (danger for destructive rows).
+ * @property itemPressedScale Scale of a pressed row (0.975).
+ * @property itemHoverScale Scale of a hovered or focused row (1.012).
+ * @property itemScaleDamping Damping ratio of the row scale spring (0.72).
+ * @property itemActiveElevation Shadow elevation of an active (not pressed) filled row (2dp).
+ * @property itemShadowColor Shadow colour of rows; null uses the default 16% black.
+ * @property itemBottomRimColor Colour of the lower lip of a row's inner rim; null draws none.
+ * @property itemOrbColor Colour of a glass orb overlay on rows; null draws none.
+ * @property itemOverlayBrush Brush drawn over a row's fill and below its content; null draws none.
+ * @property groupLabelForeground Colour of [MillenniumDropdownMenuLabel]; null uses the palette muted colour.
+ * @property emptyForeground Colour of [MillenniumDropdownMenuEmpty]; null uses the palette muted colour.
+ * @property separatorPadding Padding around [MillenniumDropdownMenuSeparator] (2dp vertical).
+ * @property separatorBrush Brush of [MillenniumDropdownMenuSeparator]; null keeps the themed [MillenniumSeparator].
+ * @property separatorThickness Thickness of a brush separator (1dp); only used when [separatorBrush] is set.
+ * @property scrollbarGutter Space reserved at the end of [MillenniumDropdownMenuContent] while its scrollbar shows (8dp).
+ * @property indicatorSpringDamping Damping ratio of the checkbox/radio indicator spring (0.6).
+ * @property indicatorInitialScale Scale the checkbox/radio indicator grows from (0.4).
  *
  * @see MillenniumDropdownMenuTheme
  * @see defaultMillenniumDropdownMenuTheme
@@ -183,6 +225,41 @@ data class MillenniumDropdownMenuThemeProperties(
     ),
     val groupLabelPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
     val sectionPadding: PaddingValues = PaddingValues(0.dp),
+    val panelBottomRimColor: Color? = null,
+    val panelOrbColor: Color? = null,
+    val panelOverlayBrush: Brush? = null,
+    val panelShadowColor: Color? = null,
+    val panelForeground: Color? = null,
+    val enterSpringDamping: Float = 0.76f,
+    val enterSlideSpringDamping: Float = 0.78f,
+    val expandSpringDamping: Float = 0.80f,
+    val enterSlideFraction: Float = 1f / 6f,
+    val exitSlideFraction: Float = 1f / 8f,
+    val itemActiveBackground: Brush? = null,
+    val itemSelectedBackground: Brush? = null,
+    val itemDestructiveBackground: Brush? = null,
+    val itemActiveForeground: Color? = null,
+    val itemDestructiveForeground: Color? = null,
+    val itemDisabledForeground: Color? = null,
+    val itemMutedForeground: Color? = null,
+    val itemIconTint: Color? = null,
+    val itemActiveBorderColor: Color? = null,
+    val itemPressedScale: Float = 0.975f,
+    val itemHoverScale: Float = 1.012f,
+    val itemScaleDamping: Float = 0.72f,
+    val itemActiveElevation: Dp = 2.dp,
+    val itemShadowColor: Color? = null,
+    val itemBottomRimColor: Color? = null,
+    val itemOrbColor: Color? = null,
+    val itemOverlayBrush: Brush? = null,
+    val groupLabelForeground: Color? = null,
+    val emptyForeground: Color? = null,
+    val separatorPadding: PaddingValues = PaddingValues(vertical = 2.dp),
+    val separatorBrush: Brush? = null,
+    val separatorThickness: Dp = 1.dp,
+    val scrollbarGutter: Dp = 8.dp,
+    val indicatorSpringDamping: Float = 0.6f,
+    val indicatorInitialScale: Float = 0.4f,
 )
 
 /**
@@ -358,29 +435,29 @@ fun MillenniumDropdownMenu(
         AnchorSide.Start -> TransformOrigin(1f, 0.5f)
         AnchorSide.End -> TransformOrigin(0f, 0.5f)
     }
-    val enterSpring = spring<Float>(dampingRatio = 0.76f, stiffness = Spring.StiffnessMediumLow)
+    val enterSpring = spring<Float>(dampingRatio = panelProperties.enterSpringDamping, stiffness = Spring.StiffnessMediumLow)
     val enterSlide = when (side) {
         AnchorSide.Bottom -> expandVertically(
-            animationSpec = spring(dampingRatio = 0.80f, stiffness = Spring.StiffnessMediumLow),
+            animationSpec = spring(dampingRatio = panelProperties.expandSpringDamping, stiffness = Spring.StiffnessMediumLow),
             expandFrom = Alignment.Top,
         ) + slideInVertically(
-            animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow),
-            initialOffsetY = { -it / 6 },
+            animationSpec = spring(dampingRatio = panelProperties.enterSlideSpringDamping, stiffness = Spring.StiffnessMediumLow),
+            initialOffsetY = { -(it * panelProperties.enterSlideFraction).toInt() },
         )
         AnchorSide.Top -> expandVertically(
-            animationSpec = spring(dampingRatio = 0.80f, stiffness = Spring.StiffnessMediumLow),
+            animationSpec = spring(dampingRatio = panelProperties.expandSpringDamping, stiffness = Spring.StiffnessMediumLow),
             expandFrom = Alignment.Bottom,
         ) + slideInVertically(
-            animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow),
-            initialOffsetY = { it / 6 },
+            animationSpec = spring(dampingRatio = panelProperties.enterSlideSpringDamping, stiffness = Spring.StiffnessMediumLow),
+            initialOffsetY = { (it * panelProperties.enterSlideFraction).toInt() },
         )
         AnchorSide.Start -> slideInHorizontally(
-            animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow),
-            initialOffsetX = { it / 6 },
+            animationSpec = spring(dampingRatio = panelProperties.enterSlideSpringDamping, stiffness = Spring.StiffnessMediumLow),
+            initialOffsetX = { (it * panelProperties.enterSlideFraction).toInt() },
         )
         AnchorSide.End -> slideInHorizontally(
-            animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow),
-            initialOffsetX = { -it / 6 },
+            animationSpec = spring(dampingRatio = panelProperties.enterSlideSpringDamping, stiffness = Spring.StiffnessMediumLow),
+            initialOffsetX = { -(it * panelProperties.enterSlideFraction).toInt() },
         )
     }
     val exitSpec = tween<Float>(resolvedCloseMillis, easing = FastOutLinearInEasing)
@@ -390,22 +467,22 @@ fun MillenniumDropdownMenu(
             shrinkTowards = Alignment.Top,
         ) + slideOutVertically(
             animationSpec = tween(resolvedCloseMillis, easing = FastOutLinearInEasing),
-            targetOffsetY = { -it / 8 },
+            targetOffsetY = { -(it * panelProperties.exitSlideFraction).toInt() },
         )
         AnchorSide.Top -> shrinkVertically(
             animationSpec = tween(resolvedCloseMillis, easing = FastOutLinearInEasing),
             shrinkTowards = Alignment.Bottom,
         ) + slideOutVertically(
             animationSpec = tween(resolvedCloseMillis, easing = FastOutLinearInEasing),
-            targetOffsetY = { it / 8 },
+            targetOffsetY = { (it * panelProperties.exitSlideFraction).toInt() },
         )
         AnchorSide.Start -> slideOutHorizontally(
             animationSpec = tween(resolvedCloseMillis, easing = FastOutLinearInEasing),
-            targetOffsetX = { it / 8 },
+            targetOffsetX = { (it * panelProperties.exitSlideFraction).toInt() },
         )
         AnchorSide.End -> slideOutHorizontally(
             animationSpec = tween(resolvedCloseMillis, easing = FastOutLinearInEasing),
-            targetOffsetX = { -it / 8 },
+            targetOffsetX = { -(it * panelProperties.exitSlideFraction).toInt() },
         )
     }
     UnstyledDropdownMenu(
@@ -425,7 +502,18 @@ fun MillenniumDropdownMenu(
                     borderWidth = panelBorderWidth ?: panelProperties.panelBorderWidth,
                     shadowElevation = panelShadowElevation ?: panelProperties.panelShadowElevation,
                     innerGlowColor = resolvedPanelGlowColor,
-                ).padding(panelPadding ?: panelProperties.panelPadding).alpha(alpha ?: panelProperties.alpha),
+                    bottomRimColor = panelProperties.panelBottomRimColor,
+                    orbColor = panelProperties.panelOrbColor,
+                    shadowColor = panelProperties.panelShadowColor ?: Color.Black.copy(alpha = 0.16f),
+                )
+                    .then(
+                        if (panelProperties.panelOverlayBrush != null) {
+                            Modifier.background(panelProperties.panelOverlayBrush)
+                        } else {
+                            Modifier
+                        },
+                    )
+                    .padding(panelPadding ?: panelProperties.panelPadding).alpha(alpha ?: panelProperties.alpha),
                 enter = fadeIn(tween(resolvedOpenMillis, easing = FastOutSlowInEasing)) +
                     scaleIn(
                         initialScale = resolvedEnterScale,
@@ -443,7 +531,7 @@ fun MillenniumDropdownMenu(
                     modifier = Modifier.width(width ?: panelProperties.itemWidth),
                     verticalArrangement = Arrangement.spacedBy(sectionSpacing ?: panelProperties.itemSpacing),
                 ) {
-                    MillenniumStyledContent(panelProperties.itemTextStyle, colors.text) { content() }
+                    MillenniumStyledContent(panelProperties.itemTextStyle, panelProperties.panelForeground ?: colors.text) { content() }
                 }
             }
         },
@@ -698,7 +786,7 @@ fun MillenniumDropdownMenuContent(
     Box(modifier.fillMaxWidth().heightIn(max = maximumHeight ?: properties.maximumHeight)) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(scrollState)
-                .padding(end = if (overflowing) 8.dp else 0.dp),
+                .padding(end = if (overflowing) properties.scrollbarGutter else 0.dp),
             verticalArrangement = Arrangement.spacedBy(contentSpacing ?: properties.itemSpacing),
         ) { content() }
         if (overflowing) {
@@ -840,7 +928,7 @@ fun MillenniumDropdownMenuLabel(
     Box(modifier.fillMaxWidth().padding(contentPadding ?: properties.groupLabelPadding)) {
         MillenniumStyledContent(
             textStyle ?: properties.groupLabelStyle,
-            foreground ?: MillenniumTheme.colors.muted,
+            foreground ?: properties.groupLabelForeground ?: MillenniumTheme.colors.muted,
             content,
         )
     }
@@ -886,7 +974,16 @@ fun MillenniumDropdownMenuSeparator(
     modifier: Modifier = Modifier,
     theme: MillenniumDropdownMenuTheme = MillenniumTheme.dropdownMenuTheme,
 ) {
-    MillenniumSeparator(modifier.padding(vertical = 2.dp))
+    val properties = theme.states.default
+    val brush = properties.separatorBrush
+    if (brush != null) {
+        Box(
+            modifier.padding(properties.separatorPadding).fillMaxWidth().height(properties.separatorThickness)
+                .background(brush),
+        )
+    } else {
+        MillenniumSeparator(modifier.padding(properties.separatorPadding))
+    }
 }
 
 /**
@@ -914,7 +1011,11 @@ fun MillenniumDropdownMenuEmpty(
 ) {
     val properties = theme.states.default
     Box(modifier.fillMaxWidth().padding(contentPadding ?: properties.itemPadding)) {
-        MillenniumStyledContent(textStyle ?: properties.itemTextStyle, MillenniumTheme.colors.muted, content)
+        MillenniumStyledContent(
+            textStyle ?: properties.itemTextStyle,
+            properties.emptyForeground ?: MillenniumTheme.colors.muted,
+            content,
+        )
     }
 }
 
@@ -1120,15 +1221,16 @@ fun MillenniumDropdownMenuItem(
             leading()
             Spacer(Modifier.width(base.iconLabelSpacing))
         }
+        val rowProperties = theme.states.resolve(visuals.state)
         Column(Modifier.weight(1f)) {
-            MillenniumStyledContent(textStyle ?: base.itemTextStyle, visuals.foreground, label)
+            MillenniumStyledContent(textStyle ?: rowProperties.itemTextStyle, visuals.foreground, label)
             if (description != null) {
-                MillenniumStyledContent(base.descriptionTextStyle, visuals.mutedForeground, description)
+                MillenniumStyledContent(rowProperties.descriptionTextStyle, visuals.mutedForeground, description)
             }
         }
         if (shortcut != null) {
             Spacer(Modifier.width(base.iconLabelSpacing))
-            MillenniumStyledContent(base.shortcutTextStyle, visuals.mutedForeground, shortcut)
+            MillenniumStyledContent(rowProperties.shortcutTextStyle, visuals.mutedForeground, shortcut)
         }
         if (trailing != null) {
             Spacer(Modifier.width(base.iconLabelSpacing))
@@ -1299,29 +1401,32 @@ fun MillenniumDropdownMenuItemContainer(
         else -> MillenniumControlState.Default
     }
     val properties = theme.states.resolve(state)
+    // A selected row that is also hovered/pressed/focused keeps the Selected theme where the active state leaves a
+    // value unset.
+    val selectedProperties = if (selected) theme.states.resolve(MillenniumControlState.Selected) else properties
     val resolvedStateMillis = stateAnimationMillis ?: properties.stateAnimationMillis
     val active = enabled && (hovered || focused || pressed)
     val resolvedShape = shape ?: properties.itemShape
     val resolvedBackground = background ?: properties.itemBackground ?: when {
-        active && destructive -> Brush.verticalGradient(
+        active && destructive -> properties.itemDestructiveBackground ?: Brush.verticalGradient(
             listOf(colors.danger.copy(alpha = 0.18f), colors.danger.copy(alpha = 0.10f)),
         )
-        active -> millenniumBevelBrush(colors, accent = true)
-        selected && enabled -> Brush.verticalGradient(
+        active -> properties.itemActiveBackground ?: millenniumBevelBrush(colors, accent = true)
+        selected && enabled -> selectedProperties.itemSelectedBackground ?: Brush.verticalGradient(
             listOf(colors.accent.copy(alpha = 0.14f), colors.accent.copy(alpha = 0.07f)),
         )
-        else -> Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
+        else -> TransparentRowBrush
     }
     val onFilled = active && !destructive
     val targetForeground = foreground ?: properties.itemForeground ?: when {
-        !enabled -> colors.muted
-        destructive -> colors.danger
-        onFilled -> colors.onAccent
+        !enabled -> properties.itemDisabledForeground ?: colors.muted
+        destructive -> properties.itemDestructiveForeground ?: colors.danger
+        onFilled -> properties.itemActiveForeground ?: colors.onAccent
         else -> colors.text
     }
     val animatedForeground by animateColorAsState(targetForeground, tween(resolvedStateMillis))
     val mutedForeground by animateColorAsState(
-        when {
+        properties.itemMutedForeground ?: when {
             onFilled -> colors.onAccent.copy(alpha = 0.82f)
             destructive && enabled -> colors.danger.copy(alpha = 0.8f)
             else -> colors.muted
@@ -1329,7 +1434,7 @@ fun MillenniumDropdownMenuItemContainer(
         tween(resolvedStateMillis),
     )
     val iconTint by animateColorAsState(
-        when {
+        properties.itemIconTint ?: when {
             !enabled -> colors.muted
             destructive -> colors.danger
             onFilled -> colors.onAccent
@@ -1339,20 +1444,20 @@ fun MillenniumDropdownMenuItemContainer(
         tween(resolvedStateMillis),
     )
     val targetBorderColor = borderColor ?: properties.itemBorderColor
-        ?: if (active) (if (destructive) colors.danger else colors.accentBottom) else Color.Transparent
+        ?: if (active) (if (destructive) colors.danger else properties.itemActiveBorderColor ?: colors.accentBottom) else Color.Transparent
     val animatedBorderColor by animateColorAsState(targetBorderColor, tween(resolvedStateMillis))
     val animatedAlpha by animateFloatAsState(alpha ?: properties.alpha, tween(resolvedStateMillis))
     val itemScale by animateFloatAsState(
         targetValue = when {
             !enabled -> 1f
-            pressed -> 0.975f
-            hovered || focused -> 1.012f
+            pressed -> properties.itemPressedScale
+            hovered || focused -> properties.itemHoverScale
             else -> 1f
         },
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMedium),
+        animationSpec = spring(dampingRatio = properties.itemScaleDamping, stiffness = Spring.StiffnessMedium),
     )
     val itemElevation by animateDpAsState(
-        targetValue = if (active && !pressed) 2.dp else 0.dp,
+        targetValue = if (active && !pressed) properties.itemActiveElevation else 0.dp,
         animationSpec = tween(resolvedStateMillis),
     )
     val visuals = remember(state, selected, destructive, animatedForeground, mutedForeground, iconTint) {
@@ -1381,7 +1486,11 @@ fun MillenniumDropdownMenuItemContainer(
                 opaqueFill = onFilled || background != null,
                 innerGlowColor = innerGlowColor ?: properties.itemGlowColor
                     ?: if (onFilled) colors.highlight.copy(alpha = 0.35f) else null,
+                bottomRimColor = properties.itemBottomRimColor,
+                orbColor = properties.itemOrbColor,
+                shadowColor = properties.itemShadowColor ?: Color.Black.copy(alpha = 0.16f),
             )
+            .then(if (properties.itemOverlayBrush != null) Modifier.background(properties.itemOverlayBrush) else Modifier)
             .millenniumInteractionSurface(state, resolvedShape, animationMillis = resolvedStateMillis),
     ) {
         Row(
@@ -1451,7 +1560,7 @@ fun MillenniumDropdownMenuCheckboxItem(
         selected = checked,
         selectedIndicator = null,
         closeOnClick = closeOnClick,
-        leading = { DropdownIndicatorSlot(checked, theme.states.default.iconSize, indicator) },
+        leading = { DropdownIndicatorSlot(checked, theme.states.default, indicator) },
         description = description,
         shortcut = shortcut,
         trailing = trailing,
@@ -1602,7 +1711,7 @@ fun <T> MillenniumDropdownMenuRadioItem(
         selected = isSelected,
         selectedIndicator = null,
         closeOnClick = closeOnClick,
-        leading = { DropdownIndicatorSlot(isSelected, theme.states.default.iconSize, indicator) },
+        leading = { DropdownIndicatorSlot(isSelected, theme.states.default, indicator) },
         description = description,
         shortcut = shortcut,
         trailing = trailing,
@@ -1644,16 +1753,25 @@ fun <T> MillenniumDropdownMenuRadioItem(
  * Fixed-size leading box that springs its indicator in and out; keeps label alignment stable when unchecked.
  */
 @Composable
-private fun DropdownIndicatorSlot(visible: Boolean, size: Dp, content: @Composable () -> Unit) {
-    Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+private fun DropdownIndicatorSlot(
+    visible: Boolean,
+    properties: MillenniumDropdownMenuThemeProperties,
+    content: @Composable () -> Unit,
+) {
+    Box(Modifier.size(properties.iconSize), contentAlignment = Alignment.Center) {
         AnimatedVisibility(
             visible = visible,
-            enter = scaleIn(spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMedium), initialScale = 0.4f) + fadeIn(),
-            exit = scaleOut(targetScale = 0.4f) + fadeOut(),
+            enter = scaleIn(
+                spring(dampingRatio = properties.indicatorSpringDamping, stiffness = Spring.StiffnessMedium),
+                initialScale = properties.indicatorInitialScale,
+            ) + fadeIn(),
+            exit = scaleOut(targetScale = properties.indicatorInitialScale) + fadeOut(),
         ) { content() }
     }
 }
 
+
+private val TransparentRowBrush: Brush = Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
 
 /**
  * Preview showing the full lego composition (filter, groups, toggles, radios, footer).
