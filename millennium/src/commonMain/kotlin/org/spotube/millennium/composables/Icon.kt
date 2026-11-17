@@ -103,6 +103,13 @@ fun defaultMillenniumIconTheme(): MillenniumIconTheme {
 val LocalMillenniumIconResolver = staticCompositionLocalOf<(ImageVector) -> ImageVector> { { it } }
 
 /**
+ * Optional content substitution for icons that are not vectors (an icon-font glyph, a bitmap). For an icon it returns a
+ * composable `(modifier, tint) -> Unit` that draws it, or null to keep the vector (after [LocalMillenniumIconResolver]).
+ * [MillenniumIcon] hands it the same size, alpha and animated tint a vector would get.
+ */
+val LocalMillenniumIconContent = staticCompositionLocalOf<((ImageVector) -> (@Composable (Modifier, Color) -> Unit)?)?> { null }
+
+/**
  * A themed vector icon built on Compose Unstyled's `UnstyledIcon`.
  *
  * Use it for glyphs inside buttons, rows and chips. The icon does not handle input itself; pass the [state] of the
@@ -163,6 +170,11 @@ fun MillenniumIcon(
         tween(tintAnimationMillis ?: properties.tintAnimationMillis),
     ).value
     val tintBrush = properties.tintBrush
+    val custom = LocalMillenniumIconContent.current?.invoke(imageVector)
+    if (custom != null) {
+        custom(modifier.size(size ?: properties.size).alpha(alpha ?: properties.alpha), animatedTint)
+        return
+    }
     UnstyledIcon(
         LocalMillenniumIconResolver.current(imageVector),
         contentDescription,

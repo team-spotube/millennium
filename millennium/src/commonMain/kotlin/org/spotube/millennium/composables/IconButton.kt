@@ -660,7 +660,9 @@ private fun IconButtonContainer(
             trackColor = properties.loadingTrackColor,
         ) {
             if (icon != null) {
-                UnstyledIcon(LocalMillenniumIconResolver.current(icon), null, Modifier.size(iconSize ?: properties.iconSize), animatedForeground)
+                val custom = LocalMillenniumIconContent.current?.invoke(icon)
+                if (custom != null) custom(Modifier.size(iconSize ?: properties.iconSize), animatedForeground)
+                else UnstyledIcon(LocalMillenniumIconResolver.current(icon), null, Modifier.size(iconSize ?: properties.iconSize), animatedForeground)
             } else {
                 MillenniumStyledContent(TextStyle.Default, animatedForeground) { content?.invoke() }
             }
