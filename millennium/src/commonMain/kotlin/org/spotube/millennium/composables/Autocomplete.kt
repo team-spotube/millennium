@@ -127,11 +127,28 @@ import androidx.compose.foundation.hoverable
  * @property itemMinimumHeight Minimum row height; 44dp by default.
  * @property itemSpacing Vertical gap between rows.
  * @property itemTextStyle Row typography.
- * @property animationMillis General animation duration kept for the popup theme.
+ * @property animationMillis Duration in milliseconds of the popup's opacity changes ([alpha]).
  * @property openAnimationMillis Duration of the popup fade-in.
  * @property closeAnimationMillis Duration of the popup exit transition.
  * @property itemStateAnimationMillis Duration of row colour, border and elevation transitions.
  * @property alpha Overall popup opacity.
+ * @property panelShadowColor Popup drop-shadow colour; null uses black at 16%.
+ * @property panelBottomRimColor Light rim along the popup's lower edge; null draws none.
+ * @property itemBorderColor Row border colour; null uses the accent-bottom colour for the highlighted row, the palette
+ * border for a hovered row and transparent otherwise. Resolved per row state.
+ * @property itemBorderWidth Row border thickness, drawn while the row is highlighted or hovered (1dp by default).
+ * @property itemShadowElevation Row shadow elevation; null uses 2dp highlighted, 1dp hovered, 0dp pressed or at rest.
+ * @property itemInnerGlowColor Inner rim of highlighted or hovered rows; null uses the palette highlight at 25%.
+ * @property itemInteractionOverlay Brush drawn over a row's fill (below its content). null keeps the built-in
+ * hover/press lighting; any brush replaces it for the row state that resolves it.
+ * @property itemInteractionTint Accent of the built-in row lighting; null uses the palette accent.
+ * @property itemContentSpacing Horizontal gap between the leading slot, label and trailing slot (10dp by default).
+ * @property itemHoverScale Scale of a hovered, not highlighted row (1.008 by default).
+ * @property itemPressedScale Scale of a pressed row (0.98 by default).
+ * @property dividerSecondaryColor Colour of the second hairline of the header/footer divider; null uses
+ * [dividerColor] at 35% alpha.
+ * @property dividerInset Horizontal inset of the header/footer divider (4dp by default).
+ * @property popupOffset Gap between the editor and the popup (4dp by default).
  *
  * @see MillenniumAutocompleteTheme
  * @see defaultMillenniumAutocompleteTheme
@@ -163,6 +180,20 @@ data class MillenniumAutocompleteThemeProperties(
     val closeAnimationMillis: Int = 130,
     val itemStateAnimationMillis: Int = 120,
     val alpha: Float = 1f,
+    val panelShadowColor: Color? = null,
+    val panelBottomRimColor: Color? = null,
+    val itemBorderColor: Color? = null,
+    val itemBorderWidth: Dp = 1.dp,
+    val itemShadowElevation: Dp? = null,
+    val itemInnerGlowColor: Color? = null,
+    val itemInteractionOverlay: Brush? = null,
+    val itemInteractionTint: Color? = null,
+    val itemContentSpacing: Dp = 10.dp,
+    val itemHoverScale: Float = 1.008f,
+    val itemPressedScale: Float = 0.98f,
+    val dividerSecondaryColor: Color? = null,
+    val dividerInset: Dp = 4.dp,
+    val popupOffset: Dp = 4.dp,
 )
 
 /**
@@ -427,7 +458,8 @@ fun <T> MillenniumAutocomplete(
     LaunchedEffect(menuOpen) { menuVisibility.targetState = menuOpen }
     val density = LocalDensity.current
     var anchorWidth by remember { mutableStateOf(0.dp) }
-    val popupPositionProvider = remember(density) {
+    val popupOffsetDp = resolvedMenu.popupOffset
+    val popupPositionProvider = remember(density, popupOffsetDp) {
         object : PopupPositionProvider {
             override fun calculatePosition(
                 anchorBounds: IntRect,
@@ -435,7 +467,7 @@ fun <T> MillenniumAutocomplete(
                 layoutDirection: LayoutDirection,
                 popupContentSize: IntSize,
             ): IntOffset {
-                val gap = with(density) { 4.dp.roundToPx() }
+                val gap = with(density) { popupOffsetDp.roundToPx() }
                 val left = if (layoutDirection == LayoutDirection.Ltr) anchorBounds.left
                 else anchorBounds.right - popupContentSize.width
                 val x =
@@ -507,7 +539,7 @@ fun <T> MillenniumAutocomplete(
         interactionSource = interaction,
         lineLimits = TextFieldLineLimits.SingleLine,
         textStyle = field.textStyle.copy(color = foreground),
-        cursorBrush = SolidColor(field.cursorColor ?: colors.accent),
+        cursorBrush = field.cursorBrush ?: SolidColor(field.cursorColor ?: colors.accent),
         selectionColors = TextSelectionColors(
             field.cursorColor ?: colors.accent,
             field.selectionColor ?: colors.accent.copy(alpha = 0.25f),
@@ -515,14 +547,16 @@ fun <T> MillenniumAutocomplete(
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(field.contentSpacing)) {
             if (!label.isNullOrBlank()) {
-                Text(label, style = field.labelStyle.copy(color = foreground))
+                Text(label, style = field.labelStyle.copy(color = field.labelColor ?: foreground))
             }
             Box(
                 Modifier.fillMaxWidth()
                     .heightIn(min = field.minimumHeight)
                     .hoverable(interaction, enabled)
                     .onGloballyPositioned { anchorWidth = with(density) { it.size.width.toDp() } }
-                    .millenniumSurface(
+                    .millenniumTextFieldBox(
+                        properties = field,
+                        controlState = controlState,
                         background = field.background ?: millenniumBevelBrush(
                             colors,
                             sunken = true
@@ -530,12 +564,11 @@ fun <T> MillenniumAutocomplete(
                         shape = field.shape,
                         borderColor = animatedBorder,
                         borderWidth = field.borderWidth,
-                        insetShadeColor = field.insetShadeColor ?: colors.text.copy(alpha = 0.09f),
-                        innerGlowColor = field.innerGlowColor ?: colors.border.copy(alpha = 0.4f),
-                        bottomRimColor = field.bottomRimColor
-                            ?: colors.highlight.copy(alpha = 0.8f),
-                    )
-                    .millenniumInteractionSurface(controlState, field.shape, animationMillis = field.stateAnimationMillis),
+                        insetShade = field.insetShadeColor ?: colors.text.copy(alpha = 0.09f),
+                        innerGlow = field.innerGlowColor ?: colors.border.copy(alpha = 0.4f),
+                        bottomRim = field.bottomRimColor ?: colors.highlight.copy(alpha = 0.8f),
+                        animationMillis = field.stateAnimationMillis,
+                    ),
                 contentAlignment = Alignment.CenterStart,
             ) {
                 TextInput(
@@ -754,23 +787,26 @@ private fun <T> AutocompleteMenu(
 ) {
     val colors = MillenniumTheme.colors
     val scroll = rememberScrollState()
+    val panelAlpha by animateFloatAsState(properties.alpha, tween(properties.animationMillis))
     Column(
         Modifier.width(width)
             .heightIn(max = properties.menuMaxHeight)
-            .alpha(properties.alpha)
+            .alpha(panelAlpha)
             .millenniumSurface(
                 background = properties.panelBackground ?: millenniumBevelBrush(colors),
                 shape = properties.panelShape,
                 borderColor = properties.panelBorderColor ?: colors.border,
                 borderWidth = properties.panelBorderWidth,
                 shadowElevation = properties.panelShadowElevation,
+                shadowColor = properties.panelShadowColor ?: Color.Black.copy(alpha = 0.16f),
                 innerGlowColor = properties.panelGlowColor ?: colors.highlight.copy(alpha = 0.5f),
+                bottomRimColor = properties.panelBottomRimColor,
             )
             .padding(properties.menuPadding),
     ) {
         if (header != null) {
             Column(Modifier.fillMaxWidth().padding(properties.menuSectionPadding), content = header)
-            AutocompleteDivider(properties.dividerColor ?: colors.border)
+            AutocompleteDivider(properties.dividerColor ?: colors.border, properties.dividerSecondaryColor, properties.dividerInset)
         }
         if (suggestions.isEmpty() && emptyContent != null) {
             Column(Modifier.weight(1f, fill = false).fillMaxWidth(), content = emptyContent)
@@ -809,7 +845,7 @@ private fun <T> AutocompleteMenu(
                         ?: gelBrush(colors.accentTop, colors.accentBottom)
                     } else itemBackground ?: itemTheme.itemBackground
                     ?: Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
-                    val targetBorder = when {
+                    val targetBorder = itemTheme.itemBorderColor ?: when {
                         highlighted -> colors.accentBottom
                         hovered -> colors.border
                         else -> Color.Transparent
@@ -819,7 +855,7 @@ private fun <T> AutocompleteMenu(
                         tween(resolvedItemAnimationMillis),
                     )
                     val elevation by animateDpAsState(
-                        when {
+                        itemTheme.itemShadowElevation ?: when {
                             pressed -> 0.dp
                             highlighted -> 2.dp
                             hovered -> 1.dp
@@ -829,8 +865,8 @@ private fun <T> AutocompleteMenu(
                     )
                     val rowScale by animateFloatAsState(
                         when {
-                            pressed -> 0.98f
-                            hovered && !highlighted -> 1.008f
+                            pressed -> itemTheme.itemPressedScale
+                            hovered && !highlighted -> itemTheme.itemHoverScale
                             else -> 1f
                         },
                         spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMedium),
@@ -851,22 +887,24 @@ private fun <T> AutocompleteMenu(
                                 background = background,
                                 shape = itemShape ?: itemTheme.itemShape,
                                 borderColor = border,
-                                borderWidth = if (highlighted || hovered) 1.dp else 0.dp,
+                                borderWidth = if (highlighted || hovered) itemTheme.itemBorderWidth else 0.dp,
                                 shadowElevation = elevation,
                                 // Only the highlighted row's gel is opaque; a hover fill is translucent.
                                 opaqueFill = highlighted,
-                                innerGlowColor = if (highlighted || hovered) colors.highlight.copy(
-                                    alpha = 0.25f
-                                ) else null,
+                                innerGlowColor = if (highlighted || hovered) {
+                                    itemTheme.itemInnerGlowColor ?: colors.highlight.copy(alpha = 0.25f)
+                                } else null,
                             )
-                            .millenniumInteractionSurface(
+                            .millenniumThemedLighting(
                                 when {
                                     pressed -> MillenniumControlState.Pressed
                                     hovered -> MillenniumControlState.Hovered
                                     else -> MillenniumControlState.Default
                                 },
                                 itemShape ?: itemTheme.itemShape,
-                                animationMillis = resolvedItemAnimationMillis,
+                                itemTheme.itemInteractionOverlay,
+                                itemTheme.itemInteractionTint,
+                                resolvedItemAnimationMillis,
                             ),
                     ) {
                         MillenniumStyledContent(
@@ -877,7 +915,7 @@ private fun <T> AutocompleteMenu(
                                 Modifier.fillMaxWidth()
                                     .padding(itemPadding ?: itemTheme.itemPadding),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                horizontalArrangement = Arrangement.spacedBy(itemTheme.itemContentSpacing),
                             ) {
                                 if (suggestionContent != null) {
                                     suggestionContent(
@@ -901,7 +939,7 @@ private fun <T> AutocompleteMenu(
             }
         }
         if (footer != null) {
-            AutocompleteDivider(properties.dividerColor ?: colors.border)
+            AutocompleteDivider(properties.dividerColor ?: colors.border, properties.dividerSecondaryColor, properties.dividerInset)
             Column(Modifier.fillMaxWidth().padding(properties.menuSectionPadding), content = footer)
         }
     }
@@ -911,9 +949,9 @@ private fun <T> AutocompleteMenu(
  * Double hairline (full and 35% alpha) used around the header and footer.
  */
 @Composable
-private fun AutocompleteDivider(color: Color) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
+private fun AutocompleteDivider(color: Color, secondary: Color?, inset: Dp) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = inset)) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(color))
-        Box(Modifier.fillMaxWidth().height(1.dp).background(color.copy(alpha = 0.35f)))
+        Box(Modifier.fillMaxWidth().height(1.dp).background(secondary ?: color.copy(alpha = 0.35f)))
     }
 }

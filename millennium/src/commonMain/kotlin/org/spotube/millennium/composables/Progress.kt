@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.Indicator
 import com.composeunstyled.UnstyledProgress
+import org.spotube.millennium.theme.MillenniumColors
 import org.spotube.millennium.theme.MillenniumControlState
 import org.spotube.millennium.theme.MillenniumControlStateProperty
 import org.spotube.millennium.theme.MillenniumTheme
@@ -35,8 +36,9 @@ import org.spotube.millennium.theme.millenniumSurface
  * Appearance of one control state of [MillenniumProgress] and [MillenniumIndeterminateProgress].
  *
  * Instances are normally produced by [defaultMillenniumProgressTheme] and customised with `copy`. The
- * composables currently resolve only [MillenniumControlState.Default] from the owning
- * [MillenniumProgressTheme]; the other states exist so a theme can describe them uniformly.
+ * composables resolve [MillenniumControlState.Disabled] (`enabled = false`), [MillenniumControlState.Error]
+ * (`isError = true`) or [MillenniumControlState.Default] from the owning [MillenniumProgressTheme]; the other
+ * states exist so a theme can describe them uniformly.
  *
  * @property trackBackground Brush filling the recessed track; `null` derives a sunken bevel brush from the
  * active palette.
@@ -54,6 +56,14 @@ import org.spotube.millennium.theme.millenniumSurface
  * block.
  * @property indeterminateFraction Width of the sweeping block as a fraction (0..1) of the track width.
  * @property alpha Overall opacity multiplier (1 = opaque).
+ * @property trackBottomRimColor Light rim along the track's lower edge; `null` uses the palette highlight at 30%.
+ * @property trackShadowElevation Drop-shadow elevation under the track; `0.dp` (default) draws none.
+ * @property trackShadowColor Drop-shadow colour; `null` = black at 16%. Only used above 0dp elevation.
+ * @property progressShape Shape of the indicator; `null` uses [shape].
+ * @property progressBorderColor Border around the indicator; `null` draws none. Needs [progressBorderWidth] above 0dp.
+ * @property progressBorderWidth Border thickness of the indicator; `0.dp` (default) draws none.
+ * @property progressInnerGlowColor Inner rim of the indicator; `null` draws none.
+ * @property progressBottomRimColor Light rim along the indicator's lower edge; `null` draws none.
  */
 @Immutable
 data class MillenniumProgressThemeProperties(
@@ -68,6 +78,14 @@ data class MillenniumProgressThemeProperties(
     val indeterminateAnimationMillis: Int,
     val indeterminateFraction: Float,
     val alpha: Float,
+    val trackBottomRimColor: Color? = null,
+    val trackShadowElevation: Dp = 0.dp,
+    val trackShadowColor: Color? = null,
+    val progressShape: Shape? = null,
+    val progressBorderColor: Color? = null,
+    val progressBorderWidth: Dp = 0.dp,
+    val progressInnerGlowColor: Color? = null,
+    val progressBottomRimColor: Color? = null,
 )
 
 /**
@@ -76,13 +94,67 @@ data class MillenniumProgressThemeProperties(
  * Installed globally as [MillenniumTheme.progressTheme] and overridable per call through the `theme`
  * parameter of [MillenniumProgress] and [MillenniumIndeterminateProgress].
  *
- * @property states State-resolved properties; both composables resolve [MillenniumControlState.Default].
+ * @property states State-resolved properties; both composables resolve Disabled, Error or Default (see
+ * [progressControlState]).
  * @see defaultMillenniumProgressTheme
  */
 @Immutable
 data class MillenniumProgressTheme(
     val states: MillenniumControlStateProperty<MillenniumProgressThemeProperties>,
 )
+
+/**
+ * The theme state of a progress bar: [MillenniumControlState.Disabled] when not enabled, otherwise
+ * [MillenniumControlState.Error] when [isError], otherwise [MillenniumControlState.Default].
+ */
+internal fun progressControlState(enabled: Boolean, isError: Boolean): MillenniumControlState = when {
+    !enabled -> MillenniumControlState.Disabled
+    isError -> MillenniumControlState.Error
+    else -> MillenniumControlState.Default
+}
+
+/** The recessed track surface shared by both progress bars. */
+private fun Modifier.progressTrackSurface(
+    properties: MillenniumProgressThemeProperties,
+    colors: MillenniumColors,
+    background: Brush,
+    shape: Shape,
+    borderColor: Color,
+    borderWidth: Dp,
+    glowColor: Color,
+): Modifier = millenniumSurface(
+    background = background,
+    shape = shape,
+    borderColor = borderColor,
+    borderWidth = borderWidth,
+    shadowElevation = properties.trackShadowElevation,
+    shadowColor = properties.trackShadowColor ?: Color.Black.copy(alpha = 0.16f),
+    innerGlowColor = glowColor,
+    bottomRimColor = properties.trackBottomRimColor ?: colors.highlight.copy(alpha = 0.3f),
+)
+
+/** The indicator fill; a plain background unless the theme asks for a border or rims. */
+private fun Modifier.progressFillSurface(
+    properties: MillenniumProgressThemeProperties,
+    brush: Brush,
+    shape: Shape,
+): Modifier {
+    val fillShape = properties.progressShape ?: shape
+    val extras = (properties.progressBorderColor != null && properties.progressBorderWidth > 0.dp) ||
+        properties.progressInnerGlowColor != null || properties.progressBottomRimColor != null
+    return if (extras) {
+        millenniumSurface(
+            background = brush,
+            shape = fillShape,
+            borderColor = properties.progressBorderColor,
+            borderWidth = properties.progressBorderWidth,
+            innerGlowColor = properties.progressInnerGlowColor,
+            bottomRimColor = properties.progressBottomRimColor,
+        )
+    } else {
+        background(brush, fillShape)
+    }
+}
 
 /**
  * Creates the default progress theme: a 12dp fully rounded sunken track with a 1dp hairline, an accent
@@ -156,6 +228,8 @@ fun defaultMillenniumProgressTheme(): MillenniumProgressTheme {
  * of the default spring.
  * @param alpha Overrides the overall opacity; `null` falls back to the theme.
  * @param theme Theme supplying defaults; defaults to [MillenniumTheme.progressTheme].
+ * @param enabled When `false` the bar resolves the theme's Disabled state (45% opacity by default).
+ * @param isError When `true` (and enabled) the bar resolves the theme's Error state.
  * @see MillenniumIndeterminateProgress
  * @see MillenniumProgressTheme
  */
@@ -173,8 +247,10 @@ fun MillenniumProgress(
     determinateAnimationMillis: Int? = null,
     alpha: Float? = null,
     theme: MillenniumProgressTheme = MillenniumTheme.progressTheme,
+    enabled: Boolean = true,
+    isError: Boolean = false,
 ) {
-    val properties = theme.states.resolve(MillenniumControlState.Default)
+    val properties = theme.states.resolve(progressControlState(enabled, isError))
     val colors = MillenniumTheme.colors
     val resolvedShape = shape ?: properties.shape
     val trackBackground = trackBackground ?: properties.trackBackground ?: millenniumBevelBrush(colors, sunken = true)
@@ -193,17 +269,13 @@ fun MillenniumProgress(
     )
     UnstyledProgress(
         animatedProgress,
-        modifier.fillMaxWidth().height(height ?: properties.height).millenniumSurface(
-            background = trackBackground,
-            shape = resolvedShape,
-            borderColor = borderColor,
-            borderWidth = borderWidth ?: properties.borderWidth,
-            innerGlowColor = glowColor,
-            bottomRimColor = colors.highlight.copy(alpha = 0.3f),
+        modifier.fillMaxWidth().height(height ?: properties.height).progressTrackSurface(
+            properties, colors, trackBackground, resolvedShape, borderColor,
+            borderWidth ?: properties.borderWidth, glowColor,
         ).alpha(alpha ?: properties.alpha),
     ) {
         Indicator(
-            Modifier.fillMaxHeight().background(progressBackground, resolvedShape),
+            Modifier.fillMaxHeight().progressFillSurface(properties, progressBackground, resolvedShape),
         )
     }
 }
@@ -244,6 +316,8 @@ fun MillenniumProgress(
  * falls back to the theme.
  * @param alpha Overrides the overall opacity; `null` falls back to the theme.
  * @param theme Theme supplying defaults; defaults to [MillenniumTheme.progressTheme].
+ * @param enabled When `false` the bar resolves the theme's Disabled state (45% opacity by default).
+ * @param isError When `true` (and enabled) the bar resolves the theme's Error state.
  * @see MillenniumProgress
  * @see MillenniumProgressTheme
  */
@@ -261,8 +335,10 @@ fun MillenniumIndeterminateProgress(
     indeterminateFraction: Float? = null,
     alpha: Float? = null,
     theme: MillenniumProgressTheme = MillenniumTheme.progressTheme,
+    enabled: Boolean = true,
+    isError: Boolean = false,
 ) {
-    val properties = theme.states.resolve(MillenniumControlState.Default)
+    val properties = theme.states.resolve(progressControlState(enabled, isError))
     val colors = MillenniumTheme.colors
     val resolvedShape = shape ?: properties.shape
     val trackBackground = trackBackground ?: properties.trackBackground ?: millenniumBevelBrush(colors, sunken = true)
@@ -283,19 +359,15 @@ fun MillenniumIndeterminateProgress(
         ),
     )
     UnstyledProgress(
-        modifier.fillMaxWidth().height(height ?: properties.height).millenniumSurface(
-            background = trackBackground,
-            shape = resolvedShape,
-            borderColor = borderColor,
-            borderWidth = borderWidth ?: properties.borderWidth,
-            innerGlowColor = glowColor,
-            bottomRimColor = colors.highlight.copy(alpha = 0.3f),
+        modifier.fillMaxWidth().height(height ?: properties.height).progressTrackSurface(
+            properties, colors, trackBackground, resolvedShape, borderColor,
+            borderWidth ?: properties.borderWidth, glowColor,
         ).alpha(alpha ?: properties.alpha),
     ) {
         Box(Modifier.fillMaxSize(), contentAlignment = BiasAlignment(offset * 2f - 1f, 0f)) {
             Box(
                 Modifier.fillMaxWidth((indeterminateFraction ?: properties.indeterminateFraction).coerceIn(0f, 1f))
-                    .fillMaxHeight().background(progressBackground, resolvedShape),
+                    .fillMaxHeight().progressFillSurface(properties, progressBackground, resolvedShape),
             )
         }
     }

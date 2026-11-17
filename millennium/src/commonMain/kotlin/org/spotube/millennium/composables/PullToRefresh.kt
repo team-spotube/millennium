@@ -27,6 +27,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -61,6 +62,17 @@ import org.spotube.millennium.theme.millenniumSurface
  * @property indicatorPadding Padding between the pod edge and the progress bar.
  * @property indicatorWidth Width in dp of the indeterminate progress bar inside the pod.
  * @property indicatorTopPadding Gap in dp between the container top and the pod.
+ * @property indicatorShadowColor Drop-shadow colour of the pod; `null` = black at 16%.
+ * @property indicatorBottomRimColor Light rim along the pod's lower edge; `null` draws none.
+ * @property indicatorTrackBackground Brush of the progress bar's track inside the pod; `null` uses the progress theme.
+ * @property indicatorProgressBackground Brush of the progress bar's moving block inside the pod; `null` uses the
+ * progress theme (accent gel).
+ * @property indicatorProgressHeight Height of the progress bar inside the pod; `null` uses the progress theme.
+ * @property indicatorAlpha Opacity of the whole pod (1 by default).
+ * @property indicatorEnterScale Scale the pod grows from when it appears (0.85 by default).
+ * @property indicatorExitScale Scale the pod shrinks to when it disappears (0.85 by default).
+ * @property indicatorEnterMillis Duration in ms of the pod's fade-in (150 by default).
+ * @property indicatorExitMillis Duration in ms of the pod's fade-out and shrink (130 by default).
  */
 @Immutable
 data class MillenniumPullToRefreshThemeProperties(
@@ -76,6 +88,16 @@ data class MillenniumPullToRefreshThemeProperties(
     val indicatorPadding: PaddingValues,
     val indicatorWidth: Dp,
     val indicatorTopPadding: Dp,
+    val indicatorShadowColor: Color? = null,
+    val indicatorBottomRimColor: Color? = null,
+    val indicatorTrackBackground: Brush? = null,
+    val indicatorProgressBackground: Brush? = null,
+    val indicatorProgressHeight: Dp? = null,
+    val indicatorAlpha: Float = 1f,
+    val indicatorEnterScale: Float = 0.85f,
+    val indicatorExitScale: Float = 0.85f,
+    val indicatorEnterMillis: Int = 150,
+    val indicatorExitMillis: Int = 130,
 )
 
 /**
@@ -240,15 +262,15 @@ fun MillenniumPullToRefreshBox(
                 .align(Alignment.TopCenter)
                 .offset(y = with(density) { pullOffset.value.toDp() } + if (isRefreshing) resolvedTopPadding else 0.dp)
                 .padding(top = resolvedTopPadding),
-            enter = fadeIn(tween(150, easing = FastOutSlowInEasing)) +
+            enter = fadeIn(tween(properties.indicatorEnterMillis, easing = FastOutSlowInEasing)) +
                 scaleIn(
-                    initialScale = 0.85f,
+                    initialScale = properties.indicatorEnterScale,
                     animationSpec = spring(dampingRatio = 0.65f, stiffness = Spring.StiffnessMedium),
                 ),
-            exit = fadeOut(tween(130, easing = FastOutLinearInEasing)) +
+            exit = fadeOut(tween(properties.indicatorExitMillis, easing = FastOutLinearInEasing)) +
                 scaleOut(
-                    targetScale = 0.85f,
-                    animationSpec = tween(130, easing = FastOutLinearInEasing),
+                    targetScale = properties.indicatorExitScale,
+                    animationSpec = tween(properties.indicatorExitMillis, easing = FastOutLinearInEasing),
                 ),
         ) {
             Box(
@@ -259,12 +281,20 @@ fun MillenniumPullToRefreshBox(
                         borderColor = indicatorBorderColor ?: properties.indicatorBorderColor ?: colors.border,
                         borderWidth = indicatorBorderWidth ?: properties.indicatorBorderWidth,
                         shadowElevation = indicatorShadowElevation ?: properties.indicatorShadowElevation,
+                        shadowColor = properties.indicatorShadowColor ?: Color.Black.copy(alpha = 0.16f),
+                        bottomRimColor = properties.indicatorBottomRimColor,
                         innerGlowColor = indicatorInnerGlowColor ?: properties.indicatorInnerGlowColor
                             ?: colors.highlight.copy(alpha = 0.4f),
                     )
+                    .alpha(properties.indicatorAlpha)
                     .padding(indicatorPadding ?: properties.indicatorPadding),
             ) {
-                MillenniumIndeterminateProgress(Modifier.width(indicatorWidth ?: properties.indicatorWidth))
+                MillenniumIndeterminateProgress(
+                    Modifier.width(indicatorWidth ?: properties.indicatorWidth),
+                    trackBackground = properties.indicatorTrackBackground,
+                    progressBackground = properties.indicatorProgressBackground,
+                    height = properties.indicatorProgressHeight,
+                )
             }
         }
     }

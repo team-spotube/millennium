@@ -73,6 +73,18 @@ import org.spotube.millennium.theme.millenniumInteractionSurface
  * @property alpha Overall opacity; `0.45f` when disabled.
  * @property thumbBottomRimColor Thumb lower inner rim; `null` = palette highlight at 60%.
  * @property trackInsetShadeColor Inner shade at the track's top edge; `null` = text colour at 10%.
+ * @property trackInnerGlowColor Inner rim of the track; `null` draws none (the default look).
+ * @property trackBottomRimColor Light rim along the track's lower edge; `null` draws none.
+ * @property activeTrackShape Outline of the filled portion; `null` = [trackShape].
+ * @property activeTrackBorderColor Border around the filled portion; `null` draws none. Needs [activeTrackBorderWidth] above 0dp.
+ * @property activeTrackBorderWidth Border thickness of the filled portion; `0.dp` (default) draws none.
+ * @property activeTrackGlowColor Inner rim of the filled portion; `null` draws none.
+ * @property thumbShadowColor Thumb drop-shadow colour; `null` = black at 16%.
+ * @property trackInteractionOverlay Brush drawn over the track fill (below the active fill). `null` keeps the
+ * built-in hover/press lighting on the track; any brush replaces it for the state that resolves it.
+ * @property thumbInteractionOverlay Brush drawn over the thumb fill. `null` keeps the built-in hover/press
+ * lighting on the thumb; any brush replaces it for the state that resolves it.
+ * @property interactionTint Accent of the built-in lighting on track and thumb; `null` = palette accent.
  */
 @Immutable
 data class MillenniumSliderThemeProperties(
@@ -95,6 +107,16 @@ data class MillenniumSliderThemeProperties(
     val alpha: Float = 1f,
     val thumbBottomRimColor: Color? = null,
     val trackInsetShadeColor: Color? = null,
+    val trackInnerGlowColor: Color? = null,
+    val trackBottomRimColor: Color? = null,
+    val activeTrackShape: Shape? = null,
+    val activeTrackBorderColor: Color? = null,
+    val activeTrackBorderWidth: Dp = 0.dp,
+    val activeTrackGlowColor: Color? = null,
+    val thumbShadowColor: Color? = null,
+    val trackInteractionOverlay: Brush? = null,
+    val thumbInteractionOverlay: Brush? = null,
+    val interactionTint: Color? = null,
 )
 
 /**
@@ -288,12 +310,34 @@ fun MillenniumSlider(
                             borderWidth = trackBorderWidth ?: properties.trackBorderWidth,
                             insetShadeColor = trackInsetShadeColor ?: properties.trackInsetShadeColor
                                 ?: colors.text.copy(alpha = 0.1f),
+                            innerGlowColor = properties.trackInnerGlowColor,
+                            bottomRimColor = properties.trackBottomRimColor,
                         )
-                        .millenniumInteractionSurface(controlState, trackShape ?: properties.trackShape, animationMillis = stateAnimationMillis ?: properties.stateAnimationMillis),
+                        .millenniumThemedLighting(
+                            controlState,
+                            trackShape ?: properties.trackShape,
+                            properties.trackInteractionOverlay,
+                            properties.interactionTint,
+                            stateAnimationMillis ?: properties.stateAnimationMillis,
+                        ),
                     ) {
+                        val fillShape = properties.activeTrackShape ?: trackShape ?: properties.trackShape
+                        val hasFillExtras = (properties.activeTrackBorderColor != null &&
+                            properties.activeTrackBorderWidth > 0.dp) || properties.activeTrackGlowColor != null
                         Box(
-                            Modifier.fillMaxHeight().fillMaxWidth(state.fraction)
-                                .background(resolvedActiveTrackBackground, trackShape ?: properties.trackShape),
+                            Modifier.fillMaxHeight().fillMaxWidth(state.fraction).then(
+                                if (hasFillExtras) {
+                                    Modifier.millenniumSurface(
+                                        background = resolvedActiveTrackBackground,
+                                        shape = fillShape,
+                                        borderColor = properties.activeTrackBorderColor,
+                                        borderWidth = properties.activeTrackBorderWidth,
+                                        innerGlowColor = properties.activeTrackGlowColor,
+                                    )
+                                } else {
+                                    Modifier.background(resolvedActiveTrackBackground, fillShape)
+                                },
+                            ),
                         )
                     }
                 }
@@ -342,11 +386,18 @@ fun MillenniumSlider(
                             borderColor = animatedThumbBorderColor,
                             borderWidth = thumbBorderWidth ?: thumbProperties.thumbBorderWidth,
                             shadowElevation = animatedElevation,
+                            shadowColor = thumbProperties.thumbShadowColor ?: Color.Black.copy(alpha = 0.16f),
                             innerGlowColor = resolvedThumbGlowColor,
                             bottomRimColor = thumbBottomRimColor ?: thumbProperties.thumbBottomRimColor
                                 ?: colors.highlight.copy(alpha = 0.6f),
                         )
-                        .millenniumInteractionSurface(thumbState, thumbShape ?: thumbProperties.thumbShape, animationMillis = stateAnimationMillis ?: thumbProperties.stateAnimationMillis),
+                        .millenniumThemedLighting(
+                            thumbState,
+                            thumbShape ?: thumbProperties.thumbShape,
+                            thumbProperties.thumbInteractionOverlay,
+                            thumbProperties.interactionTint,
+                            stateAnimationMillis ?: thumbProperties.stateAnimationMillis,
+                        ),
                     )
                 }
             },

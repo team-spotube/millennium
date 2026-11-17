@@ -1,5 +1,8 @@
 package org.spotube.millennium.composables
 
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -8,6 +11,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
@@ -44,6 +49,13 @@ import org.spotube.millennium.theme.millenniumPanelBrush
  * @property innerGlowColor Inner top highlight; null uses the palette highlight at 55%.
  * @property alpha Whole-card opacity.
  * @property bottomRimColor Light rim along the bottom edge; null uses the palette highlight at 50%.
+ * @property innerGlowWidth Stroke width of the inner rim (1dp by default).
+ * @property insetShadeColor Shade along the inner top perimeter for a recessed card; null draws none.
+ * @property shadowColors When non-empty, one shadow layer per colour (stacked) replaces [shadowColor]; null or
+ * empty uses [shadowColor].
+ * @property interactionOverlay Brush drawn over the fill, below the content, clipped to [shape]. null draws none.
+ * Because the card resolves its state from `hovered`, `selected`, `isError` and `enabled`, a theme can give the
+ * Hovered, Selected or Error entry its own overlay (gloss, tint, glow) without touching Kotlin.
  * @see MillenniumCardTheme
  * @see defaultMillenniumCardTheme
  */
@@ -63,18 +75,39 @@ data class MillenniumCardThemeProperties(
     val innerGlowColor: Color? = null,
     val alpha: Float = 1f,
     val bottomRimColor: Color? = null,
+    val innerGlowWidth: Dp = 1.dp,
+    val insetShadeColor: Color? = null,
+    val shadowColors: List<Color>? = null,
+    val interactionOverlay: Brush? = null,
 )
 
 /**
  * Per-state theme of [MillenniumCard].
  *
- * @property states Properties per [MillenniumControlState]. The card is a static surface, so [MillenniumCard] always
- * resolves the Default state; other states are available for custom interactive wrappers.
+ * @property states Properties per [MillenniumControlState]. [MillenniumCard] resolves them with [cardControlState]:
+ * Disabled (`enabled = false`), Error (`isError`), Selected (`selected`), Hovered (pointer over the card) and
+ * Default. The card is not clickable, so Pressed and Focused are not resolved.
  */
 @Immutable
 data class MillenniumCardTheme(
     val states: MillenniumControlStateProperty<MillenniumCardThemeProperties>,
 )
+
+/**
+ * Resolves the theme state of a [MillenniumCard]: Disabled, then Error, then Selected, then Hovered, else Default.
+ */
+internal fun cardControlState(
+    enabled: Boolean,
+    isError: Boolean,
+    selected: Boolean,
+    hovered: Boolean,
+): MillenniumControlState = when {
+    !enabled -> MillenniumControlState.Disabled
+    isError -> MillenniumControlState.Error
+    selected -> MillenniumControlState.Selected
+    hovered -> MillenniumControlState.Hovered
+    else -> MillenniumControlState.Default
+}
 
 /**
  * Creates the default [MillenniumCardTheme] installed as `MillenniumTheme.cardTheme`.
@@ -145,6 +178,9 @@ fun defaultMillenniumCardTheme(): MillenniumCardTheme {
  * @param contentSpacing Overrides the spacing between children; null uses the theme.
  * @param alpha Overrides the opacity; null uses the theme.
  * @param theme Per-state theme; defaults to `MillenniumTheme.cardTheme`.
+ * @param enabled When false the card resolves the theme's Disabled state (and ignores hover).
+ * @param selected When true the card resolves the theme's Selected state.
+ * @param isError When true the card resolves the theme's Error state.
  * @param content Column content of the card.
  * @see MillenniumCardTheme
  * @see MillenniumText
@@ -165,23 +201,34 @@ fun MillenniumCard(
     contentSpacing: Dp? = null,
     alpha: Float? = null,
     theme: MillenniumCardTheme = MillenniumTheme.cardTheme,
+    enabled: Boolean = true,
+    selected: Boolean = false,
+    isError: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = MillenniumTheme.colors
-    val properties = theme.states.resolve(MillenniumControlState.Default)
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
+    val properties = theme.states.resolve(cardControlState(enabled, isError, selected, hovered))
+    val cardShape = shape ?: properties.shape
     Column(
         modifier = modifier
+            .hoverable(interaction, enabled)
             .widthIn(max = maxWidth ?: properties.maxWidth)
             .millenniumSurface(
                 background = background ?: properties.background ?: millenniumPanelBrush(colors),
-                shape = shape ?: properties.shape,
+                shape = cardShape,
                 borderColor = borderColor ?: properties.borderColor ?: colors.border,
                 borderWidth = borderWidth ?: properties.borderWidth,
                 shadowElevation = shadowElevation ?: properties.shadowElevation,
                 shadowColor = shadowColor ?: properties.shadowColor ?: Color.Black.copy(alpha = 0.14f),
+                shadowColors = properties.shadowColors,
                 innerGlowColor = innerGlowColor ?: properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f),
+                innerGlowWidth = properties.innerGlowWidth,
+                insetShadeColor = properties.insetShadeColor,
                 bottomRimColor = bottomRimColor ?: properties.bottomRimColor ?: colors.highlight.copy(alpha = 0.5f),
             )
+            .millenniumOverlayBrush(properties.interactionOverlay, cardShape)
             .padding(contentPadding ?: properties.contentPadding)
             .alpha(alpha ?: properties.alpha),
         verticalArrangement = Arrangement.spacedBy(contentSpacing ?: properties.contentSpacing),

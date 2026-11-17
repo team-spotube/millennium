@@ -7,7 +7,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -31,6 +36,9 @@ import org.spotube.millennium.theme.MillenniumPreview
  * @property size Width and height of the icon (20dp by default).
  * @property alpha Opacity of the icon (0.45 when disabled by default).
  * @property tintAnimationMillis Duration in milliseconds of tint colour transitions.
+ * @property tintBrush Brush that paints the glyph (for example a vertical gradient). When set it replaces [tint]
+ * and the state-derived colour: the glyph's shape is kept and filled with the brush, which is sized to the icon.
+ * null paints the tint colour. Brush changes do not animate.
  * @see MillenniumIconTheme
  * @see defaultMillenniumIconTheme
  */
@@ -40,6 +48,7 @@ data class MillenniumIconThemeProperties(
     val size: Dp,
     val alpha: Float,
     val tintAnimationMillis: Int,
+    val tintBrush: Brush? = null,
 )
 
 /**
@@ -136,10 +145,20 @@ fun MillenniumIcon(
         targetTint,
         tween(tintAnimationMillis ?: properties.tintAnimationMillis),
     ).value
+    val tintBrush = properties.tintBrush
     UnstyledIcon(
         imageVector,
         contentDescription,
-        modifier.size(size ?: properties.size).alpha(alpha ?: properties.alpha),
+        modifier.size(size ?: properties.size).alpha(alpha ?: properties.alpha).then(
+            if (tintBrush != null) {
+                Modifier
+                    .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+                    .drawWithContent {
+                        drawContent()
+                        drawRect(tintBrush, blendMode = BlendMode.SrcIn)
+                    }
+            } else Modifier,
+        ),
         animatedTint,
     )
 }

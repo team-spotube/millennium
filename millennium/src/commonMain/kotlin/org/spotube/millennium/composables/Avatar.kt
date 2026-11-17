@@ -2,7 +2,13 @@ package org.spotube.millennium.composables
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -42,6 +48,15 @@ import org.spotube.millennium.theme.millenniumSurface
  * @property innerGlowColor Inner top highlight colour; null uses the palette highlight at 55%.
  * @property sizeAnimationMillis Duration in milliseconds of size changes.
  * @property alpha Whole-avatar opacity.
+ * @property bottomRimColor Light rim along the avatar's lower edge; null uses the palette highlight at 40%.
+ * @property innerGlowWidth Stroke width of the inner rim (1dp by default).
+ * @property initialsBackground Brush painted behind the initials only (under the image); null paints none.
+ * @property imageOverlay Brush painted over the avatar (above image and initials), clipped to [shape], for tints
+ * or gloss on photos; null draws none.
+ * @property borderBrush Brush stroked as the border instead of [borderColor]; null uses [borderColor]. Needs
+ * [borderWidth] above 0dp.
+ * @property interactionOverlay Brush drawn over the avatar fill; null draws none. Resolved per state, so the
+ * Pressed or Selected entry of the theme can supply a highlight when a wrapper drives the state.
  * @see MillenniumAvatarTheme
  * @see defaultMillenniumAvatarTheme
  */
@@ -59,13 +74,20 @@ data class MillenniumAvatarThemeProperties(
     val innerGlowColor: Color? = null,
     val sizeAnimationMillis: Int,
     val alpha: Float = 1f,
+    val bottomRimColor: Color? = null,
+    val innerGlowWidth: Dp = 1.dp,
+    val initialsBackground: Brush? = null,
+    val imageOverlay: Brush? = null,
+    val borderBrush: Brush? = null,
+    val interactionOverlay: Brush? = null,
 )
 
 /**
  * Per-state theme of [MillenniumAvatar].
  *
- * @property states Properties per [MillenniumControlState]. The avatar is not interactive, so [MillenniumAvatar]
- * always resolves the Default state; the other states exist for consistency and for custom wrappers.
+ * @property states Properties per [MillenniumControlState]. The avatar is not interactive itself; [MillenniumAvatar]
+ * resolves the state passed through its `state` parameter (Default when omitted), so wrappers that make the avatar
+ * clickable or selectable can drive hover, press, selection, error and disabled looks from the theme.
  */
 @Immutable
 data class MillenniumAvatarTheme(
@@ -140,6 +162,8 @@ fun defaultMillenniumAvatarTheme(): MillenniumAvatarTheme {
  * @param sizeAnimationMillis Overrides the size animation duration; null uses the theme.
  * @param alpha Overrides the opacity; null uses the theme.
  * @param theme Per-state theme; defaults to `MillenniumTheme.avatarTheme`.
+ * @param state Theme state to render: Default (initial), or Hovered/Focused/Pressed/Selected/Error/Disabled when a
+ * wrapper that owns the interaction wants the theme's matching look.
  * @see MillenniumAvatarTheme
  */
 @Composable
@@ -161,37 +185,64 @@ fun MillenniumAvatar(
     sizeAnimationMillis: Int? = null,
     alpha: Float? = null,
     theme: MillenniumAvatarTheme = MillenniumTheme.avatarTheme,
+    state: MillenniumControlState = MillenniumControlState.Default,
 ) {
     val colors = MillenniumTheme.colors
-    val properties = theme.states.resolve(MillenniumControlState.Default)
+    val properties = theme.states.resolve(state)
     val targetSize = size ?: properties.size
     val animatedSize = animateDpAsState(
         targetSize,
         tween(sizeAnimationMillis ?: properties.sizeAnimationMillis),
     ).value
     val resolvedTextStyle = textStyle ?: properties.textStyle
+    val resolvedShape = shape ?: properties.shape
+    val resolvedBorderWidth = borderWidth ?: properties.borderWidth
+    val borderBrush = properties.borderBrush
+    val imageOverlay = properties.imageOverlay
     UnstyledAvatar(
         painter = painter,
         contentDescription = contentDescription,
         modifier = modifier.size(animatedSize).millenniumSurface(
             background = background ?: properties.background ?: gelBrush(colors.accentTop, colors.accentBottom),
-            shape = shape ?: properties.shape,
-            borderColor = borderColor ?: properties.borderColor ?: colors.accentBottom,
-            borderWidth = borderWidth ?: properties.borderWidth,
+            shape = resolvedShape,
+            borderColor = if (borderBrush != null) null else borderColor ?: properties.borderColor ?: colors.accentBottom,
+            borderWidth = resolvedBorderWidth,
             shadowElevation = shadowElevation ?: properties.shadowElevation,
             shadowColor = shadowColor ?: properties.shadowColor ?: Color.Black.copy(alpha = 0.16f),
-                innerGlowColor = innerGlowColor ?: properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f),
-                bottomRimColor = colors.highlight.copy(alpha = 0.4f),
+            innerGlowColor = innerGlowColor ?: properties.innerGlowColor ?: colors.highlight.copy(alpha = 0.55f),
+            innerGlowWidth = properties.innerGlowWidth,
+            bottomRimColor = properties.bottomRimColor ?: colors.highlight.copy(alpha = 0.4f),
+        ).then(
+            if (borderBrush != null && resolvedBorderWidth > 0.dp) {
+                Modifier.border(resolvedBorderWidth, borderBrush, resolvedShape)
+            } else Modifier,
+        ).millenniumOverlayBrush(properties.interactionOverlay, resolvedShape).then(
+            if (imageOverlay != null) {
+                Modifier.drawWithContent {
+                    drawContent()
+                    drawRect(imageOverlay)
+                }
+            } else Modifier,
         ).alpha(alpha ?: properties.alpha),
         underlay = {
             val fontSize = resolvedTextStyle.fontSize.takeUnless { it == androidx.compose.ui.unit.TextUnit.Unspecified }
                 ?: (animatedSize.value * 0.3f).sp
-            Text(
-                initials,
-                style = resolvedTextStyle,
-                color = foreground ?: properties.foreground ?: colors.onAccent,
-                fontSize = fontSize,
-            )
+            val initialsText: @Composable () -> Unit = {
+                Text(
+                    initials,
+                    style = resolvedTextStyle,
+                    color = foreground ?: properties.foreground ?: colors.onAccent,
+                    fontSize = fontSize,
+                )
+            }
+            val initialsBackground = properties.initialsBackground
+            if (initialsBackground != null) {
+                Box(Modifier.fillMaxSize().background(initialsBackground), contentAlignment = Alignment.Center) {
+                    initialsText()
+                }
+            } else {
+                initialsText()
+            }
         },
     )
 }

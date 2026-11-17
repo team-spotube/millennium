@@ -2,11 +2,14 @@ package org.spotube.millennium.composables
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.unit.sp
 import com.composeunstyled.Text
 import org.spotube.millennium.theme.MillenniumControlState
@@ -27,6 +30,11 @@ import org.spotube.millennium.theme.MillenniumTheme
  * @property headline Large headings, 32sp Bold with 40sp leading.
  * @property caption Secondary and helper text, 12sp with 17sp leading.
  * @property avatar Base style for avatar initials (Bold, no size: the avatar scales the size from its diameter).
+ * @property alpha Opacity of [MillenniumText] in this state (1 by default); give the Disabled entry a lower value
+ * to dim text that is rendered with `state = MillenniumControlState.Disabled`.
+ *
+ * Every field is a full [TextStyle], so colour, font family, letter spacing, decoration and text shadow
+ * (`TextStyle.shadow`) of each role come from the theme: [MillenniumText] applies the style of its `role` in full.
  * @see MillenniumTextTheme
  * @see defaultMillenniumTextTheme
  */
@@ -39,7 +47,36 @@ data class MillenniumTextThemeProperties(
     val headline: TextStyle,
     val caption: TextStyle,
     val avatar: TextStyle,
+    val alpha: Float = 1f,
 )
+
+/**
+ * Typography roles of [MillenniumTextThemeProperties] that [MillenniumText] can render.
+ *
+ * @property Body Running text ([MillenniumTextThemeProperties.body]); the default role.
+ * @property Label Form and control labels.
+ * @property Button Button captions.
+ * @property Title Section titles.
+ * @property Headline Large headings.
+ * @property Caption Secondary and helper text.
+ * @property Avatar Avatar initials style (has no font size of its own).
+ */
+enum class MillenniumTextRole { Body, Label, Button, Title, Headline, Caption, Avatar }
+
+/**
+ * Returns the [TextStyle] of [role].
+ *
+ * @param role The typography role to look up.
+ */
+fun MillenniumTextThemeProperties.styleFor(role: MillenniumTextRole): TextStyle = when (role) {
+    MillenniumTextRole.Body -> body
+    MillenniumTextRole.Label -> label
+    MillenniumTextRole.Button -> button
+    MillenniumTextRole.Title -> title
+    MillenniumTextRole.Headline -> headline
+    MillenniumTextRole.Caption -> caption
+    MillenniumTextRole.Avatar -> avatar
+}
 
 /**
  * Theme of the shared typography scale.
@@ -102,14 +139,18 @@ fun defaultMillenniumTextTheme() = MillenniumTextTheme(
  *
  * @param text The string to render.
  * @param modifier Modifier applied to the text.
- * @param color Text colour; defaults to the palette text colour. Unlike other components this is a non-null
- * parameter with a palette default rather than a theme override.
- * @param size Font size; defaults to the body style's size (14sp).
- * @param weight Font weight; defaults to the body style's weight or Normal.
+ * @param color Text colour; unspecified (the default) uses the role style's colour from the theme when it has one,
+ * otherwise the palette text colour.
+ * @param size Font size; unspecified (the default) uses the role style's size (14sp for body).
+ * @param weight Font weight; null (the default) uses the role style's weight or Normal.
  * @param style Optional style whose line height and font family are used as the base instead of the theme body style.
  * Its colour, size and weight are not applied; use the explicit parameters for those.
  * @param lineHeight Explicit line height; null scales the base leading with [size].
- * @param theme Typography theme; defaults to `MillenniumTheme.textTheme`. Only its Default-state body style is read.
+ * @param theme Typography theme; defaults to `MillenniumTheme.textTheme`. The style of [role] in the entry for
+ * [state] is applied in full (family, spacing, shadow, decoration, colour...), not just its size and leading.
+ * @param role Typography role to render; defaults to [MillenniumTextRole.Body]. [size], [weight] and
+ * [lineHeight] default to the role style's own values.
+ * @param state Theme state to resolve (Default when omitted); its `alpha` dims the text.
  * @see MillenniumTextTheme
  * @see MillenniumStyledContent
  */
@@ -117,21 +158,32 @@ fun defaultMillenniumTextTheme() = MillenniumTextTheme(
 fun MillenniumText(
     text: String,
     modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier,
-    color: Color = MillenniumTheme.colors.text,
-    size: TextUnit = MillenniumTheme.textTheme.states.default.body.fontSize,
-    weight: FontWeight = MillenniumTheme.textTheme.states.default.body.fontWeight ?: FontWeight.Normal,
+    color: Color = Color.Unspecified,
+    size: TextUnit = TextUnit.Unspecified,
+    weight: FontWeight? = null,
     style: TextStyle? = null,
     lineHeight: TextUnit? = null,
     theme: MillenniumTextTheme = MillenniumTheme.textTheme,
+    role: MillenniumTextRole = MillenniumTextRole.Body,
+    state: MillenniumControlState = MillenniumControlState.Default,
 ) {
-    val baseStyle = style ?: theme.states.resolve(MillenniumControlState.Default).body
+    val properties = theme.states.resolve(state)
+    val themeStyle = properties.styleFor(role)
+    val baseStyle = style ?: themeStyle
+    val resolvedSize = if (size.isSpecified) size else baseStyle.fontSize
+    val resolvedColor = when {
+        color.isSpecified -> color
+        style == null && themeStyle.color.isSpecified -> themeStyle.color
+        else -> MillenniumTheme.colors.text
+    }
     Text(
         text = text,
-        modifier = modifier,
-        color = color,
-        fontSize = size,
-        lineHeight = lineHeight ?: millenniumTextLineHeight(size, baseStyle.fontSize, baseStyle.lineHeight),
-        fontWeight = weight,
+        modifier = if (properties.alpha < 1f) modifier.alpha(properties.alpha) else modifier,
+        style = baseStyle,
+        color = resolvedColor,
+        fontSize = resolvedSize,
+        lineHeight = lineHeight ?: millenniumTextLineHeight(resolvedSize, baseStyle.fontSize, baseStyle.lineHeight),
+        fontWeight = weight ?: baseStyle.fontWeight ?: FontWeight.Normal,
         fontFamily = baseStyle.fontFamily,
     )
 }

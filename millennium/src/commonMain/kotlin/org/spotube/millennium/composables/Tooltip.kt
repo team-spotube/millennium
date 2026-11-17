@@ -60,6 +60,12 @@ import org.spotube.millennium.theme.millenniumPanelBrush
  * @property enterScale Initial scale the bubble grows from when appearing (0.90).
  * @property exitScale Target scale the bubble shrinks to when disappearing (0.94).
  * @property alpha Whole-bubble opacity.
+ * @property shadowColor Drop-shadow colour; null uses black at 16%.
+ * @property bottomRimColor Light rim along the bubble's lower edge; null draws none.
+ * @property innerGlowWidth Stroke width of the inner rim (1dp by default).
+ * @property shadowColors When non-empty, one shadow layer per colour (stacked) replaces [shadowColor].
+ * @property enterSlideFraction Fraction of the bubble height it slides up from while appearing (0.25 by default).
+ * @property exitSlideFraction Fraction of the bubble height it slides down by while disappearing (about 0.167 by default).
  * @see MillenniumTooltipTheme
  * @see defaultMillenniumTooltipTheme
  */
@@ -82,12 +88,19 @@ data class MillenniumTooltipThemeProperties(
     val enterScale: Float = 0.90f,
     val exitScale: Float = 0.94f,
     val alpha: Float,
+    val shadowColor: Color? = null,
+    val bottomRimColor: Color? = null,
+    val innerGlowWidth: Dp = 1.dp,
+    val shadowColors: List<Color>? = null,
+    val enterSlideFraction: Float = 0.25f,
+    val exitSlideFraction: Float = 1f / 6f,
 )
 
 /**
  * Per-state theme of [MillenniumTooltip].
  *
- * @property states Properties per [MillenniumControlState]. [MillenniumTooltip] always reads the default state.
+ * @property states Properties per [MillenniumControlState]. [MillenniumTooltip] always reads the default state: the
+ * bubble has no interaction states of its own (it appears and disappears), so the other entries are never read.
  */
 @Immutable
 data class MillenniumTooltipTheme(
@@ -236,7 +249,11 @@ fun MillenniumTooltip(
                     borderColor = resolvedBorderColor,
                     borderWidth = borderWidth ?: properties.borderWidth,
                     shadowElevation = shadowElevation ?: properties.shadowElevation,
+                    shadowColor = properties.shadowColor ?: Color.Black.copy(alpha = 0.16f),
+                    shadowColors = properties.shadowColors,
                     innerGlowColor = resolvedGlowColor,
+                    innerGlowWidth = properties.innerGlowWidth,
+                    bottomRimColor = properties.bottomRimColor,
                 ).padding(padding ?: properties.padding).alpha(alpha ?: properties.alpha),
                 enter = fadeIn(tween(resolvedOpenMillis, easing = FastOutSlowInEasing)) +
                     scaleIn(
@@ -252,7 +269,7 @@ fun MillenniumTooltip(
                             dampingRatio = 0.76f,
                             stiffness = Spring.StiffnessMediumLow,
                         ),
-                        initialOffsetY = { it / 4 },
+                        initialOffsetY = { (it * properties.enterSlideFraction).toInt() },
                     ),
                 exit = fadeOut(tween(resolvedCloseMillis, easing = FastOutLinearInEasing)) +
                     scaleOut(
@@ -262,7 +279,7 @@ fun MillenniumTooltip(
                     ) +
                     slideOutVertically(
                         animationSpec = tween(resolvedCloseMillis, easing = FastOutLinearInEasing),
-                        targetOffsetY = { it / 6 },
+                        targetOffsetY = { (it * properties.exitSlideFraction).toInt() },
                     ),
             ) {
                 Text(text, style = textStyle ?: properties.textStyle, color = resolvedForeground)
