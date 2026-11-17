@@ -74,10 +74,12 @@ import org.spotube.millennium.theme.millenniumInteractionSurface
  *   [titleForeground], then the palette text color.
  * @property selectedSubtitleForeground Subtitle color when selected; `null` falls back to
  *   [subtitleForeground], then palette text at 82 percent alpha.
- * @property background Fill override for non-selected states; `null` derives accent washes (hover,
- *   focus, press), a danger wash (error) or transparency.
+ * @property background Fill for non-selected tiles in this state; `null` derives accent washes (hover,
+ *   focus, press), a danger wash (error) or transparency. Set it on the hovered, focused, pressed or error
+ *   entry of the theme to restyle that state's fill (read since this release; it used to be ignored).
  * @property selectedBackground Fill override while selected; `null` uses the surface-blended gel
- *   from [selectedGelStrength].
+ *   from [selectedGelStrength]. A selected tile that is also hovered, focused or pressed uses the entry of
+ *   that interaction; when its value is `null` the Selected entry's value is used.
  * @property selectedGelStrength How strongly the selected fill blends the gel toward the row surface
  *   (0 is the surface, 1 the full gel; default 0.35). Hover and focus add 0.08, press adds 0.15 and
  *   disabled scales it by 0.6.
@@ -95,6 +97,15 @@ import org.spotube.millennium.theme.millenniumInteractionSurface
  * @property alpha Overall opacity (the default theme dims disabled tiles to 0.45).
  * @property stateAnimationMillis Duration in milliseconds of the alpha and interaction-lighting
  *   animations (default 140).
+ * @property innerGlowWidth Stroke width of the inner rim (1dp by default).
+ * @property shadowElevation Drop-shadow elevation under the tile; `0.dp` (default) draws none.
+ * @property shadowColor Drop-shadow colour; `null` = black at 16%. Only used above 0dp elevation.
+ * @property bottomRimColor Light rim along the lower edge; `null` draws none.
+ * @property scale Scale of the tile in this state while it is clickable; `null` uses the built-in motion
+ *   (0.985 pressed, 1.006 hovered, 1 otherwise). A value applies to every clickable tile resolving this entry.
+ * @property interactionOverlay Brush drawn over the fill, below the content. `null` keeps the built-in
+ *   hover/press lighting; any brush replaces it for the state that resolves it.
+ * @property interactionTint Accent of the built-in lighting; `null` = palette accent.
  * @see MillenniumListTile
  */
 @Immutable
@@ -120,6 +131,13 @@ data class MillenniumListTileThemeProperties(
     val innerGlowColor: Color? = null,
     val alpha: Float = 1f,
     val stateAnimationMillis: Int = 140,
+    val innerGlowWidth: Dp = 1.dp,
+    val shadowElevation: Dp = 0.dp,
+    val shadowColor: Color? = null,
+    val bottomRimColor: Color? = null,
+    val scale: Float? = null,
+    val interactionOverlay: Brush? = null,
+    val interactionTint: Color? = null,
 )
 
 /**
@@ -235,6 +253,23 @@ internal fun listTileBackground(
         else -> Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
     }
 }
+
+/**
+ * Chooses the fill of a tile: an explicit [background] override, then (selected) [selectedBackground] or the
+ * surface-blended gel, then (unselected) the theme's per-state [themeBackground], then the derived washes of
+ * [listTileBackground].
+ */
+internal fun resolveListTileBackground(
+    colors: MillenniumColors,
+    selected: Boolean,
+    state: MillenniumControlState,
+    selectedGelStrength: Float,
+    background: Brush?,
+    selectedBackground: Brush?,
+    themeBackground: Brush?,
+): Brush = background
+    ?: (if (selected) selectedBackground else themeBackground)
+    ?: listTileBackground(colors, selected, state, selectedGelStrength)
 
 /**
  * A flexible list row with leading, title, optional subtitle and trailing slots.
@@ -364,7 +399,21 @@ fun MillenniumListTile(
         hovered = hovered,
         selected = selected,
     )
-    val properties = theme.states.resolve(state)
+    val selectedEntry = theme.states.selected
+    val properties = theme.states.resolve(state).let { entry ->
+        if (selected && state != MillenniumControlState.Selected && state != MillenniumControlState.Disabled) {
+            // A selected tile that is hovered, focused or pressed still honours the Selected entry for the
+            // values its interaction entry leaves unset.
+            entry.copy(
+                selectedBackground = entry.selectedBackground ?: selectedEntry.selectedBackground,
+                selectedTitleForeground = entry.selectedTitleForeground ?: selectedEntry.selectedTitleForeground,
+                selectedSubtitleForeground = entry.selectedSubtitleForeground ?: selectedEntry.selectedSubtitleForeground,
+                borderColor = entry.borderColor ?: selectedEntry.borderColor,
+                innerGlowColor = entry.innerGlowColor ?: selectedEntry.innerGlowColor,
+                interactionOverlay = entry.interactionOverlay ?: selectedEntry.interactionOverlay,
+            )
+        } else entry
+    }
     val resolvedProperties = properties.copy(
         titleStyle = titleStyle ?: properties.titleStyle,
         subtitleStyle = subtitleStyle ?: properties.subtitleStyle,
@@ -376,14 +425,15 @@ fun MillenniumListTile(
         titleSpacing = titleSpacing ?: properties.titleSpacing,
         borderWidth = borderWidth ?: properties.borderWidth,
     )
-    val resolvedBackground = background
-        ?: (if (selected) selectedBackground ?: properties.selectedBackground else null)
-        ?: listTileBackground(
-            colors,
-            selected,
-            state,
-            selectedGelStrength ?: properties.selectedGelStrength,
-        )
+    val resolvedBackground = resolveListTileBackground(
+        colors = colors,
+        selected = selected,
+        state = state,
+        selectedGelStrength = selectedGelStrength ?: properties.selectedGelStrength,
+        background = background,
+        selectedBackground = selectedBackground ?: properties.selectedBackground,
+        themeBackground = properties.background,
+    )
     val resolvedTitleForeground = if (selected) {
         selectedTitleForeground ?: properties.selectedTitleForeground
             ?: titleForeground ?: properties.titleForeground ?: colors.text
@@ -410,9 +460,11 @@ fun MillenniumListTile(
     val rowScale by animateFloatAsState(
         targetValue = when {
             !clickable -> 1f
-            pressed -> 0.985f
-            hovered -> 1.006f
-            else -> 1f
+            else -> properties.scale ?: when {
+                pressed -> 0.985f
+                hovered -> 1.006f
+                else -> 1f
+            }
         },
         animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMedium),
     )
@@ -428,6 +480,10 @@ fun MillenniumListTile(
             shape = resolvedProperties.shape,
             borderColor = resolvedBorderColor,
             borderWidth = resolvedProperties.borderWidth,
+            shadowElevation = properties.shadowElevation,
+            shadowColor = properties.shadowColor ?: Color.Black.copy(alpha = 0.16f),
+            innerGlowWidth = properties.innerGlowWidth,
+            bottomRimColor = properties.bottomRimColor,
             innerGlowColor = innerGlowColor ?: resolvedProperties.innerGlowColor
                 ?: if (selected || state == MillenniumControlState.Hovered || state == MillenniumControlState.Focused) {
                     colors.highlight.copy(alpha = 0.25f)
@@ -435,7 +491,13 @@ fun MillenniumListTile(
                     null
                 },
         )
-        .millenniumInteractionSurface(state, resolvedProperties.shape, animationMillis = stateAnimationMillis ?: properties.stateAnimationMillis)
+        .millenniumThemedLighting(
+            state,
+            resolvedProperties.shape,
+            properties.interactionOverlay,
+            properties.interactionTint,
+            stateAnimationMillis ?: properties.stateAnimationMillis,
+        )
         .then(secondaryClickModifier(if (enabled) onRightClick else null, interaction))
     val row: @Composable () -> Unit = {
         ListTileRow(

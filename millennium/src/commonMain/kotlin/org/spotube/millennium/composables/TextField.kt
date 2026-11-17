@@ -45,6 +45,8 @@ import org.spotube.millennium.theme.millenniumBevelBrush
 import org.spotube.millennium.theme.millenniumSurface
 import org.spotube.millennium.theme.millenniumInteractionSurface
 import androidx.compose.foundation.hoverable
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.graphics.drawOutline
 
 /**
  * Visual and layout properties of a [MillenniumTextField] in one interaction state.
@@ -76,6 +78,17 @@ import androidx.compose.foundation.hoverable
  * @property insetShadeColor Inner shade drawn along the top/left edge for the recessed look; null uses text colour at 9%.
  * @property innerGlowColor Inner glow along the box edge; null uses the border colour at 40%.
  * @property bottomRimColor Light rim along the bottom edge; null uses the palette highlight at 80%.
+ * @property labelColor Colour of the label above the box; null uses the resolved text colour ([foreground]).
+ * @property cursorBrush Brush of the caret; null draws the caret with [cursorColor] (or the palette accent).
+ * @property innerGlowWidth Stroke width of the inner rim (1dp by default).
+ * @property shadowElevation Drop-shadow elevation under the box; 0dp (default) draws none.
+ * @property shadowColor Drop-shadow colour; null uses black at 16%. Only used when [shadowElevation] is above 0dp.
+ * @property interactionOverlay Brush drawn over the box fill, below the text, clipped to [shape]. null keeps the
+ * built-in hover/press lighting (white sheen on hover, inward shade on press, nothing at rest). Any non-null
+ * brush replaces that lighting in the state that resolves it, so a themed hover overlay is set on the hovered
+ * state; use a transparent brush to switch the lighting off.
+ * @property interactionTint Accent colour of the built-in lighting; null uses the palette accent. Ignored when
+ * [interactionOverlay] is set.
  * @see MillenniumTextFieldTheme
  * @see defaultMillenniumTextFieldTheme
  */
@@ -102,13 +115,20 @@ data class MillenniumTextFieldThemeProperties(
     val insetShadeColor: Color? = null,
     val innerGlowColor: Color? = null,
     val bottomRimColor: Color? = null,
+    val labelColor: Color? = null,
+    val cursorBrush: Brush? = null,
+    val innerGlowWidth: Dp = 1.dp,
+    val shadowElevation: Dp = 0.dp,
+    val shadowColor: Color? = null,
+    val interactionOverlay: Brush? = null,
+    val interactionTint: Color? = null,
 )
 
 /**
  * Per-state theme of [MillenniumTextField].
  *
  * @property states Properties resolved per [MillenniumControlState]. [MillenniumTextField] resolves Disabled, Error,
- * Pressed, Focused (keyboard-only), Hovered or Default; the Selected state is not used by the text field.
+ * Pressed, Focused (keyboard-only), Hovered or Default; the Selected state is not used by the text field (it has no selected condition).
  * @see MillenniumTextFieldThemeProperties
  * @see MillenniumTheme
  */
@@ -116,6 +136,66 @@ data class MillenniumTextFieldThemeProperties(
 data class MillenniumTextFieldTheme(
     val states: MillenniumControlStateProperty<MillenniumTextFieldThemeProperties>,
 )
+
+/**
+ * Draws [overlay] over the fill of the receiver, clipped to [shape], below the content. Does nothing when
+ * [overlay] is null. Shared by the themed surfaces of this package so that every hover/press/selected overlay
+ * can be a theme-supplied brush.
+ */
+internal fun Modifier.millenniumOverlayBrush(overlay: Brush?, shape: Shape): Modifier =
+    if (overlay == null) this else drawWithCache {
+        val outline = shape.createOutline(size, layoutDirection, this)
+        onDrawWithContent {
+            drawOutline(outline, overlay)
+            drawContent()
+        }
+    }
+
+/**
+ * Interaction lighting of a themed surface: the theme's [overlay] brush when set, otherwise the built-in
+ * hover/press lighting ([millenniumInteractionSurface]) tinted with [tint].
+ */
+@Composable
+internal fun Modifier.millenniumThemedLighting(
+    state: MillenniumControlState,
+    shape: Shape,
+    overlay: Brush?,
+    tint: Color?,
+    animationMillis: Int,
+): Modifier = if (overlay != null) {
+    millenniumOverlayBrush(overlay, shape)
+} else {
+    millenniumInteractionSurface(state, shape, tint ?: MillenniumTheme.colors.accent, animationMillis)
+}
+
+/**
+ * The recessed field box shared by [MillenniumTextField] and [MillenniumAutocomplete]: sunken fill, border,
+ * inner rims, optional shadow and the themed interaction lighting.
+ */
+@Composable
+internal fun Modifier.millenniumTextFieldBox(
+    properties: MillenniumTextFieldThemeProperties,
+    controlState: MillenniumControlState,
+    background: Brush,
+    shape: Shape,
+    borderColor: Color,
+    borderWidth: Dp,
+    insetShade: Color,
+    innerGlow: Color,
+    bottomRim: Color,
+    animationMillis: Int,
+): Modifier = millenniumSurface(
+    background = background,
+    shape = shape,
+    borderColor = borderColor,
+    borderWidth = borderWidth,
+    shadowElevation = properties.shadowElevation,
+    shadowColor = properties.shadowColor ?: Color.Black.copy(alpha = 0.16f),
+    innerGlowColor = innerGlow,
+    innerGlowWidth = properties.innerGlowWidth,
+    insetShadeColor = insetShade,
+    bottomRimColor = bottomRim,
+).millenniumThemedLighting(controlState, shape, properties.interactionOverlay, properties.interactionTint, animationMillis)
 
 /**
  * Creates the default [MillenniumTextFieldTheme] installed as `MillenniumTheme.textFieldTheme`.
@@ -308,7 +388,7 @@ fun MillenniumTextField(
         interactionSource = interaction,
         lineLimits = TextFieldLineLimits.SingleLine,
         textStyle = resolvedTextStyle.copy(color = resolvedForeground),
-        cursorBrush = SolidColor(resolvedCursorColor),
+        cursorBrush = properties.cursorBrush ?: SolidColor(resolvedCursorColor),
         selectionColors = TextSelectionColors(resolvedCursorColor, resolvedSelectionColor),
     ) {
         Column(
@@ -319,14 +399,16 @@ fun MillenniumTextField(
             if (!label.isNullOrBlank())
                 Text(
                     label,
-                    style = (labelStyle ?: properties.labelStyle).copy(color = resolvedForeground)
+                    style = (labelStyle ?: properties.labelStyle).copy(color = properties.labelColor ?: resolvedForeground)
                 )
             Box(
                 Modifier
                     .hoverable(interaction, enabled)
                     .fillMaxWidth()
                     .heightIn(min = minimumHeight ?: properties.minimumHeight)
-                    .millenniumSurface(
+                    .millenniumTextFieldBox(
+                        properties = properties,
+                        controlState = controlState,
                         background = background ?: properties.background ?: millenniumBevelBrush(
                             colors,
                             sunken = true
@@ -334,14 +416,14 @@ fun MillenniumTextField(
                         shape = shape ?: properties.shape,
                         borderColor = animatedBorder,
                         borderWidth = borderWidth ?: properties.borderWidth,
-                        insetShadeColor = insetShadeColor ?: properties.insetShadeColor
+                        insetShade = insetShadeColor ?: properties.insetShadeColor
                         ?: colors.text.copy(alpha = 0.09f),
-                        innerGlowColor = innerGlowColor ?: properties.innerGlowColor
+                        innerGlow = innerGlowColor ?: properties.innerGlowColor
                         ?: colors.border.copy(alpha = 0.4f),
-                        bottomRimColor = bottomRimColor ?: properties.bottomRimColor
+                        bottomRim = bottomRimColor ?: properties.bottomRimColor
                         ?: colors.highlight.copy(alpha = 0.8f),
-                    )
-                    .millenniumInteractionSurface(controlState, shape ?: properties.shape, animationMillis = stateAnimationMillis ?: properties.stateAnimationMillis),
+                        animationMillis = stateAnimationMillis ?: properties.stateAnimationMillis,
+                    ),
                 contentAlignment = Alignment.CenterStart,
             ) {
                 TextInput(

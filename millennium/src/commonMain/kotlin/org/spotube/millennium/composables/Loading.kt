@@ -90,6 +90,26 @@ import org.spotube.millennium.theme.millenniumSurface
  * @property color Replaces the palette accent when set (a gel is built from it); `null` uses the accent gel.
  * @property trackColor Ring track colour of [MillenniumCircularProgress]; `null` uses the palette inset colour.
  * @property alpha Overall opacity multiplier (1 = opaque).
+ * @property fillBrush Brush of every moving fill (striped, shimmer, segmented, buffered played part, marquee,
+ * bars loader, circular arc). `null` uses the accent gel. A per-instance `color` argument still wins.
+ * @property glossBrush Brush drawn over gel fills as the upper-half reflection; `null` uses a white to
+ * transparent band built from [highlightColor]. Use a transparent brush to remove the gloss.
+ * @property highlightColor Colour of every light effect (stripes at 26%, shimmer glint at 65%, gloss band,
+ * ring reflection, orb/dot/pulse glints and the lightened centre of orbs); `null` uses white.
+ * @property trackBackground Fill of the recessed linear track; `null` uses a sunken bevel brush.
+ * @property trackBorderColor Border of the linear track; `null` uses the palette border colour.
+ * @property trackBorderWidth Border thickness of the linear track (1dp by default).
+ * @property trackGlowColor Inner rim of the linear track; `null` uses the palette highlight at 45%.
+ * @property trackBottomRimColor Lower rim of the linear track; `null` uses the palette highlight at 30%.
+ * @property linearShape Shape of the linear tracks and fills; `null` is a capsule (fully rounded).
+ * @property bufferedBrush Brush of the buffered (not yet played) part of [MillenniumBufferedProgress]; `null`
+ * uses a translucent gel.
+ * @property segmentShape Shape of one block of [MillenniumSegmentedProgress] (3dp rounded by default).
+ * @property segmentBackground Fill of an unlit block; `null` uses a sunken bevel brush.
+ * @property segmentBorderColor Border of a block; `null` uses the palette border colour.
+ * @property ringBorderColor Hairline around the circular ring; `null` uses the palette border colour.
+ * @property skeletonBackground Fill of [MillenniumSkeleton]; `null` uses a sunken bevel brush.
+ * @property skeletonShimmerColor Colour of the skeleton's sweeping glint; `null` uses the palette highlight at 75%.
  */
 @Immutable
 data class MillenniumLoadingThemeProperties(
@@ -109,6 +129,22 @@ data class MillenniumLoadingThemeProperties(
     val color: Color? = null,
     val trackColor: Color? = null,
     val alpha: Float = 1f,
+    val fillBrush: Brush? = null,
+    val glossBrush: Brush? = null,
+    val highlightColor: Color? = null,
+    val trackBackground: Brush? = null,
+    val trackBorderColor: Color? = null,
+    val trackBorderWidth: Dp = 1.dp,
+    val trackGlowColor: Color? = null,
+    val trackBottomRimColor: Color? = null,
+    val linearShape: Shape? = null,
+    val bufferedBrush: Brush? = null,
+    val segmentShape: Shape = RoundedCornerShape(3.dp),
+    val segmentBackground: Brush? = null,
+    val segmentBorderColor: Color? = null,
+    val ringBorderColor: Color? = null,
+    val skeletonBackground: Brush? = null,
+    val skeletonShimmerColor: Color? = null,
 )
 
 /**
@@ -164,8 +200,13 @@ fun defaultMillenniumLoadingTheme(): MillenniumLoadingTheme {
 // ---------------------------------------------------------------------------
 
 /** Internal: the accent's gel endpoints, or a gel built from a caller-supplied colour. */
-private class LoadingGel(val top: Color, val bottom: Color) {
-    val brush: Brush get() = gelBrush(top, bottom)
+/** Light effect colour of the loaders: the theme's highlight or white. */
+private val MillenniumLoadingThemeProperties.highlight: Color get() = highlightColor ?: Color.White
+
+private fun Color.scaled(factor: Float): Color = copy(alpha = alpha * factor)
+
+private class LoadingGel(val top: Color, val bottom: Color, private val override: Brush? = null) {
+    val brush: Brush get() = override ?: gelBrush(top, bottom)
     val glow: Color get() = bottom
 }
 
@@ -174,9 +215,9 @@ private fun loadingGel(color: Color?, theme: MillenniumLoadingThemeProperties): 
     val colors = MillenniumTheme.colors
     val override = color ?: theme.color
     return if (override != null) {
-        LoadingGel(lerp(override, Color.White, 0.28f), override)
+        LoadingGel(lerp(override, theme.highlight, 0.28f), override)
     } else {
-        LoadingGel(colors.accentTop, colors.accentBottom)
+        LoadingGel(colors.accentTop, colors.accentBottom, theme.fillBrush)
     }
 }
 
@@ -213,6 +254,7 @@ private fun LinearTrack(
     height: Dp,
     shape: Shape,
     alpha: Float,
+    properties: MillenniumLoadingThemeProperties,
     progress: Float?,
     label: String,
     content: @Composable BoxScope.() -> Unit,
@@ -221,23 +263,29 @@ private fun LinearTrack(
     Box(
         modifier.fillMaxWidth().height(height).loadingSemantics(progress, label)
             .millenniumSurface(
-                background = millenniumBevelBrush(colors, sunken = true),
+                background = properties.trackBackground ?: millenniumBevelBrush(colors, sunken = true),
                 shape = shape,
-                borderColor = colors.border,
-                borderWidth = 1.dp,
-                innerGlowColor = colors.highlight.copy(alpha = 0.45f),
-                bottomRimColor = colors.highlight.copy(alpha = 0.3f),
+                borderColor = properties.trackBorderColor ?: colors.border,
+                borderWidth = properties.trackBorderWidth,
+                innerGlowColor = properties.trackGlowColor ?: colors.highlight.copy(alpha = 0.45f),
+                bottomRimColor = properties.trackBottomRimColor ?: colors.highlight.copy(alpha = 0.3f),
             ).alpha(alpha),
         content = content,
     )
 }
 
-private fun DrawScope.glossBand(color: Color = Color.White) {
+private fun DrawScope.glossBand(properties: MillenniumLoadingThemeProperties) {
+    val gloss = properties.glossBrush
+    if (gloss != null) {
+        drawRect(brush = gloss)
+        return
+    }
     // A soft reflection across the upper half, as on the gel fill.
+    val color = properties.highlight
     drawRect(
         brush = Brush.verticalGradient(
-            0f to color.copy(alpha = 0.38f),
-            0.5f to color.copy(alpha = 0.06f),
+            0f to color.scaled(0.38f),
+            0.5f to color.scaled(0.06f),
             0.5f to Color.Transparent,
             1f to Color.Transparent,
         ),
@@ -289,14 +337,14 @@ fun MillenniumStripedProgress(
 ) {
     val properties = theme.states.resolve(MillenniumControlState.Default)
     val gel = loadingGel(color, properties)
-    val resolvedShape = shape ?: RoundedCornerShape(50)
+    val resolvedShape = shape ?: properties.linearShape ?: RoundedCornerShape(50)
     val fraction by animateFloatAsState(
         targetValue = (progress ?: 1f).coerceIn(0f, 1f),
         animationSpec = spring(dampingRatio = 0.80f, stiffness = Spring.StiffnessMediumLow),
     )
     val phase = loopingPhase(animationMillis ?: (properties.animationMillis / 2))
     val stripe = stripeWidth ?: properties.stripeWidth
-    LinearTrack(modifier, height ?: properties.linearHeight, resolvedShape, properties.alpha, progress, contentDescription) {
+    LinearTrack(modifier, height ?: properties.linearHeight, resolvedShape, properties.alpha, properties, progress, contentDescription) {
         Box(
             Modifier.fillMaxHeight().fillMaxWidth(fraction)
                 .clip(resolvedShape)
@@ -316,8 +364,8 @@ fun MillenniumStripedProgress(
                         stripes.close()
                         x += period
                     }
-                    drawPath(stripes, Color.White.copy(alpha = 0.26f))
-                    glossBand()
+                    drawPath(stripes, properties.highlight.scaled(0.26f))
+                    glossBand(properties)
                 },
         )
     }
@@ -363,13 +411,13 @@ fun MillenniumShimmerProgress(
 ) {
     val properties = theme.states.resolve(MillenniumControlState.Default)
     val gel = loadingGel(color, properties)
-    val resolvedShape = shape ?: RoundedCornerShape(50)
+    val resolvedShape = shape ?: properties.linearShape ?: RoundedCornerShape(50)
     val fraction by animateFloatAsState(
         targetValue = progress.coerceIn(0f, 1f),
         animationSpec = spring(dampingRatio = 0.80f, stiffness = Spring.StiffnessMediumLow),
     )
     val phase = loopingPhase(animationMillis ?: (properties.animationMillis * 3 / 2), FastOutSlowInEasing)
-    LinearTrack(modifier, height ?: properties.linearHeight, resolvedShape, properties.alpha, progress, contentDescription) {
+    LinearTrack(modifier, height ?: properties.linearHeight, resolvedShape, properties.alpha, properties, progress, contentDescription) {
         Box(
             Modifier.fillMaxHeight().fillMaxWidth(fraction)
                 .clip(resolvedShape)
@@ -381,13 +429,13 @@ fun MillenniumShimmerProgress(
                     drawRect(
                         Brush.horizontalGradient(
                             0f to Color.Transparent,
-                            0.5f to Color.White.copy(alpha = 0.65f),
+                            0.5f to properties.highlight.scaled(0.65f),
                             1f to Color.Transparent,
                             startX = start,
                             endX = start + band,
                         ),
                     )
-                    glossBand()
+                    glossBand(properties)
                 },
         )
     }
@@ -436,7 +484,7 @@ fun MillenniumSegmentedProgress(
     val colors = MillenniumTheme.colors
     val gel = loadingGel(color, properties)
     val count = (segments ?: properties.segmentCount).coerceAtLeast(1)
-    val blockShape = RoundedCornerShape(3.dp)
+    val blockShape = properties.segmentShape
     val animated = animateFloatAsState(
         targetValue = (progress ?: 0f).coerceIn(0f, 1f),
         animationSpec = spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessMediumLow),
@@ -450,9 +498,9 @@ fun MillenniumSegmentedProgress(
         repeat(count) { index ->
             Box(
                 Modifier.weight(1f).fillMaxHeight().millenniumSurface(
-                    background = millenniumBevelBrush(colors, sunken = true),
+                    background = properties.segmentBackground ?: millenniumBevelBrush(colors, sunken = true),
                     shape = blockShape,
-                    borderColor = colors.border,
+                    borderColor = properties.segmentBorderColor ?: colors.border,
                     borderWidth = 1.dp,
                 ),
             ) {
@@ -470,7 +518,7 @@ fun MillenniumSegmentedProgress(
                         }
                         .clip(blockShape)
                         .background(gel.brush)
-                        .drawWithContent { drawContent(); glossBand() },
+                        .drawWithContent { drawContent(); glossBand(properties) },
                 )
             }
         }
@@ -516,21 +564,21 @@ fun MillenniumBufferedProgress(
 ) {
     val properties = theme.states.resolve(MillenniumControlState.Default)
     val gel = loadingGel(color, properties)
-    val resolvedShape = shape ?: RoundedCornerShape(50)
+    val resolvedShape = shape ?: properties.linearShape ?: RoundedCornerShape(50)
     val spec = spring<Float>(dampingRatio = 0.85f, stiffness = Spring.StiffnessMediumLow)
     val played by animateFloatAsState(progress.coerceIn(0f, 1f), spec)
     val buffer by animateFloatAsState(max(buffered, progress).coerceIn(0f, 1f), spec)
-    LinearTrack(modifier, height ?: properties.linearHeight, resolvedShape, properties.alpha, progress, contentDescription) {
+    LinearTrack(modifier, height ?: properties.linearHeight, resolvedShape, properties.alpha, properties, progress, contentDescription) {
         Box(
             Modifier.fillMaxHeight().fillMaxWidth(buffer).clip(resolvedShape).background(
-                Brush.verticalGradient(
+                properties.bufferedBrush ?: Brush.verticalGradient(
                     listOf(gel.top.copy(alpha = 0.34f), gel.bottom.copy(alpha = 0.26f)),
                 ),
             ),
         )
         Box(
             Modifier.fillMaxHeight().fillMaxWidth(played).clip(resolvedShape).background(gel.brush)
-                .drawWithContent { drawContent(); glossBand() },
+                .drawWithContent { drawContent(); glossBand(properties) },
         )
     }
 }
@@ -567,9 +615,9 @@ fun MillenniumMarqueeProgress(
 ) {
     val properties = theme.states.resolve(MillenniumControlState.Default)
     val gel = loadingGel(color, properties)
-    val resolvedShape = shape ?: RoundedCornerShape(50)
+    val resolvedShape = shape ?: properties.linearShape ?: RoundedCornerShape(50)
     val phase = loopingPhase(animationMillis ?: (properties.animationMillis * 3 / 2))
-    LinearTrack(modifier, height ?: properties.linearHeight, resolvedShape, properties.alpha, null, contentDescription) {
+    LinearTrack(modifier, height ?: properties.linearHeight, resolvedShape, properties.alpha, properties, null, contentDescription) {
         Canvas(Modifier.fillMaxSize()) {
             val t = phase.value
             fun bar(progress: Float, width: Float) {
@@ -650,7 +698,7 @@ fun MillenniumCircularProgress(
         ),
         label = "breathing",
     )
-    val borderColor = colors.border
+    val borderColor = properties.ringBorderColor ?: colors.border
     Box(
         modifier.size(size ?: properties.size).loadingSemantics(progress, contentDescription).alpha(properties.alpha),
         contentAlignment = Alignment.Center,
@@ -678,7 +726,7 @@ fun MillenniumCircularProgress(
                 // Reflection riding the outer edge of the arc.
                 val lift = stroke * 0.22f
                 drawArc(
-                    Color.White.copy(alpha = 0.42f), start, sweep, false,
+                    properties.highlight.scaled(0.42f), start, sweep, false,
                     Offset(inset - lift, inset - lift),
                     Size(arcSize.width + lift * 2f, arcSize.height + lift * 2f),
                     style = Stroke(stroke * 0.26f, cap = StrokeCap.Round),
@@ -754,7 +802,7 @@ fun MillenniumOrbSpinner(
         }
         drawCircle(
             Brush.radialGradient(
-                0f to lerp(gel.top, Color.White, 0.5f),
+                0f to lerp(gel.top, properties.highlight, 0.5f),
                 0.55f to gel.top,
                 1f to gel.bottom,
                 center = Offset(c.x - r * 0.3f, c.y - r * 0.4f),
@@ -767,7 +815,7 @@ fun MillenniumOrbSpinner(
         clipPath(orb) {
             drawOval(
                 brush = Brush.verticalGradient(
-                    listOf(Color.White.copy(alpha = 0.78f), Color.White.copy(alpha = 0.04f)),
+                    listOf(properties.highlight.scaled(0.78f), properties.highlight.scaled(0.04f)),
                     startY = c.y - r,
                     endY = c.y,
                 ),
@@ -883,7 +931,7 @@ fun MillenniumDotsLoader(
             val squash = 1f - 0.12f * (1f - hop)
             drawOval(
                 brush = Brush.radialGradient(
-                    0f to lerp(gel.top, Color.White, 0.55f),
+                    0f to lerp(gel.top, properties.highlight, 0.55f),
                     0.5f to gel.top,
                     1f to gel.bottom,
                     center = Offset(cx - r * 0.3f, cy - r * 0.4f),
@@ -893,7 +941,7 @@ fun MillenniumDotsLoader(
                 size = Size(d, d * squash),
             )
             drawCircle(
-                Color.White.copy(alpha = 0.7f), radius = r * 0.22f,
+                properties.highlight.scaled(0.7f), radius = r * 0.22f,
                 center = Offset(cx - r * 0.3f, cy - r * 0.45f),
             )
         }
@@ -1004,7 +1052,7 @@ fun MillenniumPulseLoader(
         val r = core * breath
         drawCircle(
             Brush.radialGradient(
-                0f to lerp(gel.top, Color.White, 0.5f),
+                0f to lerp(gel.top, properties.highlight, 0.5f),
                 0.5f to gel.top,
                 1f to gel.bottom,
                 center = Offset(c.x - r * 0.3f, c.y - r * 0.4f),
@@ -1013,7 +1061,7 @@ fun MillenniumPulseLoader(
             radius = r,
             center = c,
         )
-        drawCircle(Color.White.copy(alpha = 0.7f), radius = r * 0.24f, center = Offset(c.x - r * 0.3f, c.y - r * 0.42f))
+        drawCircle(properties.highlight.scaled(0.7f), radius = r * 0.24f, center = Offset(c.x - r * 0.3f, c.y - r * 0.42f))
     }
 }
 
@@ -1062,7 +1110,7 @@ fun MillenniumSkeleton(
         modifier
             .then(if (contentDescription != null) Modifier.loadingSemantics(null, contentDescription) else Modifier)
             .clip(shape)
-            .background(millenniumBevelBrush(colors, sunken = true))
+            .background(properties.skeletonBackground ?: millenniumBevelBrush(colors, sunken = true))
             .drawWithContent {
                 drawContent()
                 val band = max(size.width * 0.5f, 64.dp.toPx())
@@ -1070,7 +1118,7 @@ fun MillenniumSkeleton(
                 drawRect(
                     Brush.horizontalGradient(
                         0f to Color.Transparent,
-                        0.5f to colors.highlight.copy(alpha = 0.75f),
+                        0.5f to (properties.skeletonShimmerColor ?: colors.highlight.copy(alpha = 0.75f)),
                         1f to Color.Transparent,
                         startX = start,
                         endX = start + band,

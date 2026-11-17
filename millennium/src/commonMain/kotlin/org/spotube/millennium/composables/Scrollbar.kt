@@ -54,6 +54,16 @@ import org.spotube.millennium.theme.millenniumInteractionSurface
  * @property borderWidth Track border thickness (1dp by default).
  * @property alpha Thumb opacity (0.74 at rest, 0.95 hovered, 1.0 dragged, 0.35 disabled). Changes animate.
  * @property stateAnimationMillis Duration in milliseconds of the thumb opacity animation.
+ * @property thumbShape Shape of the thumb; null uses [shape].
+ * @property thumbBorderColor Border around the thumb; null draws none. Needs [thumbBorderWidth] above 0dp.
+ * @property thumbBorderWidth Border thickness of the thumb; 0dp (default) draws none.
+ * @property thumbInnerGlowColor Inner rim of the thumb; null uses the palette highlight at 40%.
+ * @property thumbBottomRimColor Light rim along the thumb's lower edge; null draws none.
+ * @property trackInnerGlowColor Inner rim of the track; null draws none.
+ * @property trackBottomRimColor Light rim along the track's lower edge; null draws none.
+ * @property thumbInteractionOverlay Brush drawn over the thumb fill. null keeps the built-in hover/press
+ * lighting; any brush replaces it for the state that resolves it (hovered, pressed while dragging).
+ * @property interactionTint Accent of the built-in thumb lighting; null uses the palette accent.
  * @see MillenniumScrollbarTheme
  * @see defaultMillenniumScrollbarTheme
  */
@@ -67,13 +77,23 @@ data class MillenniumScrollbarThemeProperties(
     val borderWidth: Dp,
     val alpha: Float,
     val stateAnimationMillis: Int,
+    val thumbShape: Shape? = null,
+    val thumbBorderColor: Color? = null,
+    val thumbBorderWidth: Dp = 0.dp,
+    val thumbInnerGlowColor: Color? = null,
+    val thumbBottomRimColor: Color? = null,
+    val trackInnerGlowColor: Color? = null,
+    val trackBottomRimColor: Color? = null,
+    val thumbInteractionOverlay: Brush? = null,
+    val interactionTint: Color? = null,
 )
 
 /**
  * Per-state theme of [MillenniumScrollbar].
  *
  * @property states Properties per [MillenniumControlState]. [MillenniumScrollbar] resolves Pressed while the thumb
- * is dragged, Hovered while the pointer is over the bar and Default otherwise.
+ * is dragged, Hovered while the pointer is over the bar and Default otherwise. The scrollbar has no focus,
+ * selected, error or disabled condition of its own, so those entries are never read.
  */
 @Immutable
 data class MillenniumScrollbarTheme(
@@ -176,6 +196,7 @@ fun MillenniumScrollbar(
         else -> Brush.verticalGradient(listOf(colors.border, androidx.compose.ui.graphics.lerp(colors.border, colors.muted, 0.45f)))
     }
     val resolvedBorderColor = borderColor ?: properties.borderColor ?: colors.border
+    val thumbShape = properties.thumbShape ?: shape ?: properties.shape
     val animatedAlpha = animateFloatAsState(
         targetValue = alpha ?: properties.alpha,
         animationSpec = tween(stateAnimationMillis ?: properties.stateAnimationMillis),
@@ -188,15 +209,26 @@ fun MillenniumScrollbar(
                 shape = shape ?: properties.shape,
                 borderColor = resolvedBorderColor,
                 borderWidth = borderWidth ?: properties.borderWidth,
+                innerGlowColor = properties.trackInnerGlowColor,
+                bottomRimColor = properties.trackBottomRimColor,
             ),
             interactionSource = interaction,
         ) {
             Thumb(
                 Modifier.fillMaxHeight().millenniumSurface(
                     background = resolvedThumbBackground,
-                    shape = shape ?: properties.shape,
-                    innerGlowColor = colors.highlight.copy(alpha = 0.4f),
-                ).millenniumInteractionSurface(visualState, shape ?: properties.shape).alpha(animatedAlpha),
+                    shape = thumbShape,
+                    borderColor = properties.thumbBorderColor,
+                    borderWidth = properties.thumbBorderWidth,
+                    innerGlowColor = properties.thumbInnerGlowColor ?: colors.highlight.copy(alpha = 0.4f),
+                    bottomRimColor = properties.thumbBottomRimColor,
+                ).millenniumThemedLighting(
+                    visualState,
+                    thumbShape,
+                    properties.thumbInteractionOverlay,
+                    properties.interactionTint,
+                    stateAnimationMillis ?: properties.stateAnimationMillis,
+                ).alpha(animatedAlpha),
             )
         }
     } else {
@@ -207,15 +239,26 @@ fun MillenniumScrollbar(
                 shape = shape ?: properties.shape,
                 borderColor = resolvedBorderColor,
                 borderWidth = borderWidth ?: properties.borderWidth,
+                innerGlowColor = properties.trackInnerGlowColor,
+                bottomRimColor = properties.trackBottomRimColor,
             ),
             interactionSource = interaction,
         ) {
             Thumb(
                 Modifier.fillMaxWidth().millenniumSurface(
                     background = resolvedThumbBackground,
-                    shape = shape ?: properties.shape,
-                    innerGlowColor = colors.highlight.copy(alpha = 0.4f),
-                ).millenniumInteractionSurface(visualState, shape ?: properties.shape).alpha(animatedAlpha),
+                    shape = thumbShape,
+                    borderColor = properties.thumbBorderColor,
+                    borderWidth = properties.thumbBorderWidth,
+                    innerGlowColor = properties.thumbInnerGlowColor ?: colors.highlight.copy(alpha = 0.4f),
+                    bottomRimColor = properties.thumbBottomRimColor,
+                ).millenniumThemedLighting(
+                    visualState,
+                    thumbShape,
+                    properties.thumbInteractionOverlay,
+                    properties.interactionTint,
+                    stateAnimationMillis ?: properties.stateAnimationMillis,
+                ).alpha(animatedAlpha),
             )
         }
     }

@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -28,6 +29,10 @@ import org.spotube.millennium.theme.MillenniumPreview
  * @property highlightColor Colour of the light line drawn on the trailing edge (bottom or right); null uses the
  * palette highlight at 65%.
  * @property highlightWidth Thickness of that highlight line (0.5dp by default); 0dp disables it.
+ * @property lineBrush Brush of the main line. When set it replaces [color]: the line is painted with the brush
+ * across its whole thickness (for example a gradient that fades out toward both ends). null paints [color].
+ * @property highlightBrush Brush of the trailing highlight line. When set it replaces [highlightColor]; the
+ * highlight still needs [highlightWidth] above 0dp. null paints [highlightColor].
  * @see MillenniumSeparatorTheme
  * @see defaultMillenniumSeparatorTheme
  */
@@ -38,6 +43,8 @@ data class MillenniumSeparatorThemeProperties(
     val alpha: Float,
     val highlightColor: Color? = null,
     val highlightWidth: Dp = 0.5.dp,
+    val lineBrush: Brush? = null,
+    val highlightBrush: Brush? = null,
 )
 
 /**
@@ -115,19 +122,34 @@ fun MillenniumSeparator(
     theme: MillenniumSeparatorTheme = MillenniumTheme.separatorTheme,
 ) {
     val properties = theme.states.resolve(MillenniumControlState.Default)
-    val color = color ?: properties.color ?: MillenniumTheme.colors.border
+    val color = if (properties.lineBrush != null && color == null && properties.color == null) {
+        Color.Transparent
+    } else {
+        color ?: properties.color ?: MillenniumTheme.colors.border
+    }
     val highlight = highlightColor ?: properties.highlightColor ?: MillenniumTheme.colors.highlight.copy(alpha = 0.65f)
     val highlightWidth = highlightWidth ?: properties.highlightWidth
+    val lineBrush = properties.lineBrush
+    val highlightBrush = properties.highlightBrush
     val beveledModifier = modifier.alpha(alpha ?: properties.alpha).drawWithContent {
         drawContent()
+        if (lineBrush != null) drawRect(lineBrush)
         if (highlightWidth > 0.dp) {
             val stroke = highlightWidth.toPx()
             if (vertical) {
                 val x = size.width - stroke / 2f
-                drawLine(highlight, Offset(x, 0f), Offset(x, size.height), stroke)
+                if (highlightBrush != null) {
+                    drawLine(highlightBrush, Offset(x, 0f), Offset(x, size.height), stroke)
+                } else {
+                    drawLine(highlight, Offset(x, 0f), Offset(x, size.height), stroke)
+                }
             } else {
                 val y = size.height - stroke / 2f
-                drawLine(highlight, Offset(0f, y), Offset(size.width, y), stroke)
+                if (highlightBrush != null) {
+                    drawLine(highlightBrush, Offset(0f, y), Offset(size.width, y), stroke)
+                } else {
+                    drawLine(highlight, Offset(0f, y), Offset(size.width, y), stroke)
+                }
             }
         }
     }
